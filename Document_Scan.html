@@ -22,9 +22,11 @@
 </header>
 <main class="flex-1 flex items-center justify-center p-4">
 <div class="w-full aspect-[3/4] rounded-2xl border-4 border-dashed border-white/20 flex items-center justify-center relative overflow-hidden">
-<div class="absolute inset-0 bg-gray-500 animate-pulse"></div>
+<div class="absolute inset-0 bg-gray-500 animate-pulse" id="scan-bg"></div>
+<video id="camera-stream" autoplay playsinline class="absolute inset-0 w-full h-full object-cover z-0 hidden"></video>
+<img id="captured-image" class="absolute inset-0 w-full h-full object-cover z-0 hidden" alt="Captured document" />
 <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[2px] bg-[var(--primary-500)]/50 animate-scan"></div>
-<p class="text-white/80 z-10">Position document within the frame</p>
+<p class="text-white/80 z-10 text-center">Position document within the frame <br /> Then press the capture button</p>
 </div>
 </main>
 <div class="flex items-center justify-center gap-6 p-4">
