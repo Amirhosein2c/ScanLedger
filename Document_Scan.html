@@ -1,0 +1,72 @@
+<html><head>
+<meta charset="utf-8"/>
+<link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
+<link as="style" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Spline+Sans%3Awght%40400%3B500%3B700" onload="this.rel='stylesheet'" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<title>Stitch Design</title>
+<link href="data:image/x-icon;base64," rel="icon" type="image/x-icon"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link rel="stylesheet" href="css/document_scan.css" />
+  </head>
+<body class="bg-[#111827]">
+<div class="relative flex size-full min-h-screen flex-col bg-[var(--neutral-900)] dark justify-between group/design-root" style='font-family: "Spline Sans", "Noto Sans", sans-serif;'>
+<div class="flex flex-col flex-1">
+<header class="flex items-center justify-between p-4">
+<button class="flex items-center justify-center rounded-full text-white/50 hover:text-white transition-colors">
+<span class="material-symbols-outlined"> flash_on </span>
+</button>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Scan Document</h2>
+<button class="flex items-center justify-center rounded-full text-white/50 hover:text-white transition-colors">
+<span class="material-symbols-outlined"> close </span>
+</button>
+</header>
+<main class="flex-1 flex items-center justify-center p-4">
+<div class="w-full aspect-[3/4] rounded-2xl border-4 border-dashed border-white/20 flex items-center justify-center relative overflow-hidden">
+<div class="absolute inset-0 bg-gray-500 animate-pulse"></div>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[2px] bg-[var(--primary-500)]/50 animate-scan"></div>
+<p class="text-white/80 z-10">Position document within the frame</p>
+</div>
+</main>
+<div class="flex items-center justify-center gap-6 p-4">
+<div class="flex items-center gap-4 bg-black/30 backdrop-blur-sm p-2 rounded-full">
+<button class="text-white px-4 py-2 rounded-full bg-white/10">Single</button>
+<button class="text-white/60 px-4 py-2 rounded-full">Batch</button>
+</div>
+</div>
+<div class="flex items-center justify-center gap-6 p-4">
+<button class="flex shrink-0 items-center justify-center rounded-full size-12 bg-white/10 text-white shadow-lg">
+<span class="material-symbols-outlined"> photo_library </span>
+</button>
+<button class="flex shrink-0 items-center justify-center rounded-full size-20 bg-white text-[var(--neutral-900)] shadow-lg ring-4 ring-white/20">
+<span class="material-symbols-outlined text-4xl"> camera </span>
+</button>
+<button class="flex shrink-0 items-center justify-center rounded-full size-12 bg-white/10 text-white shadow-lg">
+<span class="material-symbols-outlined"> auto_awesome </span>
+</button>
+</div>
+</div>
+<footer class="bg-[var(--neutral-800)]">
+<div class="flex border-t border-[var(--neutral-700)] px-4 pb-3 pt-2">
+<a class="flex flex-1 flex-col items-center justify-end gap-1 rounded-full text-[var(--primary-500)]" href="#">
+<span class="material-symbols-outlined"> document_scanner </span>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Scan</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-[var(--neutral-400)]" href="#">
+<span class="material-symbols-outlined"> folder </span>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Documents</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-[var(--neutral-400)]" href="#">
+<span class="material-symbols-outlined"> bar_chart </span>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Dashboard</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-[var(--neutral-400)]" href="#">
+<span class="material-symbols-outlined"> settings </span>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Settings</p>
+</a>
+</div>
+<div class="h-5 bg-[var(--neutral-800)]"></div>
+</footer>
+</div>
+
+
+<script src="js/document_scan.js" defer></script></body></html>

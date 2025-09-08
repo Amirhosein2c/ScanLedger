@@ -1,0 +1,14 @@
+/* Extracted from Login_Registration.html */
+:root {
+  --primary-color: #38e07b;
+  --background-color: #111827;
+  --field-background: #1F2937;
+  --text-color: #F9FAFB;
+  --placeholder-color: #9CA3AF;
+  --secondary-text-color: #D1D5DB;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  min-height: max(884px, 100dvh);
+}
