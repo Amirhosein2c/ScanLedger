@@ -22,7 +22,8 @@
 <div class="aspect-[9/12] rounded-2xl overflow-hidden shadow-lg">
 <img id="review-image" alt="Scanned Document" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxJmmNFAN5fa4ImmQdjTtIEgQJr93B8BiKT1d994eU8QNF1E4I797b9qeq-qKhuZfIXg89SgSCjcvTFw6eSUzzLuk1vRiXYndWPIKpWsDNozW-gEiaGGZo9ezXueItm_WB8DjW2vboPQttKvtV3NdbSgb4FQKmPSzMJcmivW4aFDLxyojP2owBTGVPDURacFQuvEGhWoqtFfAKM0lvUm1hvU5clNRaQ5TRrZXMVEb3Efc3K2xRYIolEUdBcZGPBg2Q1LY0zUsbqT0"/>
 </div>
-<div class="space-y-4">
+<div id="extracted-fields-container" class="space-y-4 mt-6"></div>
+<div id="default-fields-block" class="space-y-4">
 <label class="block">
 <span class="text-sm font-medium text-[var(--text-secondary)]">Date</span>
 <input class="mt-1 block w-full rounded-xl border-transparent bg-[var(--input-bg)] px-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50" type="date" value="2023-10-27"/>
@@ -50,7 +51,7 @@
 </div>
 <div class="flex gap-4 pt-4">
 <button id="discard-btn" class="flex-1 rounded-full bg-[var(--input-bg)] py-3 text-center text-base font-bold text-white">Discard</button>
-<button class="flex-1 rounded-full bg-[var(--primary-color)] py-3 text-center text-base font-bold text-[var(--background-color)]">Save</button>
+<button id="save-btn" class="flex-1 rounded-full bg-[var(--primary-color)] py-3 text-center text-base font-bold text-[var(--background-color)]">Save</button>
 </div>
 </main>
 <footer class="sticky bottom-0 z-10 border-t border-[#264532] bg-[#1b3124] pb-safe-area-bottom">

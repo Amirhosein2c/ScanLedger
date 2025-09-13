@@ -10,8 +10,10 @@ document.addEventListener('DOMContentLoaded', function() {
 	const confirmBtn = document.getElementById('confirm-btn');
 	const pdfUploadBtn = document.getElementById('pdf-upload-btn');
 	const pdfFileInput = document.getElementById('pdf-file-input');
+	const scanContainer = document.getElementById('camera-stream')?.parentElement; // container holding video/image
 	let uploadedPdfData = null; // store PDF ArrayBuffer/base64 if needed
 	let stream = null;
+	let processingOverlay = null;
 
 	// Start camera on load
 	if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -82,17 +84,173 @@ document.addEventListener('DOMContentLoaded', function() {
 
 	// Confirm logic (placeholder: could navigate / save)
 	if (confirmBtn) {
-		confirmBtn.addEventListener('click', function() {
+		confirmBtn.addEventListener('click', async function() {
 			if (confirmBtn.disabled) return;
 			if (!img || img.classList.contains('hidden') || !img.src) return;
-			try {
-				sessionStorage.setItem('scannedImageDataUrl', img.src);
-			} catch (e) {
-				console.warn('Could not save image to sessionStorage', e);
+
+			const webhookUrl = 'http://192.99.127.217:5678/webhook-test/multi-agent-ocr';
+			// const webhookUrl = 'http://192.99.127.217:5678/webhook/multi-agent-ocr';
+
+			// Helper: convert dataURL to Blob
+			function dataURLtoBlob(dataUrl) {
+				const parts = dataUrl.split(',');
+				const meta = parts[0];
+				const base64 = parts[1];
+				const mime = /data:(.*?);base64/.exec(meta)?.[1] || 'image/png';
+				const binary = atob(base64);
+				const len = binary.length;
+				const bytes = new Uint8Array(len);
+				for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+				return new Blob([bytes], { type: mime });
 			}
-			// Navigate to review/edit page
-			window.location.href = 'Document_Details_Edit.html';
+
+			// Visual feedback (button spinner + overlay message)
+			const originalIcon = confirmBtn.innerHTML;
+			confirmBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-2xl">progress_activity</span>';
+			confirmBtn.disabled = true;
+			confirmBtn.classList.add('opacity-70','pointer-events-none');
+
+			showProcessingMessage();
+
+			try {
+				const blob = dataURLtoBlob(img.src);
+				const formData = new FormData();
+				const isPdfDerived = !!uploadedPdfData; // if came from PDF render
+				const filename = isPdfDerived ? 'scanned_pdf_page.png' : 'scanned_image.png';
+				formData.append('file', blob, filename);
+				formData.append('source', isPdfDerived ? 'pdf_first_page_render' : 'camera_capture');
+				formData.append('timestamp', new Date().toISOString());
+
+				// Store locally for subsequent page, non-blocking
+				try { sessionStorage.setItem('scannedImageDataUrl', img.src); } catch (e) { /* ignore */ }
+				try { localStorage.setItem('scannedImageDataUrl', img.src); } catch (e) { /* ignore */ }
+
+				const response = await fetch(webhookUrl, {
+					method: 'POST',
+					body: formData
+				});
+
+				if (!response.ok) {
+					throw new Error('Upload failed: ' + response.status + ' ' + response.statusText);
+				}
+
+				// Optionally capture response data (not required). If JSON attempt parse.
+				let resultText = '';
+				try {
+					const ct = response.headers.get('content-type') || '';
+					let rawObj = null;
+					if (ct.includes('application/json')) {
+						try { rawObj = await response.json(); } catch(_) {}
+					} else {
+						// attempt clone->text parse
+						try {
+							resultText = await response.text();
+							try { rawObj = JSON.parse(resultText); } catch(_) {}
+						} catch(_) {}
+					}
+
+					// Normalization for various n8n shapes: rawObj may be
+					// 1) An array of items
+					// 2) { data: [ items ] }
+					// 3) Single object already containing display_fields
+					let normalized = { display_fields: [], csv_content: null, raw: rawObj };
+					try {
+						let items = [];
+						if (Array.isArray(rawObj)) items = rawObj;
+						else if (rawObj && Array.isArray(rawObj.data)) items = rawObj.data;
+						else if (rawObj) items = [rawObj];
+
+						const collectedFields = [];
+						for (const it of items) {
+							const binaries = it?.binary || it?.json?.binary || it?.json?.data?.binary;
+							const possibleDisplay = binaries?.display_data || binaries?.display || binaries?.display_json;
+							if (possibleDisplay?.data) {
+								try {
+									const decoded = decodeBase64ToText(possibleDisplay.data);
+									const dispJson = safeJsonParse(decoded);
+									if (dispJson) {
+										const f = extractDisplayFields(dispJson);
+										if (f.length) collectedFields.push(...f);
+									}
+								} catch(e) { console.warn('display_data decode error', e); }
+							}
+							const csvBin = binaries?.csv_data || binaries?.csv || binaries?.csvfile;
+							if (csvBin?.data && !normalized.csv_content) {
+								try { normalized.csv_content = decodeBase64ToText(csvBin.data); } catch(e) {}
+							}
+							// Also check json directly for display_fields
+							const jsonSection = it?.json || it;
+							if (jsonSection) {
+								const f2 = extractDisplayFields(jsonSection);
+								if (f2.length) collectedFields.push(...f2);
+							}
+						}
+						// Deduplicate by label+value
+						const seen = new Set();
+						normalized.display_fields = collectedFields.filter(f => {
+							const key = (f.label||'') + '|' + (f.value||'');
+							if (seen.has(key)) return false;
+							seen.add(key); return true;
+						});
+						// direct fallback
+						if (!normalized.display_fields.length && rawObj?.display_fields) {
+							const direct = extractDisplayFields(rawObj);
+							if (direct.length) normalized.display_fields = direct;
+						}
+						resultText = JSON.stringify(normalized);
+					} catch(e) {
+						console.warn('Normalization error', e);
+						resultText = JSON.stringify({ raw: rawObj });
+					}
+
+					try { sessionStorage.setItem('ocrResultData', resultText); } catch (e) { /* ignore */ }
+					try { localStorage.setItem('ocrResultData', resultText); } catch (e) { /* ignore */ }
+					console.log('Webhook response:', resultText);
+				} catch (e) { /* swallow parse errors */ }
+
+				// Navigate after successful upload (overlay stays until new page loads)
+				window.location.href = 'Document_Details_Edit.html';
+			} catch (err) {
+				console.error(err);
+				alert('Failed to send image to processing workflow. Please try again.');
+				confirmBtn.innerHTML = originalIcon; // restore
+				confirmBtn.disabled = false;
+				confirmBtn.classList.remove('opacity-70','pointer-events-none');
+				hideProcessingMessage();
+			} 
 		});
+	}
+
+	function showProcessingMessage() {
+		if (!scanContainer) return;
+		if (processingOverlay) return; // already shown
+		processingOverlay = document.createElement('div');
+		processingOverlay.id = 'processing-overlay';
+		processingOverlay.className = 'absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/70 backdrop-blur-sm text-center p-4 z-30';
+		processingOverlay.innerHTML = `
+			<div class="flex flex-col items-center gap-3">
+				<span class="material-symbols-outlined animate-spin text-5xl text-green-400">progress_activity</span>
+				<p class="text-white font-medium text-lg leading-snug">Processing the document,<br/>Please wait!</p>
+				<p class="text-white/60 text-xs max-w-xs">Do not close this tab. Upload & OCR may take a few seconds.</p>
+			</div>`;
+		// Ensure relative positioning on container
+		if (!scanContainer.classList.contains('relative')) scanContainer.classList.add('relative');
+		// Hide guidance text if present
+		const guide = scanContainer.querySelector('p');
+		if (guide) guide.classList.add('opacity-0');
+		scanContainer.appendChild(processingOverlay);
+	}
+
+	function hideProcessingMessage() {
+		if (processingOverlay?.parentElement) {
+			processingOverlay.parentElement.removeChild(processingOverlay);
+		}
+		processingOverlay = null;
+		// Restore guidance text if still on this page and capture not confirmed
+		if (scanContainer) {
+			const guide = scanContainer.querySelector('p');
+			if (guide) guide.classList.remove('opacity-0');
+		}
 	}
 
 	// Ensure buttons start disabled
@@ -157,5 +315,37 @@ document.addEventListener('DOMContentLoaded', function() {
 			script.onerror = () => reject(new Error('Network error loading PDF.js'));
 			document.head.appendChild(script);
 		});
+	}
+
+	function decodeBase64ToText(b64) {
+		try {
+			if (typeof atob === 'function') {
+				return decodeURIComponent(escape(atob(b64)));
+			}
+		} catch(e) {
+			try { return atob(b64); } catch(_) {}
+		}
+		return '';
+	}
+
+	function safeJsonParse(text) {
+		try { return JSON.parse(text); } catch(_) { return null; }
+	}
+
+	function extractDisplayFields(obj) {
+		if (!obj || typeof obj !== 'object') return [];
+		if (Array.isArray(obj.display_fields)) return sanitizeFields(obj.display_fields);
+		if (Array.isArray(obj.fields)) return sanitizeFields(obj.fields);
+		if (Array.isArray(obj)) return sanitizeFields(obj);
+		return [];
+	}
+
+	function sanitizeFields(arr) {
+		return arr
+			.filter(f => f && (f.label || f.name || f.key))
+			.map(f => ({
+				label: String(f.label || f.name || f.key || ''),
+				value: f.value != null ? String(f.value) : ''
+			}));
 	}
 });

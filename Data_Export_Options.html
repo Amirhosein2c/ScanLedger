@@ -24,12 +24,12 @@
 <section>
 <h2 class="mb-3 text-base font-semibold text-white/90">Export Destination</h2>
 <div class="flex flex-col gap-3 rounded-xl bg-[#1F2937] p-1">
-<label class="flex cursor-pointer items-center justify-between gap-4 rounded-lg p-3 transition-colors hover:bg-white/5 peer-checked:bg-red-500 has-[:checked]:bg-[#1F2937]">
+<label class="flex cursor-pointer items-center justify-between gap-4 rounded-lg p-3 transition-colors hover:bg-white/5 has-[:checked]:bg-[#1F2937]">
 <div class="flex items-center gap-4">
 <span class="material-symbols-outlined text-white/70">email</span>
 <span class="text-sm font-medium">Email</span>
 </div>
-<input checked="" class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="export-destination" type="radio"/>
+<input class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="export-destination" type="radio" value="email"/>
 </label>
 <div class="h-px w-full bg-[#333]"></div>
 <label class="flex cursor-pointer items-center justify-between gap-4 rounded-lg p-3 transition-colors hover:bg-white/5 has-[:checked]:bg-[#1F2937]">
@@ -37,7 +37,7 @@
 <span class="material-symbols-outlined text-white/70">cloud</span>
 <span class="text-sm font-medium">Google Drive</span>
 </div>
-<input class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="export-destination" type="radio"/>
+<input class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="export-destination" type="radio" value="gdrive"/>
 </label>
 <div class="h-px w-full bg-[#333]"></div>
 <label class="flex cursor-pointer items-center justify-between gap-4 rounded-lg p-3 transition-colors hover:bg-white/5 has-[:checked]:bg-[#1F2937]">
@@ -45,7 +45,7 @@
 <span class="material-symbols-outlined text-white/70">cloud_sync</span>
 <span class="text-sm font-medium">Dropbox</span>
 </div>
-<input class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="export-destination" type="radio"/>
+<input class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="export-destination" type="radio" value="dropbox"/>
 </label>
 <div class="h-px w-full bg-[#333]"></div>
 <label class="flex cursor-pointer items-center justify-between gap-4 rounded-lg p-3 transition-colors hover:bg-white/5 has-[:checked]:bg-[#1F2937]">
@@ -53,7 +53,7 @@
 <span class="material-symbols-outlined text-white/70">save</span>
 <span class="text-sm font-medium">Local Storage</span>
 </div>
-<input class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="export-destination" type="radio"/>
+<input id="dest-local" checked class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="export-destination" type="radio" value="local"/>
 </label>
 </div>
 </section>
@@ -62,44 +62,21 @@
 <div class="flex flex-col gap-3 rounded-xl bg-[#1F2937] p-1">
 <label class="flex cursor-pointer items-center justify-between gap-4 rounded-lg p-3 transition-colors hover:bg-white/5 has-[:checked]:bg-[#1F2937]">
 <span class="text-sm font-medium">CSV</span>
-<input checked="" class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="file-format" type="radio"/>
+<input id="format-csv" checked class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="file-format" type="radio" value="csv"/>
 </label>
 <div class="h-px w-full bg-[#333]"></div>
 <label class="flex cursor-pointer items-center justify-between gap-4 rounded-lg p-3 transition-colors hover:bg-white/5 has-[:checked]:bg-[#1F2937]">
 <span class="text-sm font-medium">Excel</span>
-<input class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="file-format" type="radio"/>
+<input class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="file-format" type="radio" value="excel"/>
 </label>
 <div class="h-px w-full bg-[#333]"></div>
 <label class="flex cursor-pointer items-center justify-between gap-4 rounded-lg p-3 transition-colors hover:bg-white/5 has-[:checked]:bg-[#1F2937]">
 <span class="text-sm font-medium">Google Sheets</span>
-<input class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="file-format" type="radio"/>
+<input class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="file-format" type="radio" value="gsheet"/>
 </label>
 </div>
 </section>
-<section>
-<h2 class="mb-3 text-base font-semibold text-white/90">Data Range</h2>
-<div class="flex flex-col gap-3 rounded-xl bg-[#1F2937] p-1">
-<label class="flex cursor-pointer items-center justify-between gap-4 rounded-lg p-3 transition-colors hover:bg-white/5 has-[:checked]:bg-[#1F2937]">
-<span class="text-sm font-medium">All Data</span>
-<input checked="" class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="data-range" type="radio"/>
-</label>
-<div class="h-px w-full bg-[#333]"></div>
-<label class="flex cursor-pointer items-center justify-between gap-4 rounded-lg p-3 transition-colors hover:bg-white/5 has-[:checked]:bg-[#1F2937]">
-<span class="text-sm font-medium">Last 3 Months</span>
-<input class="form-radio h-5 w-5 border-[#424242] bg-[#1F2937] text-transparent focus:ring-0 focus:ring-offset-0" name="data-range" type="radio"/>
-</label>
-<div class="h-px w-full bg-[#333]"></div>
-<label class="flex cursor-pointer items-center justify-between gap-4 rounded-lg p-3 transition-colors hover:bg-white/5 has-[:checked]:bg-[#2a2a2a]">
-<span class="text-sm font-medium">Custom Range</span>
-<input class="form-radio h-5 w-5 border-[#424242] bg-[#1e1e1e] text-transparent focus:ring-0 focus:ring-offset-0" name="data-range" type="radio"/>
-</label>
-<div class="h-px w-full bg-[#333]"></div>
-<label class="flex cursor-pointer items-center justify-between gap-4 rounded-lg p-3 transition-colors hover:bg-white/5 has-[:checked]:bg-[#2a2a2a]">
-<span class="text-sm font-medium">Specific Documents</span>
-<input class="form-radio h-5 w-5 border-[#424242] bg-[#1e1e1e] text-transparent focus:ring-0 focus:ring-offset-0" name="data-range" type="radio"/>
-</label>
-</div>
-</section>
+
 </div>
 </main>
 <footer class="fixed bottom-0 left-0 right-0 bg-[#111827]/80 backdrop-blur-sm p-4">
