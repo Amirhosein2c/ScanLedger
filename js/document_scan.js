@@ -159,8 +159,8 @@ document.addEventListener('DOMContentLoaded', function() {
 			if (confirmBtn.disabled) return;
 			if (!img || img.classList.contains('hidden') || !img.src) return;
 
-			// const webhookUrl = 'http://192.99.127.217:5678/webhook-test/multi-agent-ocr';
-			const webhookUrl = 'http://192.99.127.217:5678/webhook/multi-agent-ocr';
+			// OCR endpoint via Netlify proxy (avoid mixed content)
+			const ocrPath = '/multi-agent-ocr';
 
 			// Helper: convert dataURL to Blob
 			function dataURLtoBlob(dataUrl) {
@@ -196,14 +196,8 @@ document.addEventListener('DOMContentLoaded', function() {
 				try { sessionStorage.setItem('scannedImageDataUrl', img.src); } catch (e) { /* ignore */ }
 				try { localStorage.setItem('scannedImageDataUrl', img.src); } catch (e) { /* ignore */ }
 
-				const response = await fetch(webhookUrl, {
-					method: 'POST',
-					body: formData
-				});
-
-				if (!response.ok) {
-					throw new Error('Upload failed: ' + response.status + ' ' + response.statusText);
-				}
+				const response = await fetch(`${window.API_BASE}${ocrPath}`, { method: 'POST', body: formData });
+				if (!response.ok) throw new Error('Upload failed: ' + response.status + ' ' + response.statusText);
 
 				// Optionally capture response data (not required). If JSON attempt parse.
 				let resultText = '';
