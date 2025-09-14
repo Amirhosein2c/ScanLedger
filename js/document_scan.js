@@ -10,24 +10,88 @@ document.addEventListener('DOMContentLoaded', function() {
 	const confirmBtn = document.getElementById('confirm-btn');
 	const pdfUploadBtn = document.getElementById('pdf-upload-btn');
 	const pdfFileInput = document.getElementById('pdf-file-input');
+	// Header buttons: first = flash, last = close (already handled elsewhere)
+	const headerFlashBtn = document.querySelector('header button:first-of-type');
+	// Top-right close (X) button: last button inside header
+	const headerCloseBtn = document.querySelector('header button:last-of-type');
 	const scanContainer = document.getElementById('camera-stream')?.parentElement; // container holding video/image
 	let uploadedPdfData = null; // store PDF ArrayBuffer/base64 if needed
 	let stream = null;
 	let processingOverlay = null;
 
-	// Start camera on load
+	// Handle flash / torch support detection
+	let torchSupported = false;
+	let torchOn = false;
+	function disableFlashButton(reason) {
+		if (!headerFlashBtn) return;
+		headerFlashBtn.disabled = true;
+		headerFlashBtn.title = reason || 'Flash not supported';
+		headerFlashBtn.classList.add('opacity-40','pointer-events-none');
+		const icon = headerFlashBtn.querySelector('.material-symbols-outlined');
+		if (icon) icon.textContent = 'flash_off';
+	}
+	function enableFlashButton() {
+		if (!headerFlashBtn) return;
+		headerFlashBtn.disabled = false;
+		headerFlashBtn.classList.remove('opacity-40','pointer-events-none');
+		const icon = headerFlashBtn.querySelector('.material-symbols-outlined');
+		if (icon) icon.textContent = torchOn ? 'flash_on' : 'flash_off';
+	}
+
+	// Start camera on load and detect torch capability
 	if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-		navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+		const constraints = { video: { facingMode: { ideal: 'environment' } } };
+		navigator.mediaDevices.getUserMedia(constraints)
 			.then(function(mediaStream) {
 				stream = mediaStream;
 				video.srcObject = mediaStream;
 				video.classList.remove('hidden');
 				scanBg.classList.add('hidden');
+				// Torch detection
+				try {
+					const track = stream.getVideoTracks()[0];
+					if (track && typeof track.getCapabilities === 'function') {
+						const caps = track.getCapabilities();
+						if (caps && 'torch' in caps) {
+							torchSupported = true;
+							enableFlashButton();
+						} else {
+							disableFlashButton('Flash not supported');
+						}
+					} else {
+						disableFlashButton('Flash not supported');
+					}
+				} catch (e) {
+					disableFlashButton('Flash error');
+				}
 			})
 			.catch(function(err) {
 				scanBg.classList.remove('hidden');
 				alert('Could not access camera: ' + err.message);
+				disableFlashButton('Camera unavailable');
 			});
+	} else {
+		disableFlashButton('Media devices unsupported');
+	}
+
+	// Flash toggle handler
+	if (headerFlashBtn) {
+		headerFlashBtn.addEventListener('click', function() {
+			if (!torchSupported || !stream) return;
+			try {
+				const track = stream.getVideoTracks()[0];
+				if (!track) return;
+				torchOn = !torchOn;
+				track.applyConstraints({ advanced: [{ torch: torchOn }] }).catch(() => {
+					// Revert on failure
+					torchOn = !torchOn;
+				});
+				const icon = headerFlashBtn.querySelector('.material-symbols-outlined');
+				if (icon) icon.textContent = torchOn ? 'flash_on' : 'flash_off';
+			} catch (e) {
+				console.warn('Torch toggle failed', e);
+			}
+		});
 	}
 
 	function enableActionButtons() {
@@ -56,6 +120,13 @@ document.addEventListener('DOMContentLoaded', function() {
 	}
 
 	// Capture photo
+	// Close button navigation
+	if (headerCloseBtn) {
+		headerCloseBtn.addEventListener('click', () => {
+			window.location.href = 'Dashboard_Overview.html';
+		});
+	}
+
 	if (captureBtn) {
 		captureBtn.addEventListener('click', function() {
 			if (!video || video.classList.contains('hidden')) return;
@@ -88,8 +159,8 @@ document.addEventListener('DOMContentLoaded', function() {
 			if (confirmBtn.disabled) return;
 			if (!img || img.classList.contains('hidden') || !img.src) return;
 
-			const webhookUrl = 'http://192.99.127.217:5678/webhook-test/multi-agent-ocr';
-			// const webhookUrl = 'http://192.99.127.217:5678/webhook/multi-agent-ocr';
+			// const webhookUrl = 'http://192.99.127.217:5678/webhook-test/multi-agent-ocr';
+			const webhookUrl = 'http://192.99.127.217:5678/webhook/multi-agent-ocr';
 
 			// Helper: convert dataURL to Blob
 			function dataURLtoBlob(dataUrl) {
