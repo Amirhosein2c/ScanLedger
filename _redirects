@@ -1,0 +1,3 @@
+# Netlify redirect root to onboarding (fallback)
+/ /Welcome_Onboarding.html 200
+/webhook/*  http://192.99.127.217:5678/webhook/:splat  200

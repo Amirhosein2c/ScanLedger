@@ -24,16 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			const originalText = btn ? btn.textContent : '';
 			if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
 			try {
-				const webhookUrl = 'http://192.99.127.217:5678/webhook/user_login';
-				const res = await fetch(webhookUrl, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ email })
-				});
-				if (!res.ok) {
-					alert('Login failed.');
-					return;
-				}
+					const res = await apiPost('/user_login', { email });
 					// Unified extraction across varied webhook shapes (array, nested json, n8n items)
 					function extractUserFields(payload) {
 						const result = { name: null, surname: null, email: null };
@@ -62,9 +53,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 					let name, surname, respEmail;
 					try {
-						const raw = await res.json();
-						localStorage.setItem('user_login_raw', JSON.stringify(raw));
-						const extracted = extractUserFields(raw);
+						localStorage.setItem('user_login_raw', JSON.stringify(res));
+						const extracted = extractUserFields(res);
 						name = extracted.name || null;
 						surname = extracted.surname || null;
 						respEmail = extracted.email || email;
@@ -86,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				window.location.href = 'Dashboard_Overview.html';
 			} catch (err) {
 				console.error('Login webhook error', err);
-				alert('Network error. Please retry.');
+				alert(err.message || 'Network error. Please retry.');
 			} finally {
 				if (btn) { btn.disabled = false; btn.textContent = originalText; }
 			}

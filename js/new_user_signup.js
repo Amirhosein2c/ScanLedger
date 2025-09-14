@@ -25,29 +25,16 @@ document.addEventListener('DOMContentLoaded', function() {
 				submitBtn.textContent = 'Submitting...';
 			}
 			try {
-				const webhookUrl = 'http://192.99.127.217:5678/webhook/user_auth';
 				const payload = { email, password, name, surname };
-				const res = await fetch(webhookUrl, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(payload)
-				});
-				// Try to parse JSON response if available
-				let respData = null;
-				try { respData = await res.json(); } catch (_) {}
-				if (!res.ok) {
-					console.error('Webhook signup failed', respData);
-					alert('Signup failed. Please try again.');
-					return;
-				}
+				const respData = await apiPost('/user_auth', payload);
 				// Persist minimal profile locally
 				localStorage.setItem('user_name', name);
 				localStorage.setItem('user_surname', surname);
 				localStorage.setItem('user_email', email.toLowerCase());
 				window.location.href = 'User_Profile_Settings.html';
 			} catch (err) {
-				console.error('Network error hitting webhook', err);
-				alert('Network error. Please retry.');
+				console.error('Signup webhook error', err);
+				alert(err.message || 'Network error. Please retry.');
 			} finally {
 				if (submitBtn) {
 					submitBtn.disabled = false;
