@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
 <link as="style" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Spline+Sans%3Awght%40400%3B500%3B700" onload="this.rel='stylesheet'" rel="stylesheet"/>
 <title>Welcome_Onboarding.html</title>
@@ -56,6 +57,18 @@
           </button>
 </div>
 </div>
+<script>
+  // Mobile viewport height fix (iOS Chrome/Safari address bar collapse) & safe area
+  function setDocHeight(){
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+  }
+  window.addEventListener('resize', setDocHeight);
+  setDocHeight();
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+    document.body.classList.add('pwa-safe-area');
+  }
+</script>
 <script src="js/pwa.js" defer></script>
 <script src="js/welcome_onboarding.js" defer></script>
 </body></html>
