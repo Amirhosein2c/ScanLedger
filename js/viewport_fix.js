@@ -13,9 +13,8 @@
   // iOS standalone safe-area padding & remove scroll bounce whitespace
   if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
     document.documentElement.classList.add('pwa-standalone');
-    document.body.classList.add('pwa-safe-area');
+    // We pad individual headers/footers using pt-safe/pb-safe to avoid double top padding.
     document.body.style.margin = '0';
-    document.body.style.padding = '0';
     document.body.style.backgroundColor = '#111827';
   }
 })();

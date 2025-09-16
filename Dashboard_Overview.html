@@ -18,7 +18,7 @@
 <script src="js/viewport_fix.js" defer></script>
 <div class="relative flex size-full min-h-screen flex-col dark justify-between group/design-root" data-full-screen style='font-family: "Spline Sans", "Noto Sans", sans-serif;'>
 <div class="flex-grow">
-<header class="bg-[#111827]/80 backdrop-blur-sm pt-safe">
+<header class="sticky top-0 z-10 bg-[#111827]/80 backdrop-blur-sm pt-safe">
 <div class="flex items-center p-4">
 <div class="flex items-center gap-4">
 <div id="dashboard-avatar" class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" style='background-image: url("https://www.gravatar.com/avatar/?d=mp&s=128"); background-color:#374151;'></div>
@@ -87,8 +87,8 @@
 </section>
 </main>
 </div>
-<div data-bottom-nav>
-<div class="flex justify-center p-4 bg-[#111827]/90 backdrop-blur-sm">
+<div class="sticky bottom-0">
+<div class="flex justify-center p-4">
 </button>
 <button id="scan-new-doc-btn" class="flex items-center justify-center gap-2 rounded-full h-14 w-full max-w-xs bg-[var(--primary-color)] text-[#111827] text-lg font-bold">
   <span class="material-symbols-outlined">
@@ -128,4 +128,3 @@
 </div>
 
 <script src="js/dashboard_overview.js" defer></script></body></html>
-<script>document.body.classList.add('with-bottom-nav');document.documentElement.style.setProperty('--bottom-nav-height','120px');</script>
