@@ -14,3 +14,7 @@ body { min-height: calc(var(--vh, 1vh) * 100); min-width:100%; }
 .pl-safe { padding-left: env(safe-area-inset-left); }
 .pr-safe { padding-right: env(safe-area-inset-right); }
 .full-screen, [data-full-screen] { min-height: calc(var(--vh, 1vh) * 100); }
+/* Fixed bottom navigation support */
+[data-bottom-nav] { position: fixed; bottom: 0; left: 0; right: 0; z-index: 60; }
+body.with-bottom-nav { padding-bottom: calc(var(--bottom-nav-height, 88px) + env(safe-area-inset-bottom)); }
+header.pt-safe { padding-top: env(safe-area-inset-top); }

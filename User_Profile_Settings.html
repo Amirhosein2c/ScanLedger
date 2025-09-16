@@ -20,7 +20,7 @@
 <body class="bg-[#111827]">
 <div class="relative flex size-full min-h-screen flex-col dark justify-between group/design-root overflow-x-hidden" style='font-family: Inter, "Noto Sans", sans-serif'>
 <div class="flex flex-col grow">
-<header class="flex items-center px-4 py-3 justify-between sticky top-0 bg-[#111827]/80 backdrop-blur-sm z-10">
+<header class="flex items-center px-4 py-3 justify-between bg-[#111827]/80 backdrop-blur-sm z-10 pt-safe">
 <button class="text-white">
 <span class="material-symbols-outlined"> arrow_back_ios_new </span>
 </button>
@@ -100,7 +100,7 @@
 </div>
 </main>
 </div>
-<footer class="sticky bottom-0 bg-[#111827]/80 backdrop-blur-sm">
+<footer data-bottom-nav class="bg-[#111827]/90 backdrop-blur-sm">
 <div class="flex justify-around items-center border-t border-white/10 py-2">
 <a class="flex flex-col items-center justify-center gap-1 text-white/60 hover:text-[var(--primary-color)] transition-colors" href="Document_Scan.html">
 <span class="material-symbols-outlined"> photo_camera </span>
@@ -122,4 +122,5 @@
 </footer>
 </div>
 
-<script src="js/user_profile_settings.js" defer></script></body></html>
+<script src="js/user_profile_settings.js" defer></script>
+<script>document.body.classList.add('with-bottom-nav');</script></body></html>

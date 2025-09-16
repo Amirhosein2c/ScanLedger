@@ -16,7 +16,7 @@
 <script src="js/viewport_fix.js" defer></script>
   </head>
 <body class="bg-[var(--background-color)] text-[var(--text-color)]">
-<div class="flex flex-col min-h-screen">
+<div class="flex flex-col min-h-screen pt-safe">
 <main class="flex-grow flex flex-col justify-center px-6 sm:px-8">
 <div class="w-full max-w-sm mx-auto">
 <div class="text-center mb-12">
@@ -89,4 +89,5 @@
 </div>
 
 <script src="js/api_base.js" defer></script>
-<script src="js/login_registration.js" defer></script></body></html>
+<script src="js/login_registration.js" defer></script>
+<script>document.body.classList.add('with-bottom-nav');</script></body></html>
