@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 			try {
 				// Re-encode image to reduce size (avoid 504 on backend). Target ~0.75 quality JPEG.
-				async function recompress(dataUrl, quality=0.75) {
+				async function recompress(dataUrl, quality=0.95) {
 					return await new Promise((resolve, reject) => {
 						const i = new Image();
 						i.onload = () => {
@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				try { localStorage.setItem('scannedImageDataUrl', img.src); } catch (e) { /* ignore */ }
 
 				const controller = new AbortController();
-				const timeout = setTimeout(()=>controller.abort(), 60000); // 60s timeout
+				const timeout = setTimeout(()=>controller.abort(), 120000); // 60s timeout
 				let response;
 				try {
 					response = await fetch(`${window.API_BASE}${ocrPath}`, { method: 'POST', body: formData, signal: controller.signal });
