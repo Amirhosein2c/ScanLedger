@@ -303,7 +303,8 @@ document.addEventListener('DOMContentLoaded', function() {
 				window.location.href = 'Document_Details_Edit.html';
 			} catch (err) {
 				console.error(err);
-				alert('Failed to send image to processing workflow. Please try again.');
+				const msg = (err && err.message) ? err.message : 'Unknown error';
+				showOcrErrorModal(msg);
 				confirmBtn.innerHTML = originalIcon; // restore
 				confirmBtn.disabled = false;
 				confirmBtn.classList.remove('opacity-70','pointer-events-none');
@@ -438,5 +439,80 @@ document.addEventListener('DOMContentLoaded', function() {
 				label: String(f.label || f.name || f.key || ''),
 				value: f.value != null ? String(f.value) : ''
 			}));
+	}
+
+	// ------------------ OCR Error Modal ------------------
+	function showOcrErrorModal(rawMessage) {
+		// Derive friendly title / suggestions
+		let title = 'OCR Processing Failed';
+		let reason = '';
+		const lower = rawMessage.toLowerCase();
+		const suggestions = [];
+		if (lower.includes('504') || lower.includes('timeout')) {
+			reason = 'The server took too long to finish.';
+			suggestions.push('Retake the photo with better lighting and higher contrast.');
+			suggestions.push('Avoid glare / shadows; fill the frame with the document.');
+			suggestions.push('Try again (the server may have been busy).');
+		} else if (lower.includes('413')) {
+			reason = 'Image too large to process.';
+			suggestions.push('Move camera slightly farther to reduce resolution.');
+			suggestions.push('Ensure only the document is visible (crop out background).');
+		} else if (lower.includes('network') || lower.includes('failed to fetch')) {
+			reason = 'Network connection issue.';
+			suggestions.push('Check internet connection and retry.');
+		} else if (lower.includes('unsupported') || lower.includes('415')) {
+			reason = 'Unsupported file format.';
+			suggestions.push('Use a clear photo or standard PDF page.');
+		} else {
+			reason = rawMessage;
+			suggestions.push('Retake photo with sharper focus.');
+			suggestions.push('Increase lighting or use flash if available.');
+			suggestions.push('Retry – transient errors often resolve.');
+		}
+
+		// Remove existing if any
+		const existing = document.getElementById('ocr-error-modal');
+		if (existing) existing.remove();
+
+		const modal = document.createElement('div');
+		modal.id = 'ocr-error-modal';
+		modal.className = 'fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6';
+		modal.innerHTML = `
+			<div class="absolute inset-0 bg-black/60 backdrop-blur-sm" data-dismiss></div>
+			<div class="w-full sm:max-w-md bg-[#1F2937] text-white rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden animate-slide-up">
+				<div class="p-5 flex flex-col gap-4">
+					<div class="flex items-start gap-3">
+						<span class="material-symbols-outlined text-red-400 text-3xl">error</span>
+						<div class="flex-1">
+							<h2 class="text-lg font-bold">${title}</h2>
+							<p class="text-sm text-red-300 mt-1">${escapeHtml(reason)}</p>
+						</div>
+					</div>
+					<ul class="list-disc list-inside text-sm space-y-1 text-gray-300">
+						${suggestions.map(s => `<li>${escapeHtml(s)}</li>`).join('')}
+					</ul>
+					<div class="flex gap-3 pt-2">
+						<button id="ocr-retake-btn" class="flex-1 px-4 py-3 rounded-md bg-white/10 hover:bg-white/15 text-sm font-medium">Retake</button>
+						<button id="ocr-retry-btn" class="flex-1 px-4 py-3 rounded-md bg-[var(--primary-color,#38e07b)] text-[#111827] font-semibold text-sm hover:opacity-90">Retry</button>
+					</div>
+				</div>
+			</div>`;
+		document.body.appendChild(modal);
+
+		function close(){ modal.remove(); }
+		modal.querySelector('[data-dismiss]')?.addEventListener('click', close);
+		modal.querySelector('#ocr-retake-btn')?.addEventListener('click', () => {
+			close();
+			// Simulate retake
+			if (retakeBtn) retakeBtn.click();
+		});
+		modal.querySelector('#ocr-retry-btn')?.addEventListener('click', () => {
+			close();
+			if (confirmBtn) confirmBtn.click();
+		});
+	}
+
+	function escapeHtml(str){
+		return String(str).replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c] || c));
 	}
 });
