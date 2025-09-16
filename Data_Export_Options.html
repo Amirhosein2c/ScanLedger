@@ -16,9 +16,9 @@
 <link rel="stylesheet" href="css/mobile_base.css" />
 <script src="js/viewport_fix.js" defer></script>
   </head>
-<body class="bg-[#111827] text-white" data-full-screen>
+<body class="bg-[#111827] text-white has-bottom-nav" data-full-screen>
 <div class="relative flex size-full min-h-screen flex-col">
-<header class="bg-[#111827]/80 backdrop-blur-sm pt-safe">
+<header class="sticky top-0 z-10 bg-[#111827]/80 backdrop-blur-sm">
 <div class="flex items-center p-4">
 <button class="flex size-10 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10">
 <span class="material-symbols-outlined">close</span>
@@ -86,12 +86,11 @@
 
 </div>
 </main>
-<footer data-bottom-nav class="bg-[#111827]/90 backdrop-blur-sm p-4">
+<footer class="bottom-nav-fixed bg-[#111827]/80 backdrop-blur-sm p-4">
 <button class="flex w-full items-center justify-center rounded-xl bg-[var(--primary-500)] h-12 px-6 text-base font-bold text-white transition-colors hover:bg-[var(--primary-600)]">
         Export
       </button>
 </footer>
 </div>
 
-<script src="js/data_export_options.js" defer></script>
-<script>document.body.classList.add('with-bottom-nav');</script></body></html>
+<script src="js/data_export_options.js" defer></script></body></html>

@@ -16,10 +16,10 @@
 <link rel="stylesheet" href="css/mobile_base.css" />
 <script src="js/viewport_fix.js" defer></script>
   </head>
-<body class="bg-[#111827]">
-<div class="relative flex size-full min-h-screen flex-col bg-[#111827] justify-between group/design-root overflow-x-hidden" style='font-family: "Spline Sans", "Noto Sans", sans-serif;'>
-<div class="flex-grow">
-<header class="bg-[#111827]/80 backdrop-blur-sm pt-safe">
+<body class="bg-[#111827] has-bottom-nav">
+<div class="relative flex size-full min-h-screen flex-col bg-[#111827] justify-start group/design-root overflow-x-hidden" style='font-family: "Spline Sans", "Noto Sans", sans-serif;'>
+<div class="flex-grow pb-40">
+<header class="sticky top-0 z-10 bg-[#111827]/80 backdrop-blur-sm">
 <div class="flex items-center p-4 justify-between">
 <div class="w-12"></div>
 <h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Documents</h2>
@@ -73,7 +73,7 @@
 <div class="space-y-2"></div>
 </main>
 </div>
-<footer data-bottom-nav class="bg-[#1b3124]/90 backdrop-blur-sm border-t border-[#264532] pb-safe">
+<footer class="bottom-nav-fixed bg-[#1b3124]/80 backdrop-blur-sm border-t border-[#264532] pb-safe">
 <div class="flex justify-around pt-2">
 <a class="flex flex-col items-center justify-end gap-1 text-[#D1D5DB] hover:text-[var(--primary-color)] transition-colors w-1/4" href="Document_Scan.html">
 <span class="material-symbols-outlined text-2xl">
@@ -104,5 +104,4 @@
 </footer>
 </div>
 
-<script src="js/document_management_search.js" defer></script>
-<script>document.body.classList.add('with-bottom-nav');</script></body></html>
+<script src="js/document_management_search.js" defer></script></body></html>
