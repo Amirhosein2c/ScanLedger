@@ -1,28 +1,62 @@
-// Central API base (proxied via Netlify _redirects)
-(function(){
-  const PROD_BASE = '/webhook'; // Netlify proxy path
-  const LOCAL_DIRECT = 'http://192.99.127.217:5678/webhook';
-  // If running locally over http on a non-https host, use direct URL; otherwise use proxy.
-  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-    window.API_BASE = LOCAL_DIRECT;
+// Centralized API base + helpers
+(function () {
+  const PROD_PROXY = '/webhook';              // via Netlify proxy (see _redirects)
+  const PROD_DIRECT = 'https://api.perceptionist.top/webhook'; // optional direct usage locally
+  const isLocal = ['localhost','127.0.0.1'].includes(location.hostname);
+
+  // In production prefer same-origin proxy to avoid CORS & expose only one origin
+  if (isLocal) {
+    window.API_BASE = PROD_DIRECT; // local dev hits remote directly
   } else {
-    window.API_BASE = PROD_BASE;
+    window.API_BASE = PROD_PROXY;  // production through proxy
   }
 })();
 
-// Helper for POST JSON
-async function apiPost(path, data) {
+/**
+ * Generic fetch (supports JSON or FormData)
+ * opts: { method, data (object or FormData), body, headers, expectJson }
+ */
+async function apiFetch(path, opts = {}) {
+  if (!window.API_BASE) throw new Error('API base not set');
+  const {
+    method = 'POST',
+    data,
+    body,
+    headers = {},
+    expectJson = true
+  } = opts;
+
   const url = `${window.API_BASE}${path.startsWith('/') ? path : '/' + path}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data || {})
-  });
-  let bodyText = null; let json = null;
-  try { bodyText = await res.text(); json = bodyText ? JSON.parse(bodyText) : null; } catch(_) {}
+
+  let finalBody = body;
+  const finalHeaders = { ...headers };
+
+  if (data instanceof FormData) {
+    finalBody = data; // browser adds boundary automatically
+  } else if (data && typeof data === 'object') {
+    finalHeaders['Content-Type'] = 'application/json';
+    finalBody = JSON.stringify(data);
+  }
+
+  const res = await fetch(url, { method, headers: finalHeaders, body: finalBody });
+  let text = '';
+  try { text = await res.text(); } catch (_) {}
+  let json;
+  if (expectJson) {
+    try { json = text ? JSON.parse(text) : null; } catch (_) {}
+  }
+
   if (!res.ok) {
-    const msg = json?.message || `HTTP ${res.status}`;
+    const msg = (json && (json.message || json.error)) || `HTTP ${res.status}`;
     throw new Error(msg);
   }
-  return json;
+  return expectJson ? (json ?? {}) : text;
 }
+
+// Backwards compatibility helper (JSON POST)
+async function apiPost(path, data) {
+  return apiFetch(path, { method: 'POST', data, expectJson: true });
+}
+
+window.api = apiFetch;
+window.apiPost = apiPost;

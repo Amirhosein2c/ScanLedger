@@ -184,7 +184,25 @@ document.addEventListener('DOMContentLoaded', function() {
 			showProcessingMessage();
 
 			try {
-				const blob = dataURLtoBlob(img.src);
+				// Re-encode image to reduce size (avoid 504 on backend). Target ~0.75 quality JPEG.
+				async function recompress(dataUrl, quality=0.75) {
+					return await new Promise((resolve, reject) => {
+						const i = new Image();
+						i.onload = () => {
+							try {
+								const c = document.createElement('canvas');
+								c.width = i.width; c.height = i.height;
+								const ctx2 = c.getContext('2d');
+								ctx2.drawImage(i, 0, 0);
+								c.toBlob(b => b ? resolve(b) : reject(new Error('Blob fail')), 'image/jpeg', quality);
+							} catch(e){ reject(e); }
+						};
+						i.onerror = () => reject(new Error('Image load fail'));
+						i.src = dataUrl;
+					});
+				}
+				let blob;
+				try { blob = await recompress(img.src, 0.7); } catch { blob = dataURLtoBlob(img.src); }
 				const formData = new FormData();
 				const isPdfDerived = !!uploadedPdfData; // if came from PDF render
 				const filename = isPdfDerived ? 'scanned_pdf_page.png' : 'scanned_image.png';
@@ -196,7 +214,15 @@ document.addEventListener('DOMContentLoaded', function() {
 				try { sessionStorage.setItem('scannedImageDataUrl', img.src); } catch (e) { /* ignore */ }
 				try { localStorage.setItem('scannedImageDataUrl', img.src); } catch (e) { /* ignore */ }
 
-				const response = await fetch(`${window.API_BASE}${ocrPath}`, { method: 'POST', body: formData });
+				const controller = new AbortController();
+				const timeout = setTimeout(()=>controller.abort(), 60000); // 60s timeout
+				let response;
+				try {
+					response = await fetch(`${window.API_BASE}${ocrPath}`, { method: 'POST', body: formData, signal: controller.signal });
+				} catch(fetchErr) {
+					if (controller.signal.aborted) throw new Error('Upload timed out. Please retry.');
+					throw fetchErr;
+				} finally { clearTimeout(timeout); }
 				if (!response.ok) throw new Error('Upload failed: ' + response.status + ' ' + response.statusText);
 
 				// Optionally capture response data (not required). If JSON attempt parse.

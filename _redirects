@@ -1,3 +1,9 @@
 # Netlify redirect root to onboarding (fallback)
 / /Welcome_Onboarding.html 200
-/webhook/*  http://192.99.127.217:5678/webhook/:splat  200
+# Secure proxy to backend (n8n)
+/webhook/*  https://api.perceptionist.top/webhook/:splat  200
+
+# Pretty URLs
+/document_scan        /Document_Scan.html          200
+/login_registration   /Login_Registration.html     200
+/new_user_signup      /New_User_SignUp.html        200
