@@ -1,88 +1,138 @@
-// Fetch and display the currently logged-in user's profile (name + surname)
-document.addEventListener('DOMContentLoaded', () => {
-	const fullnameElem = document.getElementById('user-fullname');
-	if (!fullnameElem) return;
+document.addEventListener('DOMContentLoaded', async () => {
+  const fullnameElem = document.getElementById('user-fullname');
+  if (!fullnameElem) return;
 
-	const storedEmail = localStorage.getItem('user_email');
-	if (!storedEmail) {
-		fullnameElem.textContent = 'Guest User';
-		return;
-	}
+  const storedEmail = localStorage.getItem('user_email');
+  const storedName = localStorage.getItem('user_name');
+  const storedSurname = localStorage.getItem('user_surname');
+  
+  // First, show stored data if available
+  if (storedName || storedSurname) {
+    fullnameElem.textContent = `${storedName || ''} ${storedSurname || ''}`.trim() || 'User';
+  } else if (!storedEmail) {
+    fullnameElem.textContent = 'Guest User';
+    return;
+  } else {
+    fullnameElem.textContent = 'Loading...';
+  }
 
-	// Show a temporary loading state
-	fullnameElem.textContent = 'Loading...';
+  // If no email stored, don't attempt to fetch
+  if (!storedEmail) return;
 
-	const webhookUrl = 'http://192.99.127.217:5678/webhook/user_login';
-	const controller = new AbortController();
-	const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+  try {
+    // USE THE CENTRALIZED API FUNCTION - NO DIRECT IPs!
+    const response = await apiPost('/user_login', { 
+      email: storedEmail 
+    });
 
-	fetch(webhookUrl, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ email: storedEmail }),
-		signal: controller.signal
-	})
-		.then(async res => {
-			clearTimeout(timeoutId);
-			if (!res.ok) throw new Error('Non-200 response');
-			let data = null;
-			try { data = await res.json(); } catch (_) { /* ignore parse errors */ }
-			function extractUserFields(payload) {
-				const result = { name: null, surname: null, email: null };
-				if (!payload) return result;
-				const queue = [payload];
-				while (queue.length && (!result.name || !result.surname || !result.email)) {
-					const obj = queue.shift();
-					if (Array.isArray(obj)) { obj.forEach(el => queue.push(el)); continue; }
-					if (obj && obj.json) queue.push(obj.json);
-					if (obj && obj.data) queue.push(obj.data);
-					if (obj && obj.user) queue.push(obj.user);
-					for (const [k,v] of Object.entries(obj)) {
-						const kl = k.toLowerCase();
-						if (['name','firstname','first_name','first'].includes(kl) && typeof v === 'string' && !result.name) result.name = v;
-						if (['surname','lastname','last_name','last','family','familyname'].includes(kl) && typeof v === 'string' && !result.surname) result.surname = v;
-						if (kl === 'email' && typeof v === 'string' && !result.email) result.email = v;
-						if (typeof v === 'object') queue.push(v);
-					}
-				}
-				return result;
-			}
-			let fetchedName = '', fetchedSurname = '';
-			if (data && typeof data === 'object') {
-				const extracted = extractUserFields(data);
-				fetchedName = extracted.name || '';
-				fetchedSurname = extracted.surname || '';
-			}
-			const existingName = localStorage.getItem('user_name') || '';
-			const existingSurname = localStorage.getItem('user_surname') || '';
-			if (!fetchedName && existingName) fetchedName = existingName;
-			if (!fetchedSurname && existingSurname) fetchedSurname = existingSurname;
-			if (fetchedName) localStorage.setItem('user_name', fetchedName);
-			if (fetchedSurname) localStorage.setItem('user_surname', fetchedSurname);
-			if (fetchedName || fetchedSurname) {
-				fullnameElem.textContent = `${fetchedName} ${fetchedSurname}`.trim();
-				return;
-			}
-			// Fallback to stored values if response lacked fields
-					const fallbackName = localStorage.getItem('user_name');
-					const fallbackSurname = localStorage.getItem('user_surname');
-					if (fallbackName || fallbackSurname) {
-						fullnameElem.textContent = `${fallbackName || ''} ${fallbackSurname || ''}`.trim();
-					} else {
-						fullnameElem.textContent = 'User';
-					}
-		})
-		.catch(err => {
-			clearTimeout(timeoutId);
-			console.warn('Profile fetch failed', err);
-					const fallbackName = localStorage.getItem('user_name');
-					const fallbackSurname = localStorage.getItem('user_surname');
-					if (fallbackName || fallbackSurname) {
-						fullnameElem.textContent = `${fallbackName || ''} ${fallbackSurname || ''}`.trim();
-					} else {
-						fullnameElem.textContent = 'User';
-					}
-		});
+    // Extract user fields from response
+    const extracted = extractUserFields(response);
+    
+    // Update localStorage with fresh data
+    if (extracted.name) {
+      localStorage.setItem('user_name', extracted.name);
+    }
+    if (extracted.surname) {
+      localStorage.setItem('user_surname', extracted.surname);
+    }
+    
+    // Display the name
+    const displayName = `${extracted.name || storedName || ''} ${extracted.surname || storedSurname || ''}`.trim();
+    fullnameElem.textContent = displayName || 'User';
+    
+  } catch (err) {
+    console.warn('Profile fetch failed, using cached data:', err.message);
+    // Keep showing the cached name that we already set above
+  }
 });
 
-// Additional settings interactions can be added below.
+/**
+ * Extract user fields from various webhook response formats
+ */
+function extractUserFields(payload) {
+  const result = { name: null, surname: null, email: null };
+  if (!payload) return result;
+  
+  const queue = [payload];
+  const visited = new WeakSet(); // Prevent circular references
+  
+  while (queue.length && (!result.name || !result.surname || !result.email)) {
+    const obj = queue.shift();
+    
+    // Skip if already visited (circular reference protection)
+    if (typeof obj === 'object' && obj !== null) {
+      if (visited.has(obj)) continue;
+      visited.add(obj);
+    }
+    
+    if (Array.isArray(obj)) {
+      obj.forEach(el => {
+        if (el && typeof el === 'object') queue.push(el);
+      });
+      continue;
+    }
+    
+    if (!obj || typeof obj !== 'object') continue;
+    
+    // Check common nested structures
+    if (obj.json && typeof obj.json === 'object') queue.push(obj.json);
+    if (obj.data && typeof obj.data === 'object') queue.push(obj.data);
+    if (obj.user && typeof obj.user === 'object') queue.push(obj.user);
+    
+    // Extract fields
+    for (const [key, value] of Object.entries(obj)) {
+      const keyLower = key.toLowerCase();
+      
+      // Name extraction
+      if (!result.name && typeof value === 'string' && value.trim()) {
+        if (['name', 'firstname', 'first_name', 'first'].includes(keyLower)) {
+          result.name = value.trim();
+        }
+      }
+      
+      // Surname extraction
+      if (!result.surname && typeof value === 'string' && value.trim()) {
+        if (['surname', 'lastname', 'last_name', 'last', 'family', 'familyname'].includes(keyLower)) {
+          result.surname = value.trim();
+        }
+      }
+      
+      // Email extraction
+      if (!result.email && keyLower === 'email' && typeof value === 'string' && value.trim()) {
+        result.email = value.trim();
+      }
+      
+      // Queue nested objects
+      if (value && typeof value === 'object' && !visited.has(value)) {
+        queue.push(value);
+      }
+    }
+  }
+  
+  return result;
+}
+
+// Handle logout
+document.addEventListener('DOMContentLoaded', () => {
+  const logoutBtn = document.querySelector('a[href="#"] span.text-red-400')?.parentElement;
+  
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      // Clear all user data
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('user_name');
+      localStorage.removeItem('user_surname');
+      localStorage.removeItem('ocrResultData');
+      localStorage.removeItem('scannedImageDataUrl');
+      localStorage.removeItem('exportedDocuments');
+      
+      // Clear session storage too
+      sessionStorage.clear();
+      
+      // Redirect to login
+      window.location.href = 'Login_Registration.html';
+    });
+  }
+});
