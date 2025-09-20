@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				localStorage.setItem('user_name', name);
 				localStorage.setItem('user_surname', surname);
 				localStorage.setItem('user_email', email.toLowerCase());
-				window.location.href = 'User_Profile_Settings.html';
+				window.location.href = 'Dashboard_Overview.html';
 			} catch (err) {
 				console.error('Signup webhook error', err);
 				alert(err.message || 'Network error. Please retry.');
