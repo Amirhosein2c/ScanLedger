@@ -1,7 +1,7 @@
 // Document Details Edit page scripts
 // Load scanned image from sessionStorage if present and handle n8n OCR results.
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
 	// Load scanned image
 	const imgEl = document.getElementById('review-image');
 	try {
@@ -18,7 +18,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	// Load and render OCR results from n8n backend
 	try {
-		let raw = sessionStorage.getItem('ocrResultData');
+		// 1) Allow passing OCR JSON via URL for direct n8n "Respond to Webhook" file links
+		//    Supported query params:
+		//    - ocr_url: URL to a JSON file containing fields
+		//    - ocr: URL-encoded JSON string or data:application/json;base64,...
+		const params = new URLSearchParams(location.search);
+		let rawFromQuery = null;
+		const ocrUrl = params.get('ocr_url');
+		const ocrInline = params.get('ocr');
+		if (ocrUrl) {
+			try {
+				const res = await fetch(ocrUrl, { credentials: 'omit' });
+				if (!res.ok) throw new Error('Failed to fetch OCR JSON: ' + res.status);
+				const json = await res.json();
+				rawFromQuery = JSON.stringify(json);
+				try { sessionStorage.setItem('ocrResultData', rawFromQuery); } catch(_){}
+				try { localStorage.setItem('ocrResultData', rawFromQuery); } catch(_){}
+				console.log('[OCR] Loaded OCR JSON from ocr_url');
+			} catch (e) {
+				console.warn('Failed to load OCR from ocr_url', e);
+			}
+		} else if (ocrInline) {
+			try {
+				let text = decodeURIComponent(ocrInline);
+				// Handle data URL base64
+				if (text.startsWith('data:')) {
+					const base64 = (text.split(',')[1] || '').trim();
+					try { text = atob(base64); } catch(_) {}
+				}
+				JSON.parse(text); // validate
+				rawFromQuery = text;
+				try { sessionStorage.setItem('ocrResultData', rawFromQuery); } catch(_){}
+				try { localStorage.setItem('ocrResultData', rawFromQuery); } catch(_){}
+				console.log('[OCR] Loaded OCR JSON from ocr inline');
+			} catch (e) {
+				console.warn('Failed to parse OCR from ocr inline param');
+			}
+		}
+
+		let raw = rawFromQuery;
+		if (!raw) raw = sessionStorage.getItem('ocrResultData');
 		if (!raw) raw = localStorage.getItem('ocrResultData');
 		
 		if (raw) {
@@ -127,14 +166,53 @@ document.addEventListener('DOMContentLoaded', () => {
 				localStorage.setItem('ocrResultData', serialized);
 				
 				console.log('[OCR] Saved', allFields.length, 'fields for export');
+
+				// Also build and store a summary so Dashboard and Documents can show it immediately
+				try {
+					const fields = Array.isArray(updatedData.display_fields) ? updatedData.display_fields : [];
+					const findVal = (name) => {
+						const lower = name.toLowerCase();
+						const hit = fields.find(f => (f.label||'').toLowerCase().includes(lower));
+						return hit ? hit.value : '';
+					};
+					const amount = findVal('amount') || findVal('total') || findVal('grand');
+					const vendor = findVal('vendor') || findVal('issuer') || findVal('merchant');
+					const docNum = findVal('number') || findVal('#') || findVal('invoice') || findVal('receipt');
+					const datePref = findVal('date') || findVal('due');
+					const docTypeGuess = (() => {
+						const l = (fields.map(f=>f.label).join(' ') + ' ' + (docNum||'')).toLowerCase();
+						if (l.includes('invoice')) return 'Invoice';
+						if (l.includes('receipt')) return 'Receipt';
+						if (l.includes('statement')) return 'Statement';
+						return 'Document';
+					})();
+					const image = localStorage.getItem('scannedImageDataUrl') || sessionStorage.getItem('scannedImageDataUrl');
+					const dateStr = datePref || new Date().toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' });
+					const summary = {
+						type: docTypeGuess,
+						number: docNum || '',
+						amount: amount || '',
+						vendor: vendor || '',
+						date: dateStr,
+						image,
+						ts: new Date().toISOString()
+					};
+					const summariesRaw = localStorage.getItem('exportedDocuments');
+					const arr = summariesRaw ? JSON.parse(summariesRaw) : [];
+					arr.unshift(summary);
+					localStorage.setItem('exportedDocuments', JSON.stringify(arr.slice(0,50))); // keep last 50
+				} catch(e) { console.warn('Failed to store export summary', e); }
 			} catch (e) {
 				console.warn('Failed to persist edited fields', e);
 			}
 			
-			// Navigate to export options
-			window.location.href = 'Data_Export_Options.html';
+			// Navigate directly to dashboard overview
+			window.location.href = 'Dashboard_Overview.html';
 		});
 	}
+
+	// Manual import flow for n8n JSON files
+	// (Import UI removed per request)
 });
 
 /**
@@ -144,16 +222,37 @@ function extractOcrFields(data) {
 	const fields = [];
 	
 	try {
-		// Handle direct array format: [{ "Date": "value", "Invoice #": "value", ... }]
+		// Preferred path based on provided screenshot: { raw: [ { key: value, ... } ] }
+		if (data && Array.isArray(data.raw) && data.raw.length > 0) {
+			const first = data.raw[0];
+			if (first && typeof first === 'object' && !Array.isArray(first)) {
+				for (const [key, value] of Object.entries(first)) {
+					const normalized = value == null ? '' : String(value).trim();
+					fields.push({ label: key, value: normalized });
+				}
+				return fields;
+			}
+		}
+
+		// Handle direct array format:
+		// a) [{ label, value }, ...]
+		// b) [{ "Date": "value", "Invoice #": "value", ... }]
 		if (Array.isArray(data) && data.length > 0) {
 			const firstItem = data[0];
 			if (firstItem && typeof firstItem === 'object') {
-				for (const [key, value] of Object.entries(firstItem)) {
-					if (value !== null && value !== undefined && String(value).trim()) {
-						fields.push({
-							label: key,
-							value: String(value).trim()
-						});
+				// Case a: array of field objects
+				if ('label' in firstItem || ('name' in firstItem && 'value' in firstItem)) {
+					for (const f of data) {
+						if (!f) continue;
+						const label = String(f.label || f.name || f.key || '').trim();
+						const value = f.value != null ? String(f.value).trim() : '';
+						if (label) fields.push({ label, value });
+					}
+				} else {
+					// Case b: array of objects, use first item keys
+					for (const [key, value] of Object.entries(firstItem)) {
+						const normalized = value == null ? '' : String(value).trim();
+						fields.push({ label: key, value: normalized });
 					}
 				}
 			}
@@ -163,32 +262,73 @@ function extractOcrFields(data) {
 			const firstItem = data.data[0];
 			if (firstItem && typeof firstItem === 'object') {
 				for (const [key, value] of Object.entries(firstItem)) {
-					if (value !== null && value !== undefined && String(value).trim()) {
-						fields.push({
-							label: key,
-							value: String(value).trim()
-						});
+					const normalized = value == null ? '' : String(value).trim();
+					fields.push({ label: key, value: normalized });
+				}
+			}
+		}
+		// Handle n8n items format: { items: [ { json: {...} } ] }
+		else if (data && Array.isArray(data.items) && data.items.length > 0) {
+			const first = data.items[0];
+			const jsonObj = first?.json || first;
+			if (jsonObj) {
+				// if jsonObj has display_fields or fields arrays
+				if (Array.isArray(jsonObj.display_fields)) {
+					jsonObj.display_fields.forEach(f => {
+						if (!f) return;
+						const label = String(f.label || f.name || f.key || '').trim();
+						const value = f.value != null ? String(f.value).trim() : '';
+						if (label) fields.push({ label, value });
+					});
+				} else if (Array.isArray(jsonObj.fields)) {
+					jsonObj.fields.forEach(f => {
+						if (!f) return;
+						const label = String(f.label || f.name || f.key || '').trim();
+						const value = f.value != null ? String(f.value).trim() : '';
+						if (label) fields.push({ label, value });
+					});
+				} else if (typeof jsonObj === 'object') {
+					for (const [key, value] of Object.entries(jsonObj)) {
+						const normalized = value == null ? '' : String(value).trim();
+						fields.push({ label: key, value: normalized });
 					}
 				}
 			}
 		}
 		// Handle object format: { "Date": "value", "Invoice #": "value", ... }
 		else if (data && typeof data === 'object' && !Array.isArray(data)) {
-			for (const [key, value] of Object.entries(data)) {
-				// Skip metadata fields
-				if (['display_fields', 'csv_content', 'timestamp', 'raw'].includes(key)) continue;
-				
-				if (value !== null && value !== undefined && String(value).trim()) {
-					fields.push({
-						label: key,
-						value: String(value).trim()
-					});
+			// If it contains fields/display_fields arrays, prefer them
+			if (Array.isArray(data.display_fields)) {
+				data.display_fields.forEach(f => {
+					if (!f) return;
+					const label = String(f.label || f.name || f.key || '').trim();
+					const value = f.value != null ? String(f.value).trim() : '';
+					if (label) fields.push({ label, value });
+				});
+			} else if (Array.isArray(data.fields)) {
+				data.fields.forEach(f => {
+					if (!f) return;
+					const label = String(f.label || f.name || f.key || '').trim();
+					const value = f.value != null ? String(f.value).trim() : '';
+					if (label) fields.push({ label, value });
+				});
+			} else {
+				for (const [key, value] of Object.entries(data)) {
+					// Skip metadata fields but DO NOT skip drilling into raw here; handled above
+					if (['display_fields', 'csv_content', 'timestamp'].includes(key)) continue;
+					const normalized = value == null ? '' : String(value).trim();
+					fields.push({ label: key, value: normalized });
 				}
 			}
 		}
 		// Handle legacy format with display_fields
 		else if (data && Array.isArray(data.display_fields)) {
-			return data.display_fields.filter(f => f && f.label && f.value);
+			return data.display_fields
+				.filter(f => f && (f.label || f.name || f.key))
+				.map(f => ({
+					label: String(f.label || f.name || f.key || '').trim(),
+					value: f.value != null ? String(f.value).trim() : ''
+				}));
 		}
 	} catch (e) {
 		console.warn('Error extracting OCR fields', e);
