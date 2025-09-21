@@ -20,7 +20,7 @@
 <div class="flex flex-col min-h-screen">
 <header class="sticky top-0 z-10 bg-[var(--background-color)] shadow-sm pt-safe">
 <div class="flex items-center p-4">
-<button class="p-2 -ml-2">
+<button class="p-2 -ml-2" onclick="window.location.href='Document_Scan.html'">
 <span class="material-symbols-outlined text-3xl">arrow_back_ios_new</span>
 </button>
 <h1 class="flex-1 text-center text-xl font-bold tracking-tight pr-8">Review &amp; Edit</h1>
@@ -30,7 +30,11 @@
 <div class="aspect-[9/12] rounded-2xl overflow-hidden shadow-lg">
 <img id="review-image" alt="Scanned Document" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxJmmNFAN5fa4ImmQdjTtIEgQJr93B8BiKT1d994eU8QNF1E4I797b9qeq-qKhuZfIXg89SgSCjcvTFw6eSUzzLuk1vRiXYndWPIKpWsDNozW-gEiaGGZo9ezXueItm_WB8DjW2vboPQttKvtV3NdbSgb4FQKmPSzMJcmivW4aFDLxyojP2owBTGVPDURacFQuvEGhWoqtFfAKM0lvUm1hvU5clNRaQ5TRrZXMVEb3Efc3K2xRYIolEUdBcZGPBg2Q1LY0zUsbqT0"/>
 </div>
+
+<!-- Dynamic OCR fields container -->
 <div id="extracted-fields-container" class="space-y-4 mt-6"></div>
+
+<!-- Default fields shown only if no OCR data available -->
 <div id="default-fields-block" class="space-y-4">
 <label class="block">
 <span class="text-sm font-medium text-[var(--text-secondary)]">Date</span>
@@ -57,6 +61,7 @@
 </select>
 </label>
 </div>
+
 <div class="flex gap-4 pt-4">
 <button id="discard-btn" class="flex-1 rounded-full bg-[var(--input-bg)] py-3 text-center text-base font-bold text-white">Discard</button>
 <button id="save-btn" class="flex-1 rounded-full bg-[var(--primary-color)] py-3 text-center text-base font-bold text-[var(--background-color)]">Save</button>
@@ -64,19 +69,19 @@
 </main>
 <footer class="sticky bottom-0 z-10 border-t border-[#264532] bg-[#1b3124] pb-safe-area-bottom">
 <nav class="flex justify-around p-2">
-<a class="flex flex-col items-center gap-1 p-2 text-[var(--primary-color)]" href="#">
+<a class="flex flex-col items-center gap-1 p-2 text-[var(--primary-color)]" href="Document_Scan.html">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1, 'wght' 700;">photo_camera</span>
 <span class="text-xs font-medium">Scan</span>
 </a>
-<a class="flex flex-col items-center gap-1 p-2 text-[var(--text-secondary)]" href="#">
+<a class="flex flex-col items-center gap-1 p-2 text-[var(--text-secondary)]" href="Document_Management_Search.html">
 <span class="material-symbols-outlined">description</span>
 <span class="text-xs font-medium">Documents</span>
 </a>
-<a class="flex flex-col items-center gap-1 p-2 text-[var(--text-secondary)]" href="#">
+<a class="flex flex-col items-center gap-1 p-2 text-[var(--text-secondary)]" href="Dashboard_Overview.html">
 <span class="material-symbols-outlined">bar_chart</span>
 <span class="text-xs font-medium">Dashboard</span>
 </a>
-<a class="flex flex-col items-center gap-1 p-2 text-[var(--text-secondary)]" href="#">
+<a class="flex flex-col items-center gap-1 p-2 text-[var(--text-secondary)]" href="User_Profile_Settings.html">
 <span class="material-symbols-outlined">settings</span>
 <span class="text-xs font-medium">Settings</span>
 </a>
