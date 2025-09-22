@@ -8,8 +8,8 @@
   // Use HTTPS for your VPS endpoint if testing locally
   if (isLocal) {
     // For local dev, you should still use HTTPS if possible
-    // window.API_BASE = 'https://api.perceptionist.top/webhook';
-    window.API_BASE = 'https://api.perceptionist.top/webhook-test';
+    window.API_BASE = 'https://api.perceptionist.top/webhook';
+    // window.API_BASE = 'https://api.perceptionist.top/webhook-test';
   } else {
     // Production ALWAYS uses proxy (same-origin, no CORS, no exposed IPs)
     window.API_BASE = PROXY_PATH;
