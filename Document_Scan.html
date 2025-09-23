@@ -25,7 +25,7 @@
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
   </script>
-  <link rel="stylesheet" href="css/document_scan.css?v=20250923" />
+  <link rel="stylesheet" href="css/document_scan.css" />
 </head>
 
 
@@ -34,8 +34,8 @@
   <div
     class="relative flex size-full min-h-screen flex-col bg-[var(--neutral-900)] dark justify-between group/design-root"
     data-full-screen style='font-family: "Spline Sans", "Noto Sans", sans-serif;'>
-    <div class="sticky top-0 z-30">
-      <header class="flex items-center justify-between p-4 pt-safe bg-[var(--neutral-900)]">
+    <div class="sticky top-0">
+      <header class="flex items-center justify-between p-4 pt-safe">
         <button class="flex items-center justify-center rounded-full text-white/50 hover:text-white transition-colors">
           <span class="material-symbols-outlined"> flash_on </span>
         </button>
@@ -97,8 +97,8 @@
     </div>
     
   </div>
-  <div class="sticky bottom-0 z-30">
-    <footer class="bg-[var(--neutral-800)] pb-safe">
+  <div class="sticky bottom-0">
+    <footer class="bg-[var(--neutral-800)]">
       <div class="flex border-t border-[var(--neutral-700)] px-4 pb-3 pt-2">
         <a class="flex flex-1 flex-col items-center justify-end gap-1 rounded-full text-[var(--primary-500)]" href="#">
           <span class="material-symbols-outlined"> document_scanner </span>
