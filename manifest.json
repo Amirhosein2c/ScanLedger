@@ -6,7 +6,7 @@
   "start_url": "/ScanLedger/",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "window-controls-overlay"],
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#111827",
   "theme_color": "#38e07b",
   "orientation": "portrait-primary",
