@@ -1,5 +1,6 @@
-// Handle sign up form submission
+// Updated js/new_user_signup.js
 document.addEventListener('DOMContentLoaded', function() {
+	// Handle Sign Up form submission
 	const form = document.querySelector('form');
 	if (form) {
 		form.addEventListener('submit', async function(e) {
@@ -9,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			const email = document.getElementById('signup_email').value.trim();
 			const password = document.getElementById('signup_password').value;
 			const confirmPassword = document.getElementById('signup_confirm_password').value;
+			
 			if (!name || !surname || !email || !password || !confirmPassword) {
 				alert('Please fill in all fields.');
 				return;
@@ -17,34 +19,23 @@ document.addEventListener('DOMContentLoaded', function() {
 				alert('Passwords do not match.');
 				return;
 			}
+			
 			const submitBtn = form.querySelector('button[type="submit"]');
 			const originalText = submitBtn ? submitBtn.textContent : '';
 			if (submitBtn) {
 				submitBtn.disabled = true;
 				submitBtn.textContent = 'Submitting...';
 			}
+			
 			try {
 				const payload = { email, password, name, surname };
 				const respData = await apiPost('/user_auth', payload);
+				
 				// Persist minimal profile locally
 				localStorage.setItem('user_name', name);
 				localStorage.setItem('user_surname', surname);
 				localStorage.setItem('user_email', email.toLowerCase());
-
-				// Check if there's a redirect URL stored (for cases where user was redirected to signup)
-				let redirectUrl = 'Dashboard_Overview.html'; // default
-				try {
-					const storedRedirect = sessionStorage.getItem('redirect_after_login');
-					if (storedRedirect) {
-						redirectUrl = storedRedirect;
-						sessionStorage.removeItem('redirect_after_login');
-					}
-				} catch (e) {
-					// Ignore storage errors, use default
-				}
-
-				// Navigate to the appropriate page
-				window.location.href = redirectUrl;
+				window.location.href = 'Dashboard_Overview.html';
 			} catch (err) {
 				console.error('Signup webhook error', err);
 				alert(err.message || 'Network error. Please retry.');
@@ -54,6 +45,50 @@ document.addEventListener('DOMContentLoaded', function() {
 					submitBtn.textContent = originalText;
 				}
 			}
+		});
+	}
+
+	// Google Signup Button Handler
+	const googleSignupBtn = document.querySelector('button[type="button"]:has(img[alt="Google"])');
+	if (googleSignupBtn) {
+		// Add identifying class
+		googleSignupBtn.classList.add('google-auth-btn');
+		
+		googleSignupBtn.addEventListener('click', function(e) {
+			e.preventDefault();
+			if (window.googleOAuth) {
+				window.googleOAuth.signIn();
+			} else {
+				console.error('Google OAuth not initialized');
+				alert('Google signup is not available. Please try again.');
+			}
+		});
+	}
+
+	// Facebook Signup Button (placeholder)
+	const facebookSignupBtn = document.querySelector('button[type="button"]:has(svg)');
+	if (facebookSignupBtn) {
+		facebookSignupBtn.addEventListener('click', function(e) {
+			e.preventDefault();
+			alert('Facebook signup coming soon!');
+		});
+	}
+
+	// Microsoft Signup Button (placeholder)
+	const microsoftSignupBtn = document.querySelector('button[type="button"]:has(img[alt="Microsoft"])');
+	if (microsoftSignupBtn) {
+		microsoftSignupBtn.addEventListener('click', function(e) {
+			e.preventDefault();
+			alert('Microsoft signup coming soon!');
+		});
+	}
+
+	// Apple Signup Button (placeholder)
+	const appleSignupBtn = document.querySelector('button[type="button"]:has(img[alt="Apple"])');
+	if (appleSignupBtn) {
+		appleSignupBtn.addEventListener('click', function(e) {
+			e.preventDefault();
+			alert('Apple signup coming soon!');
 		});
 	}
 });

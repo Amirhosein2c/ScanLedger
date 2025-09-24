@@ -1,5 +1,4 @@
-// Login / Registration page scripts
-// Add authentication logic here.
+// Updated js/login_registration.js
 document.addEventListener('DOMContentLoaded', function() {
 
 	// Handle Sign In form submission
@@ -72,21 +71,8 @@ document.addEventListener('DOMContentLoaded', function() {
 				if (respEmail) localStorage.setItem('user_email', respEmail.toLowerCase());
 				if (name) localStorage.setItem('user_name', name);
 				if (surname) localStorage.setItem('user_surname', surname);
-
-				// Check if there's a redirect URL stored
-				let redirectUrl = 'Dashboard_Overview.html'; // default
-				try {
-					const storedRedirect = sessionStorage.getItem('redirect_after_login');
-					if (storedRedirect) {
-						redirectUrl = storedRedirect;
-						sessionStorage.removeItem('redirect_after_login');
-					}
-				} catch (e) {
-					// Ignore storage errors, use default
-				}
-
-				// Navigate to the appropriate page
-				window.location.href = redirectUrl;
+				// Navigate to dashboard per new requirement
+				window.location.href = 'Dashboard_Overview.html';
 			} catch (err) {
 				console.error('Login webhook error', err);
 				alert(err.message || 'Network error. Please retry.');
@@ -95,11 +81,57 @@ document.addEventListener('DOMContentLoaded', function() {
 			}
 		});
 	}
+
+	// Sign up link navigation
 	const signUpLink = document.querySelector('footer .text-center a.font-medium');
 	if (signUpLink) {
 		signUpLink.addEventListener('click', function(e) {
 			e.preventDefault();
 			window.location.href = 'New_User_SignUp.html';
+		});
+	}
+
+	// Google Login Button Handler
+	const googleLoginBtn = document.querySelector('button[type="button"]:has(img[alt="Google"])');
+	if (googleLoginBtn) {
+		// Add identifying class
+		googleLoginBtn.classList.add('google-auth-btn');
+		
+		googleLoginBtn.addEventListener('click', function(e) {
+			e.preventDefault();
+			if (window.googleOAuth) {
+				window.googleOAuth.signIn();
+			} else {
+				console.error('Google OAuth not initialized');
+				alert('Google login is not available. Please try again.');
+			}
+		});
+	}
+
+	// Facebook Login Button (placeholder - you can implement later)
+	const facebookLoginBtn = document.querySelector('button[type="button"]:has(svg)');
+	if (facebookLoginBtn) {
+		facebookLoginBtn.addEventListener('click', function(e) {
+			e.preventDefault();
+			alert('Facebook login coming soon!');
+		});
+	}
+
+	// Microsoft Login Button (placeholder)
+	const microsoftLoginBtn = document.querySelector('button[type="button"]:has(img[alt="Microsoft"])');
+	if (microsoftLoginBtn) {
+		microsoftLoginBtn.addEventListener('click', function(e) {
+			e.preventDefault();
+			alert('Microsoft login coming soon!');
+		});
+	}
+
+	// Apple Login Button (placeholder)
+	const appleLoginBtn = document.querySelector('button[type="button"]:has(img[alt="Apple"])');
+	if (appleLoginBtn) {
+		appleLoginBtn.addEventListener('click', function(e) {
+			e.preventDefault();
+			alert('Apple login coming soon!');
 		});
 	}
 });
