@@ -1,4 +1,4 @@
-// Updated js/login_registration.js
+// Login / Registration page scripts
 document.addEventListener('DOMContentLoaded', function() {
 
 	// Handle Sign In form submission
@@ -81,8 +81,8 @@ document.addEventListener('DOMContentLoaded', function() {
 			}
 		});
 	}
-
-	// Sign up link navigation
+	
+	// Handle Sign Up link
 	const signUpLink = document.querySelector('footer .text-center a.font-medium');
 	if (signUpLink) {
 		signUpLink.addEventListener('click', function(e) {
@@ -91,47 +91,41 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	}
 
-	// Google Login Button Handler
-	const googleLoginBtn = document.querySelector('button[type="button"]:has(img[alt="Google"])');
-	if (googleLoginBtn) {
-		// Add identifying class
-		googleLoginBtn.classList.add('google-auth-btn');
-		
-		googleLoginBtn.addEventListener('click', function(e) {
+	// Handle OAuth buttons with simple alerts (temporary)
+	// Google
+	const googleBtn = document.querySelector('button[type="button"]:has(img[alt="Google"])');
+	if (googleBtn) {
+		googleBtn.addEventListener('click', function(e) {
 			e.preventDefault();
-			if (window.googleOAuth) {
-				window.googleOAuth.signIn();
-			} else {
-				console.error('Google OAuth not initialized');
-				alert('Google login is not available. Please try again.');
-			}
+			alert('Google Sign-In is not configured yet.\n\nPlease use email/password to sign in.');
 		});
 	}
 
-	// Facebook Login Button (placeholder - you can implement later)
-	const facebookLoginBtn = document.querySelector('button[type="button"]:has(svg)');
-	if (facebookLoginBtn) {
-		facebookLoginBtn.addEventListener('click', function(e) {
+	// Facebook
+	const facebookBtn = Array.from(document.querySelectorAll('button[type="button"]'))
+		.find(btn => btn.textContent.includes('Facebook'));
+	if (facebookBtn) {
+		facebookBtn.addEventListener('click', function(e) {
 			e.preventDefault();
-			alert('Facebook login coming soon!');
+			alert('Facebook Sign-In is not configured yet.\n\nPlease use email/password to sign in.');
 		});
 	}
 
-	// Microsoft Login Button (placeholder)
-	const microsoftLoginBtn = document.querySelector('button[type="button"]:has(img[alt="Microsoft"])');
-	if (microsoftLoginBtn) {
-		microsoftLoginBtn.addEventListener('click', function(e) {
+	// Microsoft
+	const microsoftBtn = document.querySelector('button[type="button"]:has(img[alt="Microsoft"])');
+	if (microsoftBtn) {
+		microsoftBtn.addEventListener('click', function(e) {
 			e.preventDefault();
-			alert('Microsoft login coming soon!');
+			alert('Microsoft Sign-In is not configured yet.\n\nPlease use email/password to sign in.');
 		});
 	}
 
-	// Apple Login Button (placeholder)
-	const appleLoginBtn = document.querySelector('button[type="button"]:has(img[alt="Apple"])');
-	if (appleLoginBtn) {
-		appleLoginBtn.addEventListener('click', function(e) {
+	// Apple
+	const appleBtn = document.querySelector('button[type="button"]:has(img[alt="Apple"])');
+	if (appleBtn) {
+		appleBtn.addEventListener('click', function(e) {
 			e.preventDefault();
-			alert('Apple login coming soon!');
+			alert('Apple Sign-In is not configured yet.\n\nPlease use email/password to sign in.');
 		});
 	}
 });
