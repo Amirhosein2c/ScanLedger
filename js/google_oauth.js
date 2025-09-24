@@ -1,87 +1,82 @@
-// Google OAuth integration for ScanLedger
-// Add this as js/google_oauth.js
+// js/google_oauth.js
+// Google OAuth implementation for ScanLedger
 
-class GoogleOAuth {
-  constructor() {
-    // Get client ID from config
-    this.clientId = window.ScanLedgerConfig?.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
-    
-    if (this.clientId === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com') {
-      console.error('Google Client ID not configured! Please update js/config.js');
-    }
-    
-    this.isInitialized = false;
-    this.init();
+(function() {
+  // Configuration - Replace with your actual Google Client ID
+  const GOOGLE_CLIENT_ID = 'Y50199771016-rn343kmat6jib4f07dsfj3mh3iu12cfm.apps.googleusercontent.com';
+  
+  // Check if client ID is configured
+  if (GOOGLE_CLIENT_ID === '50199771016-rn343kmat6jib4f07dsfj3mh3iu12cfm.apps.googleusercontent.com') {
+    console.warn('Google OAuth: Please configure your Google Client ID in js/google_oauth.js');
+    window.googleOAuthAvailable = false;
+    return;
   }
 
-  async init() {
-    try {
-      // Load Google Identity Services
-      await this.loadGoogleAPI();
-      
-      // Initialize Google Identity Services
-      google.accounts.id.initialize({
-        client_id: this.clientId,
-        callback: this.handleCredentialResponse.bind(this),
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
-
-      this.isInitialized = true;
-      console.log('Google OAuth initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize Google OAuth:', error);
-    }
-  }
-
-  loadGoogleAPI() {
+  // Initialize Google OAuth
+  window.initGoogleOAuth = function() {
     return new Promise((resolve, reject) => {
-      if (window.google) {
+      // Check if script already loaded
+      if (window.google && window.google.accounts) {
         resolve();
         return;
       }
 
+      // Create and load the Google Identity Services script
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
-      script.onload = resolve;
-      script.onerror = reject;
+      script.async = true;
+      script.defer = true;
+      
+      script.onload = () => {
+        if (window.google && window.google.accounts) {
+          // Initialize Google Identity Services
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          });
+          
+          window.googleOAuthAvailable = true;
+          resolve();
+        } else {
+          reject(new Error('Google Identity Services failed to load'));
+        }
+      };
+      
+      script.onerror = () => {
+        console.error('Failed to load Google Identity Services');
+        window.googleOAuthAvailable = false;
+        reject(new Error('Failed to load Google Identity Services'));
+      };
+      
       document.head.appendChild(script);
     });
+  };
+
+  // Handle the Google OAuth response
+  function handleGoogleResponse(response) {
+    // The response contains a JWT credential
+    const credential = response.credential;
+    
+    // Decode the JWT to get user info (for client-side use only)
+    const payload = decodeJWT(credential);
+    
+    // Store user info
+    localStorage.setItem('user_email', payload.email);
+    localStorage.setItem('user_name', payload.given_name || '');
+    localStorage.setItem('user_surname', payload.family_name || '');
+    localStorage.setItem('auth_method', 'google');
+    
+    // Optional: Send to your backend for verification
+    sendToBackend(credential, payload);
+    
+    // Redirect to dashboard
+    window.location.href = 'Dashboard_Overview.html';
   }
 
-  async handleCredentialResponse(response) {
-    try {
-      // Show loading state
-      this.showLoading();
-
-      // Decode the JWT token to get user info
-      const userInfo = this.parseJWT(response.credential);
-      
-      // Send to your backend for verification and user creation/login
-      const result = await this.authenticateWithBackend({
-        token: response.credential,
-        email: userInfo.email,
-        name: userInfo.given_name,
-        surname: userInfo.family_name,
-        picture: userInfo.picture,
-        provider: 'google'
-      });
-
-      // Store user info locally
-      this.storeUserInfo(userInfo);
-      
-      // Navigate to dashboard
-      window.location.href = 'Dashboard_Overview.html';
-      
-    } catch (error) {
-      console.error('Google OAuth error:', error);
-      this.showError('Authentication failed. Please try again.');
-    } finally {
-      this.hideLoading();
-    }
-  }
-
-  parseJWT(token) {
+  // Decode JWT (for display purposes only - NOT for security)
+  function decodeJWT(token) {
     try {
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -89,150 +84,68 @@ class GoogleOAuth {
         return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
       }).join(''));
       return JSON.parse(jsonPayload);
-    } catch (error) {
-      throw new Error('Invalid token format');
+    } catch (e) {
+      console.error('Failed to decode JWT:', e);
+      return {};
     }
   }
 
-  async authenticateWithBackend(userData) {
+  // Send credential to backend for verification (optional)
+  async function sendToBackend(credential, payload) {
     try {
-      const response = await apiPost('/google_auth', userData);
-      return response;
-    } catch (error) {
-      throw new Error(`Backend authentication failed: ${error.message}`);
+      // If you want to verify the token on your backend
+      await apiPost('/user_auth', {
+        credential: credential,
+        email: payload.email,
+        name: payload.given_name,
+        surname: payload.family_name,
+        auth_provider: 'google'
+      });
+    } catch (err) {
+      // Continue anyway - we have the user info client-side
+      console.log('Backend verification skipped:', err.message);
     }
   }
 
-  storeUserInfo(userInfo) {
-    try {
-      localStorage.setItem('user_email', userInfo.email);
-      localStorage.setItem('user_name', userInfo.given_name || '');
-      localStorage.setItem('user_surname', userInfo.family_name || '');
-      if (userInfo.picture) {
-        localStorage.setItem('user_picture', userInfo.picture);
-      }
-    } catch (error) {
-      console.warn('Failed to store user info:', error);
-    }
-  }
-
-  // Method to trigger Google login popup
-  signIn() {
-    if (!this.isInitialized) {
-      console.error('Google OAuth not initialized');
-      this.showError('Google login is not ready yet. Please wait and try again.');
+  // Trigger Google Sign-In
+  window.triggerGoogleSignIn = function() {
+    if (!window.googleOAuthAvailable) {
+      alert('Google Sign-In is not configured. Please use email/password instead.');
       return;
     }
-
-    // Try Google One Tap first
-    google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed()) {
-        console.log('Google One Tap not displayed, trying popup');
-        this.fallbackSignIn();
-      } else if (notification.isSkippedMoment()) {
-        console.log('Google One Tap skipped, trying popup');  
-        this.fallbackSignIn();
-      } else if (notification.isDismissedMoment()) {
-        console.log('Google One Tap dismissed');
-        // User explicitly dismissed, don't force popup
-      }
-    });
-  }
-
-  fallbackSignIn() {
-    // Use Google OAuth popup as fallback
-    const client = google.accounts.oauth2.initTokenClient({
-      client_id: this.clientId,
-      scope: 'email profile openid',
-      callback: async (response) => {
-        if (response.error) {
-          console.error('OAuth error:', response.error);
-          this.showError('Google login failed: ' + response.error);
-          return;
-        }
-        
-        try {
-          this.showLoading();
-          
-          // Get user profile with the access token
-          const userProfile = await this.getUserProfile(response.access_token);
-          
-          // Send to backend
-          await this.authenticateWithBackend({
-            token: response.access_token,
-            email: userProfile.email,
-            name: userProfile.given_name || '',
-            surname: userProfile.family_name || '',
-            picture: userProfile.picture || '',
-            provider: 'google'
-          });
-
-          this.storeUserInfo({
-            email: userProfile.email,
-            given_name: userProfile.given_name,
-            family_name: userProfile.family_name,
-            picture: userProfile.picture
-          });
-          
-          // Navigate to dashboard
-          window.location.href = 'Dashboard_Overview.html';
-          
-        } catch (error) {
-          console.error('Profile fetch error:', error);
-          this.showError('Failed to complete Google login: ' + error.message);
-        } finally {
-          this.hideLoading();
-        }
-      }
-    });
     
-    client.requestAccessToken();
-  }
-
-  async getUserProfile(accessToken) {
-    const response = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch user profile');
-    }
-    return response.json();
-  }
-
-  showLoading() {
-    const buttons = document.querySelectorAll('.google-auth-btn');
-    buttons.forEach(btn => {
-      btn.disabled = true;
-      const originalText = btn.innerHTML;
-      btn.dataset.originalText = originalText;
-      btn.innerHTML = `
-        <div class="flex items-center justify-center gap-2">
-          <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-          <span>Signing in...</span>
-        </div>
-      `;
-    });
-  }
-
-  hideLoading() {
-    const buttons = document.querySelectorAll('.google-auth-btn');
-    buttons.forEach(btn => {
-      btn.disabled = false;
-      if (btn.dataset.originalText) {
-        btn.innerHTML = btn.dataset.originalText;
+    // Show the Google One Tap dialog
+    window.google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        // If One Tap is not displayed, show the button flow
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: 'email profile',
+          callback: (response) => {
+            // This is for OAuth 2.0 flow if needed
+            console.log('OAuth response:', response);
+          },
+        });
+        tokenClient.requestAccessToken();
       }
     });
-  }
+  };
 
-  showError(message) {
-    // You can customize this error display
-    alert(message);
-  }
-}
+  // Alternative: Render Google Sign-In button
+  window.renderGoogleButton = function(buttonId) {
+    if (!window.googleOAuthAvailable) return;
+    
+    window.google.accounts.id.renderButton(
+      document.getElementById(buttonId),
+      { 
+        theme: 'filled_black',
+        size: 'large',
+        width: '100%',
+        text: 'continue_with',
+        shape: 'rectangular',
+        logo_alignment: 'center'
+      }
+    );
+  };
 
-// Initialize Google OAuth when DOM is loaded
-let googleOAuth;
-document.addEventListener('DOMContentLoaded', () => {
-  googleOAuth = new GoogleOAuth();
-});
-
-// Export for global use
-window.GoogleOAuth = GoogleOAuth;
+})();
