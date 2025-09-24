@@ -1,5 +1,8 @@
-// Login / Registration page scripts
+// Fixed Login / Registration page scripts with proper Google OAuth
 document.addEventListener('DOMContentLoaded', function() {
+
+	// Initialize Google OAuth when page loads
+	initializeGoogleOAuth();
 
 	// Handle Sign In form submission
 	const form = document.querySelector('form');
@@ -91,13 +94,44 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	}
 
-	// Handle OAuth buttons with simple alerts (temporary)
-	// Google
+	// Initialize Google OAuth
+	async function initializeGoogleOAuth() {
+		try {
+			// Wait for Google OAuth to be available
+			if (window.initGoogleOAuth) {
+				await window.initGoogleOAuth();
+				console.log('Google OAuth initialized successfully');
+			}
+		} catch (error) {
+			console.error('Failed to initialize Google OAuth:', error);
+		}
+	}
+
+	// Handle OAuth buttons - FIXED GOOGLE BUTTON
+	// Google - NOW PROPERLY INTEGRATED
 	const googleBtn = document.querySelector('button[type="button"]:has(img[alt="Google"])');
 	if (googleBtn) {
 		googleBtn.addEventListener('click', function(e) {
 			e.preventDefault();
-			alert('Google Sign-In is not configured yet.\n\nPlease use email/password to sign in.');
+			
+			// Check if Google OAuth is available
+			if (!window.googleOAuthAvailable) {
+				alert('Google Sign-In is loading. Please wait a moment and try again.');
+				// Try to initialize Google OAuth
+				initializeGoogleOAuth().then(() => {
+					if (window.googleOAuthAvailable) {
+						triggerGoogleSignIn();
+					}
+				});
+				return;
+			}
+			
+			// Trigger Google Sign-In
+			if (window.triggerGoogleSignIn) {
+				window.triggerGoogleSignIn();
+			} else {
+				alert('Google Sign-In is not ready. Please refresh the page and try again.');
+			}
 		});
 	}
 
