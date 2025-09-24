@@ -2,8 +2,8 @@
 // js/config.js
 
 window.ScanLedgerConfig = {
-  // Replace with your actual Google Client ID
-  GOOGLE_CLIENT_ID: '50199771016-rn343kmat6jib4f07dsfj3mh3iu12cfm.apps.googleusercontent.com',
+  // FIXED: Correct Google Client ID with the 'Y' prefix
+  GOOGLE_CLIENT_ID: 'Y50199771016-rn343kmat6jib4f07dsfj3mh3iu12cfm.apps.googleusercontent.com',
   
   // API Configuration
   API_TIMEOUT: 30000,

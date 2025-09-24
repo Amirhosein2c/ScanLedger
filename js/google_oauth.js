@@ -1,13 +1,23 @@
 // js/google_oauth.js
-// Google OAuth implementation for ScanLedger - FIXED VERSION
+// Google OAuth implementation for ScanLedger - UNIFIED CONFIG VERSION
 
 (function() {
-  // Configuration - Replace with your actual Google Client ID
-  const GOOGLE_CLIENT_ID = 'Y50199771016-rn343kmat6jib4f07dsfj3mh3iu12cfm.apps.googleusercontent.com';
+  // Get Client ID from config or set directly - FIXED
+  let GOOGLE_CLIENT_ID;
   
-  // Check if client ID is configured - FIXED THE CHECK
-  if (GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID_HERE' || !GOOGLE_CLIENT_ID) {
-    console.warn('Google OAuth: Please configure your Google Client ID in js/google_oauth.js');
+  // Try to get from config first, then fallback to direct assignment
+  if (window.ScanLedgerConfig && window.ScanLedgerConfig.GOOGLE_CLIENT_ID) {
+    GOOGLE_CLIENT_ID = window.ScanLedgerConfig.GOOGLE_CLIENT_ID;
+  } else {
+    // Direct fallback - make sure this matches your actual Google Cloud Console Client ID
+    GOOGLE_CLIENT_ID = 'Y50199771016-rn343kmat6jib4f07dsfj3mh3iu12cfm.apps.googleusercontent.com';
+  }
+  
+  console.log('Using Google Client ID:', GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.substring(0, 20) + '...' : 'MISSING');
+  
+  // Validate client ID format
+  if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID_HERE' || !GOOGLE_CLIENT_ID.includes('.apps.googleusercontent.com')) {
+    console.error('Google OAuth: Invalid or missing Google Client ID');
     window.googleOAuthAvailable = false;
     return;
   }
@@ -15,37 +25,24 @@
   // Initialize Google OAuth
   window.initGoogleOAuth = function() {
     return new Promise((resolve, reject) => {
+      console.log('Initializing Google OAuth with Client ID:', GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.substring(0, 20) + '...' : 'MISSING');
+      
       // Check if script already loaded
       if (window.google && window.google.accounts) {
-        window.googleOAuthAvailable = true;
-        resolve();
+        console.log('Google Identity Services already loaded, initializing...');
+        initializeGoogleIdentity(resolve, reject);
         return;
       }
 
-      // Wait a bit for the script to load if it's still loading
-      const maxWaitTime = 5000; // 5 seconds
+      // Wait for Google script to load
+      const maxWaitTime = 10000; // 10 seconds
       const checkInterval = 100; // 100ms
       let waitTime = 0;
       
       const checkForGoogle = () => {
         if (window.google && window.google.accounts) {
-          // Initialize Google Identity Services
-          try {
-            window.google.accounts.id.initialize({
-              client_id: GOOGLE_CLIENT_ID,
-              callback: handleGoogleResponse,
-              auto_select: false,
-              cancel_on_tap_outside: true,
-            });
-            
-            window.googleOAuthAvailable = true;
-            console.log('Google OAuth initialized successfully');
-            resolve();
-          } catch (error) {
-            console.error('Error initializing Google OAuth:', error);
-            window.googleOAuthAvailable = false;
-            reject(error);
-          }
+          console.log('Google Identity Services loaded, initializing...');
+          initializeGoogleIdentity(resolve, reject);
         } else if (waitTime < maxWaitTime) {
           waitTime += checkInterval;
           setTimeout(checkForGoogle, checkInterval);
@@ -60,11 +57,44 @@
     });
   };
 
+  // Initialize Google Identity Services with proper error handling
+  function initializeGoogleIdentity(resolve, reject) {
+    try {
+      if (!GOOGLE_CLIENT_ID) {
+        throw new Error('Client ID is missing');
+      }
+      
+      console.log('Calling google.accounts.id.initialize with Client ID:', GOOGLE_CLIENT_ID.substring(0, 20) + '...');
+      
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+        use_fedcm_for_prompt: true  // Added for FedCM compatibility
+      });
+      
+      window.googleOAuthAvailable = true;
+      console.log('Google OAuth initialized successfully');
+      resolve();
+    } catch (error) {
+      console.error('Error initializing Google OAuth:', error);
+      window.googleOAuthAvailable = false;
+      reject(error);
+    }
+  }
+
   // Handle the Google OAuth response
   function handleGoogleResponse(response) {
     try {
+      console.log('Received Google OAuth response');
+      
       // The response contains a JWT credential
       const credential = response.credential;
+      
+      if (!credential) {
+        throw new Error('No credential received from Google');
+      }
       
       // Decode the JWT to get user info (for client-side use only)
       const payload = decodeJWT(credential);
@@ -73,13 +103,13 @@
         throw new Error('Invalid Google response - no email found');
       }
       
+      console.log('Google OAuth successful for:', payload.email);
+      
       // Store user info
       localStorage.setItem('user_email', payload.email);
       localStorage.setItem('user_name', payload.given_name || '');
       localStorage.setItem('user_surname', payload.family_name || '');
       localStorage.setItem('auth_method', 'google');
-      
-      console.log('Google OAuth successful for:', payload.email);
       
       // Optional: Send to your backend for verification
       sendToBackend(credential, payload);
@@ -89,7 +119,7 @@
       
     } catch (error) {
       console.error('Error handling Google response:', error);
-      alert('Google Sign-In failed. Please try again.');
+      alert('Google Sign-In failed: ' + error.message);
     }
   }
 
@@ -111,7 +141,7 @@
   // Send credential to backend for verification (optional)
   async function sendToBackend(credential, payload) {
     try {
-      // If you want to verify the token on your backend
+      console.log('Sending Google credential to backend...');
       await apiPost('/user_auth', {
         credential: credential,
         email: payload.email,
@@ -119,68 +149,95 @@
         surname: payload.family_name,
         auth_provider: 'google'
       });
+      console.log('Backend verification successful');
     } catch (err) {
       // Continue anyway - we have the user info client-side
-      console.log('Backend verification skipped:', err.message);
+      console.log('Backend verification failed (continuing anyway):', err.message);
     }
   }
 
   // Trigger Google Sign-In
   window.triggerGoogleSignIn = function() {
+    console.log('triggerGoogleSignIn called, googleOAuthAvailable:', window.googleOAuthAvailable);
+    
     if (!window.googleOAuthAvailable) {
       console.error('Google OAuth not available');
-      alert('Google Sign-In is not configured. Please use email/password instead.');
+      alert('Google Sign-In is not available. Please try refreshing the page or use email/password instead.');
       return;
     }
     
     if (!window.google || !window.google.accounts) {
       console.error('Google Identity Services not loaded');
-      alert('Google Sign-In is loading. Please try again in a moment.');
+      alert('Google Sign-In is still loading. Please try again in a moment.');
+      return;
+    }
+    
+    if (!GOOGLE_CLIENT_ID) {
+      console.error('Client ID missing when triggering sign-in');
+      alert('Google Sign-In configuration error. Please contact support.');
       return;
     }
     
     try {
+      console.log('Triggering Google prompt...');
+      
       // Show the Google One Tap dialog
       window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          console.log('One Tap not displayed, trying popup flow');
-          // If One Tap is not displayed, try alternative approach
-          // You can implement popup flow here if needed
-          alert('Please enable popups for this site to use Google Sign-In, or try using email/password login.');
+        console.log('Google prompt notification:', notification);
+        
+        if (notification.isNotDisplayed()) {
+          console.log('One Tap not displayed - reason:', notification.getNotDisplayedReason());
+          showAlternativeSignIn();
+        } else if (notification.isSkippedMoment()) {
+          console.log('One Tap skipped - reason:', notification.getSkippedReason());
+          showAlternativeSignIn();
+        } else if (notification.isDismissedMoment()) {
+          console.log('One Tap dismissed - reason:', notification.getDismissedReason());
         }
       });
     } catch (error) {
       console.error('Error triggering Google Sign-In:', error);
-      alert('Google Sign-In failed to start. Please try again or use email/password login.');
+      alert('Google Sign-In failed to start: ' + error.message);
     }
   };
 
-  // Alternative: Render Google Sign-In button
-  window.renderGoogleButton = function(buttonId) {
-    if (!window.googleOAuthAvailable) return;
+  // Alternative sign-in flow when One Tap fails
+  function showAlternativeSignIn() {
+    console.log('Showing alternative Google sign-in...');
     
-    const buttonElement = document.getElementById(buttonId);
-    if (!buttonElement) {
-      console.error('Google button element not found:', buttonId);
-      return;
-    }
+    // Create a temporary button for the popup flow
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'fixed';
+    tempDiv.style.top = '-1000px';
+    tempDiv.style.left = '-1000px';
+    tempDiv.id = 'temp-google-signin';
+    document.body.appendChild(tempDiv);
     
     try {
-      window.google.accounts.id.renderButton(
-        buttonElement,
-        { 
-          theme: 'filled_black',
-          size: 'large',
-          width: '100%',
-          text: 'continue_with',
-          shape: 'rectangular',
-          logo_alignment: 'center'
+      // Render a hidden button that will trigger popup
+      window.google.accounts.id.renderButton(tempDiv, {
+        theme: 'outline',
+        size: 'large'
+      });
+      
+      // Programmatically click the button
+      setTimeout(() => {
+        const button = tempDiv.querySelector('div[role="button"]');
+        if (button) {
+          button.click();
+        } else {
+          alert('Google Sign-In popup blocked. Please allow popups for this site or use email/password login.');
         }
-      );
+        // Clean up
+        document.body.removeChild(tempDiv);
+      }, 100);
+      
     } catch (error) {
-      console.error('Error rendering Google button:', error);
+      console.error('Alternative sign-in failed:', error);
+      document.body.removeChild(tempDiv);
+      alert('Google Sign-In is not working. Please try using email/password login instead.');
     }
-  };
+  }
 
   // Initialize on load
   console.log('Google OAuth module loaded');
