@@ -3,7 +3,7 @@
   "short_name": "ScanLedger",
   "id": "scanledger",
   "description": "Scan, digitize, and organize financial documents. Offline-ready OCR and document management.",
-  "start_url": "/ScanLedger/",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
