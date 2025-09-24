@@ -72,8 +72,21 @@ document.addEventListener('DOMContentLoaded', function() {
 				if (respEmail) localStorage.setItem('user_email', respEmail.toLowerCase());
 				if (name) localStorage.setItem('user_name', name);
 				if (surname) localStorage.setItem('user_surname', surname);
-				// Navigate to dashboard per new requirement
-				window.location.href = 'Dashboard_Overview.html';
+
+				// Check if there's a redirect URL stored
+				let redirectUrl = 'Dashboard_Overview.html'; // default
+				try {
+					const storedRedirect = sessionStorage.getItem('redirect_after_login');
+					if (storedRedirect) {
+						redirectUrl = storedRedirect;
+						sessionStorage.removeItem('redirect_after_login');
+					}
+				} catch (e) {
+					// Ignore storage errors, use default
+				}
+
+				// Navigate to the appropriate page
+				window.location.href = redirectUrl;
 			} catch (err) {
 				console.error('Login webhook error', err);
 				alert(err.message || 'Network error. Please retry.');

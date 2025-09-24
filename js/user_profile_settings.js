@@ -112,7 +112,7 @@ function extractUserFields(payload) {
   return result;
 }
 
-// Handle logout
+// Handle logout using the centralized auth guard function
 document.addEventListener('DOMContentLoaded', () => {
   const logoutBtn = document.querySelector('a[href="#"] span.text-red-400')?.parentElement;
   
@@ -120,19 +120,25 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', (e) => {
       e.preventDefault();
       
-      // Clear all user data
-      localStorage.removeItem('user_email');
-      localStorage.removeItem('user_name');
-      localStorage.removeItem('user_surname');
-      localStorage.removeItem('ocrResultData');
-      localStorage.removeItem('scannedImageDataUrl');
-      localStorage.removeItem('exportedDocuments');
-      
-      // Clear session storage too
-      sessionStorage.clear();
-      
-      // Redirect to login
-      window.location.href = 'Login_Registration.html';
+      // Use the centralized logout function if available
+      if (window.authGuard && typeof window.authGuard.logout === 'function') {
+        window.authGuard.logout();
+      } else {
+        // Fallback logout logic
+        try {
+          localStorage.removeItem('user_email');
+          localStorage.removeItem('user_name');
+          localStorage.removeItem('user_surname');
+          localStorage.removeItem('ocrResultData');
+          localStorage.removeItem('scannedImageDataUrl');
+          localStorage.removeItem('exportedDocuments');
+          sessionStorage.clear();
+        } catch (e) {
+          console.warn('Logout cleanup failed:', e);
+        }
+        
+        window.location.href = 'Welcome_Onboarding.html';
+      }
     });
   }
 });
