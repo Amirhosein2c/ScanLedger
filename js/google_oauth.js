@@ -10,7 +10,7 @@
     GOOGLE_CLIENT_ID = window.ScanLedgerConfig.GOOGLE_CLIENT_ID;
   } else {
     // Direct fallback - make sure this matches your actual Google Cloud Console Client ID
-    GOOGLE_CLIENT_ID = 'Y50199771016-rn343kmat6jib4f07dsfj3mh3iu12cfm.apps.googleusercontent.com';
+    GOOGLE_CLIENT_ID = '50199771016-rn343kmat6jib4f07dsfj3mh3iu12cfm.apps.googleusercontent.com';
   }
   
   console.log('Using Google Client ID:', GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.substring(0, 20) + '...' : 'MISSING');
@@ -67,13 +67,13 @@
       console.log('Calling google.accounts.id.initialize with Client ID:', GOOGLE_CLIENT_ID.substring(0, 20) + '...');
       
       window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-        use_fedcm_for_prompt: true,  // Enable FedCM
-        itp_support: true  // Improved compatibility
-      });
+  client_id: GOOGLE_CLIENT_ID,
+  callback: handleGoogleResponse,
+  auto_select: false,
+  cancel_on_tap_outside: true,
+  use_fedcm_for_prompt: false,  // disable FedCM to avoid AbortError
+  itp_support: true
+});
       
       window.googleOAuthAvailable = true;
       console.log('Google OAuth initialized successfully');
