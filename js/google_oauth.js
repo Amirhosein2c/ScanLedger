@@ -71,7 +71,8 @@
         callback: handleGoogleResponse,
         auto_select: false,
         cancel_on_tap_outside: true,
-        use_fedcm_for_prompt: true  // Added for FedCM compatibility
+        use_fedcm_for_prompt: true,  // Enable FedCM
+        itp_support: true  // Improved compatibility
       });
       
       window.googleOAuthAvailable = true;
@@ -181,18 +182,33 @@
     try {
       console.log('Triggering Google prompt...');
       
-      // Show the Google One Tap dialog
+      // Show the Google One Tap dialog with FedCM support
       window.google.accounts.id.prompt((notification) => {
-        console.log('Google prompt notification:', notification);
+        console.log('Google prompt notification received');
         
-        if (notification.isNotDisplayed()) {
-          console.log('One Tap not displayed - reason:', notification.getNotDisplayedReason());
-          showAlternativeSignIn();
-        } else if (notification.isSkippedMoment()) {
-          console.log('One Tap skipped - reason:', notification.getSkippedReason());
-          showAlternativeSignIn();
-        } else if (notification.isDismissedMoment()) {
-          console.log('One Tap dismissed - reason:', notification.getDismissedReason());
+        // FedCM-compatible way to handle notification
+        if (notification && typeof notification.getMomentType === 'function') {
+          const momentType = notification.getMomentType();
+          console.log('Google prompt moment type:', momentType);
+          
+          if (momentType === 'display') {
+            console.log('Google One Tap displayed successfully');
+          } else if (momentType === 'skipped') {
+            console.log('Google One Tap was skipped');
+            showAlternativeSignIn();
+          } else if (momentType === 'dismissed') {
+            console.log('Google One Tap was dismissed');
+          }
+        } else {
+          // Fallback for older API (will eventually be deprecated)
+          console.log('Using legacy notification handling');
+          if (notification && notification.isNotDisplayed && notification.isNotDisplayed()) {
+            console.log('One Tap not displayed');
+            showAlternativeSignIn();
+          } else if (notification && notification.isSkippedMoment && notification.isSkippedMoment()) {
+            console.log('One Tap skipped');
+            showAlternativeSignIn();
+          }
         }
       });
     } catch (error) {
