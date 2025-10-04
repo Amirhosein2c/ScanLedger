@@ -1,0 +1,14 @@
+{
+	"geolocation": {
+		"data": {
+			"country": {
+				"code": "DE",
+				"name": "Germany"
+			},
+			"timezone": "Europe/Berlin",
+			"latitude": 51.2993,
+			"longitude": 9.491
+		},
+		"timestamp": 1758633093493
+	}
+}
