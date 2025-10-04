@@ -15,11 +15,18 @@
   //   window.API_BASE = PROXY_PATH;
   // }
   
+  // if (isLocal) {
+  //   window.API_BASE = 'https://api.perceptionist.top/webhook';
+  // } else {
+  //   // Use VPS endpoint in production too
+  //   window.API_BASE = 'https://api.perceptionist.top/webhook';
+  // }
+
   if (isLocal) {
-    window.API_BASE = 'https://api.perceptionist.top/webhook';
+    window.API_BASE = 'https://api.perceptionist.top/webhook-test';
   } else {
     // Use VPS endpoint in production too
-    window.API_BASE = 'https://api.perceptionist.top/webhook';
+    window.API_BASE = 'https://api.perceptionist.top/webhook-test';
   }
 
   console.log('API configured for:', isLocal ? 'local development' : 'production');

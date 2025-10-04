@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ScanLedger" />
+  <link rel="apple-touch-icon" href="images/icons/icon-152x152.png" />
+  <link crossorigin href="https://fonts.gstatic.com" rel="preconnect" />
+  <link as="style" href="https://fonts.googleapis.com/css2?display=swap&family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900" onload="this.rel='stylesheet'" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <title>Template Detail</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="stylesheet" href="css/mobile_base.css" />
+  <style>
+    .skeleton { background: linear-gradient(90deg,#1f2937 25%,#374151 37%,#1f2937 63%); background-size:400% 100%; animation: shimmer 1.4s ease infinite; }
+    @keyframes shimmer { 0% {background-position: 100% 0;} 100% {background-position: -100% 0;} }
+  </style>
+</head>
+<body class="bg-[#111827] text-white">
+  <div class="relative flex min-h-screen flex-col" style='font-family: Inter, "Noto Sans", sans-serif'>
+    <header class="flex items-center gap-2 px-4 py-3 sticky top-0 bg-[#111827]/80 backdrop-blur-sm z-10 pt-safe">
+      <button id="backBtn" class="text-white" aria-label="Back">
+        <span class="material-symbols-outlined"> arrow_back_ios_new </span>
+      </button>
+      <h1 id="templateTitle" class="text-lg font-bold truncate">Template</h1>
+      <div class="grow"></div>
+      <button id="saveBtn" class="px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
+    </header>
+
+    <main class="flex-grow px-4 pb-28" id="mainContent">
+      <div id="loadingState" class="space-y-4 py-6">
+        <div class="h-8 w-2/3 rounded skeleton"></div>
+        <div class="h-5 w-full rounded skeleton"></div>
+        <div class="h-5 w-5/6 rounded skeleton"></div>
+        <div class="h-5 w-4/6 rounded skeleton"></div>
+      </div>
+
+      <form id="fieldsForm" class="hidden space-y-5" autocomplete="off"></form>
+
+      <div id="emptyState" class="hidden py-10 text-center text-white/60">
+        <p class="mb-4">No template data found.</p>
+        <a href="Default_Templates.html" class="inline-flex items-center gap-1 text-indigo-400 hover:text-indigo-300">
+          <span class="material-symbols-outlined text-sm"> arrow_back_ios_new </span>
+          Back to Templates
+        </a>
+      </div>
+    </main>
+
+    <footer class="fixed bottom-0 inset-x-0 bg-[#111827]/80 backdrop-blur-sm border-t border-white/10 px-4 py-3 flex items-center gap-3">
+      <div class="text-xs text-white/50" id="statusMsg">Ready</div>
+      <div class="ml-auto flex gap-2">
+        <button type="button" id="resetBtn" class="px-3 py-1 rounded border border-white/20 text-sm hover:bg-white/10">Reset</button>
+      </div>
+    </footer>
+  </div>
+
+  <script src="js/template_detail.js" defer></script>
+  <script src="js/config.js" defer></script>
+</body>
+</html>
