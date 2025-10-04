@@ -16,8 +16,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     fullnameElem.textContent = 'Loading...';
   }
 
-  // If no email stored, don't attempt to fetch
-  if (!storedEmail) return;
 
   try {
     // USE THE CENTRALIZED API FUNCTION - NO DIRECT IPs!
@@ -45,6 +43,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Keep showing the cached name that we already set above
   }
 });
+
+
 
 /**
  * Extract user fields from various webhook response formats
@@ -111,6 +111,8 @@ function extractUserFields(payload) {
   
   return result;
 }
+
+
 
 // Handle logout using the centralized auth guard function
 document.addEventListener('DOMContentLoaded', () => {
