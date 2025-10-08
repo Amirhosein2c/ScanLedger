@@ -1,4 +1,5 @@
-const DEFAULT_API_BASE = 'https://api.perceptionist.top/webhook-test';
+// const DEFAULT_API_BASE = 'https://api.perceptionist.top/webhook-test';
+const DEFAULT_API_BASE = 'https://api.perceptionist.top/webhook';
 
 const resolveApiBase = () => {
   const configured = import.meta.env.VITE_API_BASE?.trim();

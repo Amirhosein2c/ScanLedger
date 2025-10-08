@@ -1,17 +1,22 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>ScanLedger</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="manifest" href="./manifest.json" />
-  <meta http-equiv="refresh" content="0; url=Welcome_Onboarding.html" />
-  <script>window.location.replace('./Welcome_Onboarding.html');</script>
-  <meta name="theme-color" content="#38e07b" />
-</head>
-<body>
-  <noscript>
-    <p>Continue to <a href="./Welcome_Onboarding.html">ScanLedger</a>.</p>
-  </noscript>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#38e07b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700;900&family=Spline+Sans:wght@400;500;700&display=swap"
+    />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="/images/icons/icon-128x128.png" />
+    <title>ScanLedger</title>
+  </head>
+  <body class="bg-sl-background text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

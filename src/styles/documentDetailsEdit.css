@@ -1,0 +1,18 @@
+/* Extracted from Document_Details_Edit.html */
+:root {
+  --primary-color: #38e07b;
+  --background-color: #111827; /* unified */
+  --surface-color: #1F2937; /* from login field bg */
+  --text-primary: #F9FAFB;
+  --text-secondary: #D1D5DB;
+  --input-bg: #1F2937;
+}
+
+body {
+  font-family: 'Spline Sans', sans-serif;
+  min-height: max(884px, 100dvh);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
