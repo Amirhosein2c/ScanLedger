@@ -1,76 +1,21 @@
+import type { FormEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/loginRegistration.css';
-import { useGoogleOAuth } from '../hooks/useGoogleOAuth.js';
-import { apiPost } from '../utils/api.js';
-
-const extractUserFields = (payload) => {
-  const result = { name: null, surname: null, email: null };
-  if (!payload) {
-    return result;
-  }
-
-  const queue = [payload];
-  const enqueue = (value) => {
-    if (value && typeof value === 'object') {
-      queue.push(value);
-    }
-  };
-
-  while (queue.length && (!result.name || !result.surname || !result.email)) {
-    const current = queue.shift();
-    if (!current) {
-      continue;
-    }
-
-    if (Array.isArray(current)) {
-      current.forEach(enqueue);
-      continue;
-    }
-
-    if (current.json && typeof current.json === 'object') {
-      enqueue(current.json);
-    }
-    if (current.data && typeof current.data === 'object') {
-      enqueue(current.data);
-    }
-    if (current.user && typeof current.user === 'object') {
-      enqueue(current.user);
-    }
-
-    Object.entries(current).forEach(([key, value]) => {
-      if (typeof value === 'object') {
-        enqueue(value);
-      }
-      const normalized = key.toLowerCase();
-      if (!result.name && ['name', 'firstname', 'first_name', 'first'].includes(normalized) && typeof value === 'string') {
-        result.name = value;
-      }
-      if (
-        !result.surname &&
-        ['surname', 'lastname', 'last_name', 'last', 'family', 'familyname'].includes(normalized) &&
-        typeof value === 'string'
-      ) {
-        result.surname = value;
-      }
-      if (!result.email && normalized === 'email' && typeof value === 'string') {
-        result.email = value;
-      }
-    });
-  }
-
-  return result;
-};
+import { useGoogleOAuth } from '../hooks/useGoogleOAuth';
+import { useLogin } from '../features/auth/hooks/useLogin';
 
 const LoginRegistration = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState(null);
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem('user_email');
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const storedEmail = window.localStorage?.getItem('user_email');
     if (storedEmail) {
       setEmail(storedEmail);
     }
@@ -83,6 +28,16 @@ const LoginRegistration = () => {
     [navigate]
   );
 
+  const { login, isLoading } = useLogin({
+    onSuccess: () => {
+      setMessage(null);
+      handleAuthSuccess();
+    },
+    onError: (error) => {
+      setMessage(error.message || 'Network error. Please retry.');
+    }
+  });
+
   const { isReady: googleReady, triggerSignIn } = useGoogleOAuth({
     onSuccess: handleAuthSuccess,
     onError: (err) => {
@@ -90,7 +45,7 @@ const LoginRegistration = () => {
     }
   });
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage(null);
 
@@ -100,42 +55,10 @@ const LoginRegistration = () => {
       return;
     }
 
-    setIsSubmitting(true);
-
     try {
-      const response = await apiPost('/user_login', { email: trimmedEmail });
-
-      localStorage.setItem('user_login_raw', JSON.stringify(response));
-
-      const extracted = extractUserFields(response);
-      let resolvedEmail = extracted.email || trimmedEmail;
-      let resolvedName = extracted.name || null;
-      let resolvedSurname = extracted.surname || null;
-
-      const existingEmail = localStorage.getItem('user_email');
-      if (existingEmail && existingEmail === resolvedEmail) {
-        if (!resolvedName) {
-          resolvedName = localStorage.getItem('user_name');
-        }
-        if (!resolvedSurname) {
-          resolvedSurname = localStorage.getItem('user_surname');
-        }
-      }
-
-      localStorage.setItem('user_email', resolvedEmail.toLowerCase());
-      if (resolvedName) {
-        localStorage.setItem('user_name', resolvedName);
-      }
-      if (resolvedSurname) {
-        localStorage.setItem('user_surname', resolvedSurname);
-      }
-
-      handleAuthSuccess();
+      await login({ email: trimmedEmail, password });
     } catch (error) {
       console.error('Login webhook error', error);
-      setMessage(error.message || 'Network error. Please retry.');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -183,7 +106,7 @@ const LoginRegistration = () => {
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                disabled={isSubmitting}
+                disabled={isLoading}
               />
             </div>
             <div>
@@ -200,7 +123,7 @@ const LoginRegistration = () => {
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                disabled={isSubmitting}
+                disabled={isLoading}
               />
             </div>
             <div className="flex items-center justify-end">
@@ -212,9 +135,9 @@ const LoginRegistration = () => {
               <button
                 className="flex w-full justify-center rounded-md bg-[var(--primary-color)] px-4 py-3 text-sm font-semibold leading-6 text-gray-900 shadow-sm transition-colors hover:bg-opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-color)]"
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isLoading}
               >
-                {isSubmitting ? 'Signing in...' : 'Sign In'}
+                {isLoading ? 'Signing in...' : 'Sign In'}
               </button>
             </div>
           </form>
@@ -237,7 +160,7 @@ const LoginRegistration = () => {
               type="button"
               className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-white py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
               onClick={() => triggerSignIn()}
-              disabled={!googleReady || isSubmitting}
+              disabled={!googleReady || isLoading}
             >
               <img
                 src="https://www.gstatic.com/images/branding/product/1x/googleg_24dp.png"
@@ -249,7 +172,9 @@ const LoginRegistration = () => {
             <button
               type="button"
               className="flex w-full items-center justify-center gap-3 rounded-md bg-[#1877f3] py-3 text-sm font-medium text-white transition-colors hover:bg-[#166fe0]"
-              onClick={() => setMessage('Facebook Sign-In is not configured yet. Please use email/password to sign in.')}
+              onClick={() =>
+                setMessage('Facebook Sign-In is not configured yet. Please use email/password to sign in.')
+              }
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="h-5 w-5">
                 <path d="M22.675 0h-21.35C.595 0 0 .592 0 1.326v21.348C0 23.408.595 24 1.325 24h11.495v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.797.143v3.24l-1.918.001c-1.504 0-1.797.715-1.797 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116C23.406 24 24 23.408 24 22.674V1.326C24 .592 23.406 0 22.675 0" />
@@ -259,7 +184,9 @@ const LoginRegistration = () => {
             <button
               type="button"
               className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-[#111827] py-3 text-sm font-medium text-white transition-colors hover:bg-[#1f2937]"
-              onClick={() => setMessage('Microsoft Sign-In is not configured yet. Please use email/password to sign in.')}
+              onClick={() =>
+                setMessage('Microsoft Sign-In is not configured yet. Please use email/password to sign in.')
+              }
             >
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
@@ -271,7 +198,9 @@ const LoginRegistration = () => {
             <button
               type="button"
               className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-black py-3 text-sm font-medium text-white transition-colors hover:bg-gray-900"
-              onClick={() => setMessage('Apple Sign-In is not configured yet. Please use email/password to sign in.')}
+              onClick={() =>
+                setMessage('Apple Sign-In is not configured yet. Please use email/password to sign in.')
+              }
             >
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg"

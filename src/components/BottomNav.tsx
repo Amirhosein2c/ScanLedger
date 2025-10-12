@@ -1,13 +1,20 @@
+import type { FC } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-const navItems = [
+interface NavItem {
+  to: string;
+  icon: string;
+  label: string;
+}
+
+const navItems: NavItem[] = [
   { to: '/documents/scan', icon: 'camera_alt', label: 'Scan' },
   { to: '/documents/search', icon: 'folder', label: 'Documents' },
   { to: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
   { to: '/profile', icon: 'settings', label: 'Settings' }
 ];
 
-const BottomNav = () => {
+const BottomNav: FC = () => {
   const location = useLocation();
 
   return (

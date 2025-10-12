@@ -1,44 +1,61 @@
+import type { ChangeEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import BottomNav from '../components/BottomNav.jsx';
+import BottomNav from '../components/BottomNav';
 import '../styles/user_profile_settings.css';
+
+interface ProfileState {
+  name: string;
+  surname: string;
+  email: string;
+}
 
 const UserProfileSettings = () => {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState({
+  const [profile, setProfile] = useState<ProfileState>({
     name: '',
     surname: '',
     email: ''
   });
-  const [message, setMessage] = useState(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = {
-      name: localStorage.getItem('user_name') || '',
-      surname: localStorage.getItem('user_surname') || '',
-      email: localStorage.getItem('user_email') || ''
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const stored: ProfileState = {
+      name: window.localStorage.getItem('user_name') || '',
+      surname: window.localStorage.getItem('user_surname') || '',
+      email: window.localStorage.getItem('user_email') || ''
     };
     setProfile(stored);
   }, []);
 
-  const handleChange = (event) => {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setProfile((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSave = () => {
-    localStorage.setItem('user_name', profile.name);
-    localStorage.setItem('user_surname', profile.surname);
-    localStorage.setItem('user_email', profile.email.toLowerCase());
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.setItem('user_name', profile.name);
+    window.localStorage.setItem('user_surname', profile.surname);
+    window.localStorage.setItem('user_email', profile.email.toLowerCase());
     setMessage('Profile updated');
     setTimeout(() => setMessage(null), 2500);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('user_name');
-    localStorage.removeItem('user_surname');
-    localStorage.removeItem('user_email');
-    localStorage.removeItem('auth_method');
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.localStorage.removeItem('user_name');
+    window.localStorage.removeItem('user_surname');
+    window.localStorage.removeItem('user_email');
+    window.localStorage.removeItem('auth_method');
     navigate('/login');
   };
 

@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
 const WelcomeOnboarding = () => {
   const navigate = useNavigate();
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installLabel, setInstallLabel] = useState('Install App');
   const [installDisabled, setInstallDisabled] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
@@ -13,16 +18,17 @@ const WelcomeOnboarding = () => {
       return undefined;
     }
 
-    let fallbackTimer;
+    let fallbackTimer: number | undefined;
 
-    const beforeInstallHandler = (event) => {
+    const beforeInstallHandler = (event: Event) => {
       event.preventDefault();
-      setDeferredPrompt(event);
+      const promptEvent = event as BeforeInstallPromptEvent;
+      setDeferredPrompt(promptEvent);
       setInstallLabel('Install App');
       setInstallDisabled(false);
       setShowInstall(true);
       if (fallbackTimer) {
-        clearTimeout(fallbackTimer);
+        window.clearTimeout(fallbackTimer);
       }
     };
 
@@ -35,8 +41,8 @@ const WelcomeOnboarding = () => {
     window.addEventListener('beforeinstallprompt', beforeInstallHandler);
     window.addEventListener('appinstalled', installedHandler);
 
-    const alreadyStandalone =
-      window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone;
+    const navigatorStandalone = Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
+    const alreadyStandalone = window.matchMedia?.('(display-mode: standalone)').matches || navigatorStandalone;
 
     if (!alreadyStandalone) {
       fallbackTimer = window.setTimeout(() => {
@@ -50,7 +56,7 @@ const WelcomeOnboarding = () => {
       window.removeEventListener('beforeinstallprompt', beforeInstallHandler);
       window.removeEventListener('appinstalled', installedHandler);
       if (fallbackTimer) {
-        clearTimeout(fallbackTimer);
+        window.clearTimeout(fallbackTimer);
       }
     };
   }, []);
@@ -84,7 +90,10 @@ const WelcomeOnboarding = () => {
           <div className="mb-4">
             <svg fill="none" height="64" viewBox="0 0 64 64" width="64" xmlns="http://www.w3.org/2000/svg">
               <rect fill="#38E07B" height="64" rx="32" width="64" />
-              <path d="M26 20H42C43.1046 20 44 20.8954 44 22V42C44 43.1046 43.1046 44 42 44H22C20.8954 44 20 43.1046 20 42V26L26 20Z" fill="#111827" />
+              <path
+                d="M26 20H42C43.1046 20 44 20.8954 44 22V42C44 43.1046 43.1046 44 42 44H22C20.8954 44 20 43.1046 20 42V26L26 20Z"
+                fill="#111827"
+              />
               <path d="M26 20L20 26H24C25.1046 26 26 25.1046 26 24V20Z" fill="#38E07B" />
               <path d="M28 32H38" stroke="white" strokeLinecap="round" strokeWidth="2" />
               <path d="M28 38H34" stroke="white" strokeLinecap="round" strokeWidth="2" />
@@ -114,7 +123,9 @@ const WelcomeOnboarding = () => {
             <button
               type="button"
               className={`flex h-14 w-full items-center justify-center rounded-full border border-[var(--primary-color)] text-lg font-bold text-[var(--primary-color)] transition-transform ${
-                installDisabled ? 'cursor-not-allowed opacity-70' : 'hover:bg-[var(--primary-color)] hover:text-[#111827] active:scale-95'
+                installDisabled
+                  ? 'cursor-not-allowed opacity-70'
+                  : 'hover:bg-[var(--primary-color)] hover:text-[#111827] active:scale-95'
               }`}
               onClick={handleInstallClick}
               disabled={installDisabled}

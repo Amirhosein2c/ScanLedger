@@ -1,24 +1,28 @@
 import { useEffect, useState } from 'react';
-import BottomNav from '../components/BottomNav.jsx';
+import BottomNav from '../components/BottomNav';
 import '../styles/dataExportOptions.css';
-import { generateCsvFromFields } from '../utils/ocr.js';
+import { generateCsvFromFields, type OcrField } from '../utils/ocr';
 
 const DataExportOptions = () => {
-  const [csvContent, setCsvContent] = useState('');
-  const [message, setMessage] = useState(null);
+  const [csvContent, setCsvContent] = useState<string>('');
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     try {
-      const storedCsv = sessionStorage.getItem('ocrCsvContent') || localStorage.getItem('ocrCsvContent');
+      const storedCsv = window.sessionStorage.getItem('ocrCsvContent') || window.localStorage.getItem('ocrCsvContent');
       if (storedCsv) {
         setCsvContent(storedCsv);
         return;
       }
 
-      const raw = localStorage.getItem('ocrResultData') || sessionStorage.getItem('ocrResultData');
+      const raw = window.localStorage.getItem('ocrResultData') || window.sessionStorage.getItem('ocrResultData');
       if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.display_fields) {
+        const parsed = JSON.parse(raw) as { display_fields?: OcrField[] | unknown };
+        if (Array.isArray(parsed?.display_fields)) {
           const generated = generateCsvFromFields(parsed.display_fields);
           setCsvContent(generated);
         }
@@ -52,6 +56,10 @@ const DataExportOptions = () => {
       setMessage('No CSV content to copy.');
       return;
     }
+    if (!navigator.clipboard) {
+      setMessage('Clipboard access is not available.');
+      return;
+    }
     navigator.clipboard
       .writeText(csvContent)
       .then(() => {
@@ -62,11 +70,15 @@ const DataExportOptions = () => {
   };
 
   const handleClearExports = () => {
-    localStorage.removeItem('exportedDocuments');
-    localStorage.removeItem('ocrResultData');
-    localStorage.removeItem('ocrCsvContent');
-    sessionStorage.removeItem('ocrResultData');
-    sessionStorage.removeItem('ocrCsvContent');
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.removeItem('exportedDocuments');
+    window.localStorage.removeItem('ocrResultData');
+    window.localStorage.removeItem('ocrCsvContent');
+    window.sessionStorage.removeItem('ocrResultData');
+    window.sessionStorage.removeItem('ocrCsvContent');
     setCsvContent('');
     setMessage('Export history cleared.');
     setTimeout(() => setMessage(null), 2500);
@@ -77,9 +89,7 @@ const DataExportOptions = () => {
       <header className="sticky top-0 z-10 bg-[#111827]/80 backdrop-blur-sm">
         <div className="mt-8 p-4">
           <h1 className="text-2xl font-bold tracking-tight">Export Options</h1>
-          <p className="mt-2 text-sm text-gray-400">
-            Download your OCR results or share them with other systems.
-          </p>
+          <p className="mt-2 text-sm text-gray-400">Download your OCR results or share them with other systems.</p>
         </div>
       </header>
 
@@ -110,9 +120,7 @@ const DataExportOptions = () => {
           <p className="text-sm text-gray-400">
             Webhooks and direct integrations are handled by the ScanLedger automation workflows.
           </p>
-          <p className="text-sm text-gray-500">
-            Configure destinations in your n8n workflow to sync exports automatically.
-          </p>
+          <p className="text-sm text-gray-500">Configure destinations in your n8n workflow to sync exports automatically.</p>
         </section>
 
         <section className="space-y-4 rounded-2xl bg-[#1F2937] p-6 shadow-lg">

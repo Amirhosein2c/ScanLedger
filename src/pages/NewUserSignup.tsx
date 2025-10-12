@@ -1,22 +1,36 @@
+import type { ChangeEvent, FormEvent } from 'react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/loginRegistration.css';
-import { apiPost } from '../utils/api.js';
-import { useGoogleOAuth } from '../hooks/useGoogleOAuth.js';
+import { useGoogleOAuth } from '../hooks/useGoogleOAuth';
+import { useApiMutation } from '../hooks/useApiMutation';
+
+interface SignupForm {
+  name: string;
+  surname: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+const initialFormState: SignupForm = {
+  name: '',
+  surname: '',
+  email: '',
+  password: '',
+  confirmPassword: ''
+};
 
 const NewUserSignup = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    name: '',
-    surname: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
+  const [form, setForm] = useState<SignupForm>(initialFormState);
+  const [message, setMessage] = useState<string | null>(null);
+  const signupMutation = useApiMutation({
+    path: '/user_auth'
   });
-  const [message, setMessage] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmitting = signupMutation.isPending;
 
-  const handleChange = (event) => {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -28,7 +42,7 @@ const NewUserSignup = () => {
     onError: (err) => setMessage(err.message)
   });
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage(null);
 
@@ -42,8 +56,6 @@ const NewUserSignup = () => {
       return;
     }
 
-    setIsSubmitting(true);
-
     try {
       const payload = {
         email: form.email.trim(),
@@ -51,18 +63,19 @@ const NewUserSignup = () => {
         name: form.name.trim(),
         surname: form.surname.trim()
       };
-      await apiPost('/user_auth', payload);
+      await signupMutation.mutateAsync(payload);
 
-      localStorage.setItem('user_name', payload.name);
-      localStorage.setItem('user_surname', payload.surname);
-      localStorage.setItem('user_email', payload.email.toLowerCase());
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('user_name', payload.name);
+        window.localStorage.setItem('user_surname', payload.surname);
+        window.localStorage.setItem('user_email', payload.email.toLowerCase());
+      }
 
       handleSuccess();
     } catch (error) {
-      console.error('Signup webhook error', error);
-      setMessage(error.message || 'Network error. Please retry.');
-    } finally {
-      setIsSubmitting(false);
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      console.error('Signup webhook error', normalizedError);
+      setMessage(normalizedError.message || 'Network error. Please retry.');
     }
   };
 

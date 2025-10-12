@@ -1,9 +1,16 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import BottomNav from '../components/BottomNav.jsx';
+import BottomNav from '../components/BottomNav';
+
+interface TemplateSummary {
+  id: string;
+  name: string;
+  description: string;
+  fields: string[];
+}
 
 const DefaultTemplates = () => {
-  const templates = useMemo(
+  const templates = useMemo<TemplateSummary[]>(
     () => [
       {
         id: 'invoice-standard',

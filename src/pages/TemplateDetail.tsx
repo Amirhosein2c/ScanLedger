@@ -1,50 +1,64 @@
 import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import BottomNav from '../components/BottomNav.jsx';
+import BottomNav from '../components/BottomNav';
+
+interface TemplateField {
+  label: string;
+  required: boolean;
+}
+
+interface TemplateDefinition {
+  name: string;
+  description: string;
+  fields: TemplateField[];
+}
+
+const templates: Record<string, TemplateDefinition> = {
+  'invoice-standard': {
+    name: 'Invoice (Standard)',
+    description: 'Capture invoice number, date, totals, vendor, and payment terms.',
+    fields: [
+      { label: 'Invoice Number', required: true },
+      { label: 'Invoice Date', required: true },
+      { label: 'Vendor', required: true },
+      { label: 'Subtotal', required: false },
+      { label: 'Tax', required: false },
+      { label: 'Total', required: true },
+      { label: 'Payment Terms', required: false }
+    ]
+  },
+  'receipt-retail': {
+    name: 'Retail Receipt',
+    description: 'Designed for point-of-sale receipts including merchant, total, and payment method.',
+    fields: [
+      { label: 'Merchant', required: true },
+      { label: 'Purchase Date', required: true },
+      { label: 'Total', required: true },
+      { label: 'Payment Method', required: false },
+      { label: 'Card Last 4', required: false }
+    ]
+  },
+  'statement-bank': {
+    name: 'Bank Statement',
+    description: 'Monthly statements with opening balance, closing balance, and transactions.',
+    fields: [
+      { label: 'Account Name', required: true },
+      { label: 'Period', required: true },
+      { label: 'Opening Balance', required: true },
+      { label: 'Closing Balance', required: true },
+      { label: 'Total Transactions', required: false }
+    ]
+  }
+};
 
 const TemplateDetail = () => {
   const navigate = useNavigate();
-  const { templateId } = useParams();
+  const { templateId } = useParams<{ templateId: string }>();
 
-  const template = useMemo(() => {
-    const templates = {
-      'invoice-standard': {
-        name: 'Invoice (Standard)',
-        description: 'Capture invoice number, date, totals, vendor, and payment terms.',
-        fields: [
-          { label: 'Invoice Number', required: true },
-          { label: 'Invoice Date', required: true },
-          { label: 'Vendor', required: true },
-          { label: 'Subtotal', required: false },
-          { label: 'Tax', required: false },
-          { label: 'Total', required: true },
-          { label: 'Payment Terms', required: false }
-        ]
-      },
-      'receipt-retail': {
-        name: 'Retail Receipt',
-        description: 'Designed for point-of-sale receipts including merchant, total, and payment method.',
-        fields: [
-          { label: 'Merchant', required: true },
-          { label: 'Purchase Date', required: true },
-          { label: 'Total', required: true },
-          { label: 'Payment Method', required: false },
-          { label: 'Card Last 4', required: false }
-        ]
-      },
-      'statement-bank': {
-        name: 'Bank Statement',
-        description: 'Monthly statements with opening balance, closing balance, and transactions.',
-        fields: [
-          { label: 'Account Name', required: true },
-          { label: 'Period', required: true },
-          { label: 'Opening Balance', required: true },
-          { label: 'Closing Balance', required: true },
-          { label: 'Total Transactions', required: false }
-        ]
-      }
-    };
-
+  const template = useMemo<TemplateDefinition | null>(() => {
+    if (!templateId) {
+      return null;
+    }
     return templates[templateId] || null;
   }, [templateId]);
 
@@ -109,8 +123,8 @@ const TemplateDetail = () => {
           <h2 className="text-lg font-semibold">Automation</h2>
           <p className="text-sm text-gray-400">
             Use this template in your n8n workflow by referencing the template ID{' '}
-            <code className="rounded bg-black/40 px-2 py-1 text-xs">{templateId}</code>. Fields will be mapped to the
-            OCR output automatically.
+            <code className="rounded bg-black/40 px-2 py-1 text-xs">{templateId}</code>. Fields will be mapped to the OCR
+            output automatically.
           </p>
         </section>
       </main>

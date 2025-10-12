@@ -1,10 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import BottomNav from '../components/BottomNav.jsx';
+import BottomNav from '../components/BottomNav';
 import '../styles/dashboardOverview.css';
 
-const RecentScanCard = ({ document }) => {
-  const thumbnailStyle = useMemo(() => {
+interface DocumentSummary {
+  id?: string;
+  type?: string;
+  number?: string;
+  vendor?: string;
+  amount?: string;
+  date?: string;
+  status?: string;
+  image?: string;
+}
+
+interface RecentScanCardProps {
+  document: DocumentSummary;
+}
+
+const RecentScanCard = ({ document }: RecentScanCardProps) => {
+  const thumbnailStyle = useMemo<React.CSSProperties>(() => {
     if (!document.image) {
       return {};
     }
@@ -39,17 +54,21 @@ const RecentScanCard = ({ document }) => {
 
 const DashboardOverview = () => {
   const navigate = useNavigate();
-  const [userName, setUserName] = useState('User');
-  const [recentScans, setRecentScans] = useState([]);
+  const [userName, setUserName] = useState<string>('User');
+  const [recentScans, setRecentScans] = useState<DocumentSummary[]>([]);
 
   useEffect(() => {
-    const firstName = localStorage.getItem('user_name') || '';
-    const surname = localStorage.getItem('user_surname') || '';
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const firstName = window.localStorage.getItem('user_name') || '';
+    const surname = window.localStorage.getItem('user_surname') || '';
     const fullName = `${firstName} ${surname}`.trim();
     setUserName(fullName || 'User');
 
     try {
-      const raw = localStorage.getItem('exportedDocuments');
+      const raw = window.localStorage.getItem('exportedDocuments');
       if (!raw) {
         setRecentScans([]);
         return;
@@ -91,7 +110,7 @@ const DashboardOverview = () => {
               <p className="text-2xl font-bold text-white">0</p>
               <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
             </div>
-            <div className="flex flex-col gap-2 rounded-xl bg-[#1F2937] p-4">
+          <div className="flex flex-col gap-2 rounded-xl bg-[#1F2937] p-4">
               <p className="text-sm font-medium text-gray-300">Monthly Scans</p>
               <p className="text-2xl font-bold text-white">0</p>
               <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
@@ -101,9 +120,7 @@ const DashboardOverview = () => {
           <section>
             <h2 className="mb-3 text-lg font-bold text-white">Recent Scans</h2>
             <div className="space-y-2">
-              {recentScans.length === 0 && (
-                <p className="text-sm text-gray-400">No recent scans yet.</p>
-              )}
+              {recentScans.length === 0 && <p className="text-sm text-gray-400">No recent scans yet.</p>}
               {recentScans.map((doc, index) => (
                 <RecentScanCard key={`${doc.id || doc.number || index}`} document={doc} />
               ))}

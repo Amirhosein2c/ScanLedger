@@ -1,15 +1,19 @@
 import { useEffect } from 'react';
 
-const isStandaloneMode = () => {
+const isStandaloneMode = (): boolean => {
   if (typeof window === 'undefined') {
     return false;
   }
-  return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone;
+
+  const mediaQueryMatches = window.matchMedia?.('(display-mode: standalone)').matches ?? false;
+  const navigatorStandalone = Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
+
+  return mediaQueryMatches || navigatorStandalone;
 };
 
-const usePwaSetup = () => {
+const usePwaSetup = (): void => {
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
       return undefined;
     }
 

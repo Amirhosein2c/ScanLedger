@@ -1,20 +1,27 @@
+import type { ChangeEvent } from 'react';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import BottomNav from '../components/BottomNav.jsx';
+import BottomNav from '../components/BottomNav';
 import '../styles/documentScan.css';
+import { useApiMutation } from '../hooks/useApiMutation';
 
 const DocumentScan = () => {
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const ocrMutation = useApiMutation<string, FormData>({
+    path: '/multi-agent-ocr',
+    method: 'POST',
+    config: { responseType: 'text' }
+  });
+  const isUploading = ocrMutation.isPending;
 
   const handleSelectFile = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = async (event) => {
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
@@ -27,11 +34,17 @@ const DocumentScan = () => {
 
     const reader = new FileReader();
     reader.onload = () => {
-      setImagePreview(reader.result);
+      const result = typeof reader.result === 'string' ? reader.result : null;
+      setImagePreview(result);
       setError(null);
+      if (!result) {
+        return;
+      }
       try {
-        sessionStorage.setItem('scannedImageDataUrl', reader.result);
-        localStorage.setItem('scannedImageDataUrl', reader.result);
+        if (typeof window !== 'undefined') {
+          window.sessionStorage?.setItem('scannedImageDataUrl', result);
+          window.localStorage?.setItem('scannedImageDataUrl', result);
+        }
       } catch (storageError) {
         console.warn('Unable to store preview in session storage', storageError);
       }
@@ -42,13 +55,13 @@ const DocumentScan = () => {
 
   const handleRetake = () => {
     setImagePreview(null);
-    fileInputRef.current?.value && (fileInputRef.current.value = '');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
-  const dataUrlToBlob = (dataUrl) => {
-    const parts = dataUrl.split(',');
-    const meta = parts[0];
-    const base64 = parts[1];
+  const dataUrlToBlob = (dataUrl: string): Blob => {
+    const [meta, base64] = dataUrl.split(',');
     const mimeMatch = /data:(.*?);base64/.exec(meta);
     const mime = mimeMatch ? mimeMatch[1] : 'image/png';
     const binary = atob(base64);
@@ -66,7 +79,7 @@ const DocumentScan = () => {
       return;
     }
 
-    setIsUploading(true);
+    ocrMutation.reset();
     setError(null);
 
     try {
@@ -76,35 +89,27 @@ const DocumentScan = () => {
       formData.append('source', 'camera_capture');
       formData.append('timestamp', new Date().toISOString());
 
-      const ocrResponse = await fetch(`${window.API_BASE}/multi-agent-ocr`, {
-        method: 'POST',
-        body: formData
-      });
+      const textBody = await ocrMutation.mutateAsync(formData);
 
-      if (!ocrResponse.ok) {
-        throw new Error(`Upload failed: ${ocrResponse.status} ${ocrResponse.statusText}`);
-      }
-
-      let parsedResult = null;
-      let textBody = '';
+      let parsedResult: unknown = null;
       try {
-        textBody = await ocrResponse.text();
-        parsedResult = JSON.parse(textBody);
+        parsedResult = typeof textBody === 'string' ? JSON.parse(textBody) : textBody;
       } catch (parseError) {
         console.warn('Failed to parse OCR response as JSON, storing raw text', parseError);
       }
 
-      const serialized = parsedResult ? JSON.stringify(parsedResult) : textBody;
+      const serialized = parsedResult ? JSON.stringify(parsedResult) : String(textBody ?? '');
 
-      sessionStorage.setItem('ocrResultData', serialized);
-      localStorage.setItem('ocrResultData', serialized);
+      if (typeof window !== 'undefined') {
+        window.sessionStorage?.setItem('ocrResultData', serialized);
+        window.localStorage?.setItem('ocrResultData', serialized);
+      }
 
       navigate('/documents/details');
     } catch (uploadError) {
-      console.error(uploadError);
-      setError(uploadError.message || 'Upload failed. Please try again.');
-    } finally {
-      setIsUploading(false);
+      const normalizedError = uploadError instanceof Error ? uploadError : new Error(String(uploadError));
+      console.error(normalizedError);
+      setError(normalizedError.message || 'Upload failed. Please try again.');
     }
   };
 
@@ -185,11 +190,7 @@ const DocumentScan = () => {
           onChange={handleFileChange}
         />
 
-        {error && (
-          <div className="px-4 pb-4 text-center text-sm text-red-300">
-            {error}
-          </div>
-        )}
+        {error && <div className="px-4 pb-4 text-center text-sm text-red-300">{error}</div>}
       </div>
 
       <BottomNav />

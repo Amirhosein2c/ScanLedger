@@ -1,9 +1,25 @@
+import type { ChangeEvent, FC } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import BottomNav from '../components/BottomNav.jsx';
+import BottomNav from '../components/BottomNav';
 import '../styles/documentManagementSearch.css';
 
-const DocumentRow = ({ document }) => {
-  const thumbnailStyle = document.image
+interface DocumentSummary {
+  id?: string;
+  type?: string;
+  number?: string;
+  vendor?: string;
+  amount?: string;
+  date?: string;
+  status?: string;
+  image?: string;
+}
+
+interface DocumentRowProps {
+  document: DocumentSummary;
+}
+
+const DocumentRow: FC<DocumentRowProps> = ({ document }) => {
+  const thumbnailStyle: React.CSSProperties = document.image
     ? { backgroundImage: `url('${document.image}')` }
     : { backgroundColor: '#1F2937' };
 
@@ -32,19 +48,23 @@ const DocumentRow = ({ document }) => {
 };
 
 const DocumentManagementSearch = () => {
-  const [query, setQuery] = useState('');
-  const [documents, setDocuments] = useState([]);
+  const [query, setQuery] = useState<string>('');
+  const [documents, setDocuments] = useState<DocumentSummary[]>([]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     try {
-      const raw = localStorage.getItem('exportedDocuments');
+      const raw = window.localStorage.getItem('exportedDocuments');
       if (!raw) {
         setDocuments([]);
         return;
       }
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        setDocuments(parsed);
+        setDocuments(parsed as DocumentSummary[]);
       } else {
         setDocuments([]);
       }
@@ -75,6 +95,10 @@ const DocumentManagementSearch = () => {
     });
   }, [documents, query]);
 
+  const handleQueryChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setQuery(event.target.value);
+  };
+
   return (
     <div className="group/design-root relative flex min-h-screen flex-col justify-between overflow-x-hidden bg-[#111827] text-white">
       <div className="flex-grow">
@@ -101,7 +125,7 @@ const DocumentManagementSearch = () => {
                 className="h-12 w-full rounded-full border-none bg-[#1F2937] pl-11 pr-4 text-base text-white placeholder:text-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
                 placeholder="Search documents"
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={handleQueryChange}
               />
             </div>
           </div>
@@ -121,18 +145,13 @@ const DocumentManagementSearch = () => {
         <main className="px-4">
           <div className="flex items-center justify-between pb-2 pt-4">
             <h3 className="text-lg font-bold text-white">Recent</h3>
-            <button
-              type="button"
-              className="flex items-center gap-1 text-sm font-medium text-[var(--primary-color)]"
-            >
+            <button type="button" className="flex items-center gap-1 text-sm font-medium text-[var(--primary-color)]">
               <span>Sort</span>
               <span className="material-symbols-outlined text-xl">swap_vert</span>
             </button>
           </div>
           <div className="space-y-2 pb-24">
-            {filteredDocuments.length === 0 && (
-              <p className="text-sm text-gray-400">No documents match your search.</p>
-            )}
+            {filteredDocuments.length === 0 && <p className="text-sm text-gray-400">No documents match your search.</p>}
             {filteredDocuments.map((document, index) => (
               <DocumentRow key={`${document.id || document.number || index}`} document={document} />
             ))}
