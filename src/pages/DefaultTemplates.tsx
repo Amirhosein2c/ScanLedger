@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useMemo } from 'react';
 import BottomNav from '../components/BottomNav';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
 
 interface TemplateSummary {
   id: string;
@@ -47,26 +49,28 @@ const DefaultTemplates = () => {
 
       <main className="flex-1 space-y-4 p-4 pb-32">
         {templates.map((template) => (
-          <Link
-            key={template.id}
-            href={`/templates/${template.id}`}
-            className="block rounded-2xl bg-[#1F2937] p-6 shadow-lg transition-transform hover:-translate-y-0.5"
-          >
-            <div className="flex items-start justify-between gap-4">
+          <Card key={template.id} className="bg-[#1F2937]">
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold">{template.name}</h2>
+                <CardTitle>{template.name}</CardTitle>
                 <p className="mt-1 text-sm text-gray-400">{template.description}</p>
               </div>
-              <span className="material-symbols-outlined text-3xl text-[var(--primary-color)]">chevron_right</span>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {template.fields.map((field) => (
-                <span key={field} className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/80">
-                  {field}
-                </span>
-              ))}
-            </div>
-          </Link>
+              <Button asChild variant="ghost" size="icon" className="rounded-full bg-white/5 hover:bg-white/10">
+                <Link href={`/templates/${template.id}`}>
+                  <span className="material-symbols-outlined text-3xl text-[var(--primary-color)]">chevron_right</span>
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {template.fields.map((field) => (
+                  <span key={field} className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/80">
+                    {field}
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </main>
 

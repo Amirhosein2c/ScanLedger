@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import BottomNav from '../components/BottomNav';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
 
 interface DocumentSummary {
   id?: string;
@@ -106,16 +108,20 @@ const DashboardOverview = () => {
 
         <main className="p-4 pb-36">
           <section className="mb-8 grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2 rounded-xl bg-[#1F2937] p-4">
-              <p className="text-sm font-medium text-gray-300">Total Docs</p>
-              <p className="text-2xl font-bold text-white">0</p>
-              <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
-            </div>
-          <div className="flex flex-col gap-2 rounded-xl bg-[#1F2937] p-4">
-              <p className="text-sm font-medium text-gray-300">Monthly Scans</p>
-              <p className="text-2xl font-bold text-white">0</p>
-              <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
-            </div>
+            <Card className="bg-[#1F2937]">
+              <CardContent className="flex flex-col gap-2 p-4">
+                <p className="text-sm font-medium text-gray-300">Total Docs</p>
+                <p className="text-2xl font-bold text-white">0</p>
+                <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-[#1F2937]">
+              <CardContent className="flex flex-col gap-2 p-4">
+                <p className="text-sm font-medium text-gray-300">Monthly Scans</p>
+                <p className="text-2xl font-bold text-white">0</p>
+                <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
+              </CardContent>
+            </Card>
           </section>
 
           <section>
@@ -130,14 +136,14 @@ const DashboardOverview = () => {
           </section>
 
           <div className="mt-8 flex justify-center">
-            <button
-              type="button"
+            <Button
+              size="lg"
+              className="h-14 w-full max-w-xs text-base font-semibold"
               onClick={() => router.push('/documents/scan')}
-              className="flex h-14 w-full max-w-xs items-center justify-center gap-2 rounded-full bg-[var(--primary-color)] text-lg font-bold text-[#111827]"
             >
               <span className="material-symbols-outlined">qr_code_scanner</span>
-              <span>Scan New Document</span>
-            </button>
+              <span className="ml-2">Scan New Document</span>
+            </Button>
           </div>
         </main>
       </div>
