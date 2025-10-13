@@ -3,6 +3,9 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import BottomNav from '../components/BottomNav';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
 
 interface TemplateField {
   label: string;
@@ -67,69 +70,70 @@ const TemplateDetail = () => {
 
   if (!template) {
     return (
-      <div className="flex min-h-screen flex-col bg-[#111827] text-white">
-        <main className="flex flex-1 items-center justify-center">
-          <div className="text-center">
-            <p className="text-lg font-semibold">Template not found</p>
-            <button
-              type="button"
-              className="mt-4 rounded-full bg-[var(--primary-color)] px-6 py-2 text-sm font-bold text-[#111827]"
-              onClick={() => router.push('/templates')}
-            >
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#111827] text-white">
+        <Card className="mx-4 max-w-sm bg-[#1F2937] text-center">
+          <CardHeader>
+            <CardTitle>Template not found</CardTitle>
+            <p className="text-sm text-white/60">The requested template does not exist.</p>
+          </CardHeader>
+          <CardContent>
+            <Button className="mt-2" onClick={() => router.push('/templates')}>
               Back to Templates
-            </button>
-          </div>
-        </main>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#111827] text-white">
+    <div className="flex min-h-screen flex-col bg-[#111827] pb-24 text-white">
       <header className="sticky top-0 z-10 bg-[#111827]/80 backdrop-blur-sm">
         <div className="mt-8 flex items-center p-4">
-          <button type="button" className="-ml-2 p-2" onClick={() => router.push('/templates')}>
+          <Button variant="ghost" size="icon" className="-ml-2 rounded-full" onClick={() => router.push('/templates')}>
             <span className="material-symbols-outlined text-3xl">arrow_back_ios_new</span>
-          </button>
+          </Button>
           <h1 className="flex-1 pr-8 text-center text-xl font-bold tracking-tight">{template.name}</h1>
         </div>
       </header>
 
       <main className="flex-1 space-y-6 p-4 pb-32">
-        <section className="rounded-2xl bg-[#1F2937] p-6 shadow-lg">
-          <h2 className="text-lg font-semibold">Overview</h2>
-          <p className="mt-2 text-sm text-gray-400">{template.description}</p>
-        </section>
+        <Card className="bg-[#1F2937]">
+          <CardHeader>
+            <CardTitle>Overview</CardTitle>
+            <p className="text-sm text-gray-400">{template.description}</p>
+          </CardHeader>
+        </Card>
 
-        <section className="rounded-2xl bg-[#1F2937] p-6 shadow-lg">
-          <h2 className="text-lg font-semibold">Fields</h2>
-          <div className="mt-4 space-y-3">
+        <Card className="bg-[#1F2937]">
+          <CardHeader>
+            <CardTitle>Fields</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             {template.fields.map((field) => (
               <div
                 key={field.label}
                 className="flex items-center justify-between rounded-xl bg-[#111827] px-4 py-3 text-sm"
               >
                 <span>{field.label}</span>
-                {field.required ? (
-                  <span className="rounded-full bg-amber-400/20 px-3 py-1 text-xs font-semibold text-amber-200">
-                    Required
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/70">Optional</span>
-                )}
+                <Badge variant={field.required ? 'default' : 'secondary'}>
+                  {field.required ? 'Required' : 'Optional'}
+                </Badge>
               </div>
             ))}
-          </div>
-        </section>
+          </CardContent>
+        </Card>
 
-        <section className="rounded-2xl bg-[#1F2937] p-6 shadow-lg">
-          <h2 className="text-lg font-semibold">Automation</h2>
-          <p className="text-sm text-gray-400">
-            Use this template in your n8n workflow by referencing the template ID{' '}
-            <code className="rounded bg-black/40 px-2 py-1 text-xs">{templateId}</code>. Fields will be mapped to the OCR
-            output automatically.
-          </p>
-        </section>
+        <Card className="bg-[#1F2937]">
+          <CardHeader>
+            <CardTitle>Automation</CardTitle>
+            <p className="text-sm text-gray-400">
+              Use this template in your n8n workflow by referencing the template ID{' '}
+              <code className="rounded bg-black/40 px-2 py-1 text-xs">{templateId}</code>. Fields will be mapped to the OCR
+              output automatically.
+            </p>
+          </CardHeader>
+        </Card>
       </main>
 
       <BottomNav />

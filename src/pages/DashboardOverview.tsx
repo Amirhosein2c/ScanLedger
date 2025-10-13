@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import BottomNav from '../components/BottomNav';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
 
 interface DocumentSummary {
   id?: string;
@@ -87,7 +89,7 @@ const DashboardOverview = () => {
   }, []);
 
   return (
-    <div className="group/design-root relative flex min-h-screen flex-col justify-between bg-[#111827] text-white">
+    <div className="group/design-root relative flex min-h-screen flex-col justify-between bg-[#111827] pb-24 text-white">
       <div className="mt-8 flex-grow">
         <header className="sticky top-0 z-10 bg-[#111827]/80 pt-safe backdrop-blur-sm">
           <div className="flex items-center p-4">
@@ -104,18 +106,22 @@ const DashboardOverview = () => {
           </div>
         </header>
 
-        <main className="p-4">
+        <main className="p-4 pb-36">
           <section className="mb-8 grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2 rounded-xl bg-[#1F2937] p-4">
-              <p className="text-sm font-medium text-gray-300">Total Docs</p>
-              <p className="text-2xl font-bold text-white">0</p>
-              <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
-            </div>
-          <div className="flex flex-col gap-2 rounded-xl bg-[#1F2937] p-4">
-              <p className="text-sm font-medium text-gray-300">Monthly Scans</p>
-              <p className="text-2xl font-bold text-white">0</p>
-              <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
-            </div>
+            <Card className="bg-[#1F2937]">
+              <CardContent className="flex flex-col gap-2 p-4">
+                <p className="text-sm font-medium text-gray-300">Total Docs</p>
+                <p className="text-2xl font-bold text-white">0</p>
+                <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-[#1F2937]">
+              <CardContent className="flex flex-col gap-2 p-4">
+                <p className="text-sm font-medium text-gray-300">Monthly Scans</p>
+                <p className="text-2xl font-bold text-white">0</p>
+                <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
+              </CardContent>
+            </Card>
           </section>
 
           <section>
@@ -128,22 +134,20 @@ const DashboardOverview = () => {
             </div>
             <div className="h-4" />
           </section>
+
+          <div className="mt-8 flex justify-center">
+            <Button
+              size="lg"
+              className="h-14 w-full max-w-xs text-base font-semibold"
+              onClick={() => router.push('/documents/scan')}
+            >
+              <span className="material-symbols-outlined">qr_code_scanner</span>
+              <span className="ml-2">Scan New Document</span>
+            </Button>
+          </div>
         </main>
       </div>
-
-      <div className="sticky bottom-0">
-        <div className="flex justify-center p-4">
-          <button
-            type="button"
-            onClick={() => router.push('/documents/scan')}
-            className="flex h-14 w-full max-w-xs items-center justify-center gap-2 rounded-full bg-[var(--primary-color)] text-lg font-bold text-[#111827]"
-          >
-            <span className="material-symbols-outlined">qr_code_scanner</span>
-            <span>Scan New Document</span>
-          </button>
-        </div>
-        <BottomNav />
-      </div>
+      <BottomNav />
     </div>
   );
 };

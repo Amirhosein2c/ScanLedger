@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import BottomNav from '../components/BottomNav';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { generateCsvFromFields, type OcrField } from '../utils/ocr';
 
 const DataExportOptions = () => {
@@ -86,7 +88,7 @@ const DataExportOptions = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#111827] text-white">
+    <div className="flex min-h-screen flex-col bg-[#111827] pb-24 text-white">
       <header className="sticky top-0 z-10 bg-[#111827]/80 backdrop-blur-sm">
         <div className="mt-8 p-4">
           <h1 className="text-2xl font-bold tracking-tight">Export Options</h1>
@@ -95,53 +97,62 @@ const DataExportOptions = () => {
       </header>
 
       <main className="flex-1 space-y-6 p-4 pb-32">
-        <section className="space-y-4 rounded-2xl bg-[#1F2937] p-6 shadow-lg">
-          <h2 className="text-lg font-semibold">CSV Export</h2>
-          <p className="text-sm text-gray-400">
-            Export your recent OCR results as a CSV file for Excel, Google Sheets, or your accounting software.
-          </p>
-          <button
-            type="button"
-            className="w-full rounded-full bg-[var(--primary-color)] py-3 text-base font-bold text-[#111827]"
-            onClick={handleDownloadCsv}
-          >
-            Download CSV
-          </button>
-          <button
-            type="button"
-            className="w-full rounded-full bg-white/10 py-3 text-base font-semibold text-white hover:bg-white/15"
-            onClick={handleCopyCsv}
-          >
-            Copy CSV to Clipboard
-          </button>
-        </section>
+        <Card className="bg-[#1F2937]">
+          <CardHeader>
+            <CardTitle>CSV Export</CardTitle>
+            <p className="text-sm text-gray-400">
+              Export your recent OCR results as a CSV file for Excel, Google Sheets, or your accounting software.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button className="w-full" size="lg" onClick={handleDownloadCsv}>
+              Download CSV
+            </Button>
+            <Button variant="secondary" className="w-full" size="lg" onClick={handleCopyCsv}>
+              Copy CSV to Clipboard
+            </Button>
+          </CardContent>
+        </Card>
 
-        <section className="space-y-4 rounded-2xl bg-[#1F2937] p-6 shadow-lg">
-          <h2 className="text-lg font-semibold">Integrations</h2>
-          <p className="text-sm text-gray-400">
-            Webhooks and direct integrations are handled by the ScanLedger automation workflows.
-          </p>
-          <p className="text-sm text-gray-500">Configure destinations in your n8n workflow to sync exports automatically.</p>
-        </section>
+        <Card className="bg-[#1F2937]">
+          <CardHeader>
+            <CardTitle>Integrations</CardTitle>
+            <p className="text-sm text-gray-400">
+              Webhooks and direct integrations are handled by the ScanLedger automation workflows.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-500">
+              Configure destinations in your n8n workflow to sync exports automatically.
+            </p>
+          </CardContent>
+        </Card>
 
-        <section className="space-y-4 rounded-2xl bg-[#1F2937] p-6 shadow-lg">
-          <h2 className="text-lg font-semibold">History</h2>
-          <p className="text-sm text-gray-400">
-            Manage stored documents on this device. Clearing history does not remove records from backend storage.
-          </p>
-          <button
-            type="button"
-            className="w-full rounded-full border border-red-400/60 py-3 text-base font-semibold text-red-200"
-            onClick={handleClearExports}
-          >
-            Clear Local Export History
-          </button>
-        </section>
+        <Card className="bg-[#1F2937]">
+          <CardHeader>
+            <CardTitle>History</CardTitle>
+            <p className="text-sm text-gray-400">
+              Manage stored documents on this device. Clearing history does not remove records from backend storage.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              className="w-full border-red-400/60 text-red-200 hover:bg-red-500/10"
+              size="lg"
+              onClick={handleClearExports}
+            >
+              Clear Local Export History
+            </Button>
+          </CardContent>
+        </Card>
 
         {message && (
-          <div className="rounded-full border border-emerald-400/60 bg-emerald-400/10 px-4 py-2 text-center text-sm text-emerald-200">
-            {message}
-          </div>
+          <Card className="border-emerald-400/60 bg-emerald-400/10">
+            <CardContent className="px-4 py-2 text-center text-sm text-emerald-200">
+              {message}
+            </CardContent>
+          </Card>
         )}
       </main>
 

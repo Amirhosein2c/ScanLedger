@@ -251,7 +251,7 @@ const DocumentDetailsEdit = () => {
   };
 
   return (
-    <div className="group/design-root relative flex min-h-screen flex-col justify-between bg-[#111827] text-white">
+    <div className="group/design-root relative flex min-h-screen flex-col bg-[#111827] pb-24 text-white">
       <header className="sticky top-0 z-10 bg-[#111827]/80 pt-safe backdrop-blur-sm">
         <div className="mt-8 flex items-center justify-between p-4">
           <button
