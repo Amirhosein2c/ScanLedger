@@ -1,6 +1,8 @@
-// Login / Registration page scripts
-// Add authentication logic here.
+// Fixed Login / Registration page scripts with proper Google OAuth
 document.addEventListener('DOMContentLoaded', function() {
+
+	// Initialize Google OAuth when page loads
+	initializeGoogleOAuth();
 
 	// Handle Sign In form submission
 	const form = document.querySelector('form');
@@ -82,11 +84,82 @@ document.addEventListener('DOMContentLoaded', function() {
 			}
 		});
 	}
+	
+	// Handle Sign Up link
 	const signUpLink = document.querySelector('footer .text-center a.font-medium');
 	if (signUpLink) {
 		signUpLink.addEventListener('click', function(e) {
 			e.preventDefault();
 			window.location.href = 'New_User_SignUp.html';
+		});
+	}
+
+	// Initialize Google OAuth
+	async function initializeGoogleOAuth() {
+		try {
+			// Wait for Google OAuth to be available
+			if (window.initGoogleOAuth) {
+				await window.initGoogleOAuth();
+				console.log('Google OAuth initialized successfully');
+			}
+		} catch (error) {
+			console.error('Failed to initialize Google OAuth:', error);
+		}
+	}
+
+	// Handle OAuth buttons - FIXED GOOGLE BUTTON
+	// Google - NOW PROPERLY INTEGRATED
+	const googleBtn = document.querySelector('button[type="button"]:has(img[alt="Google"])');
+	if (googleBtn) {
+		googleBtn.addEventListener('click', function(e) {
+			e.preventDefault();
+			
+			// Check if Google OAuth is available
+			if (!window.googleOAuthAvailable) {
+				alert('Google Sign-In is loading. Please wait a moment and try again.');
+				// Try to initialize Google OAuth
+				initializeGoogleOAuth().then(() => {
+					if (window.googleOAuthAvailable) {
+						triggerGoogleSignIn();
+					}
+				});
+				return;
+			}
+			
+			// Trigger Google Sign-In
+			if (window.triggerGoogleSignIn) {
+				window.triggerGoogleSignIn();
+			} else {
+				alert('Google Sign-In is not ready. Please refresh the page and try again.');
+			}
+		});
+	}
+
+	// Facebook
+	const facebookBtn = Array.from(document.querySelectorAll('button[type="button"]'))
+		.find(btn => btn.textContent.includes('Facebook'));
+	if (facebookBtn) {
+		facebookBtn.addEventListener('click', function(e) {
+			e.preventDefault();
+			alert('Facebook Sign-In is not configured yet.\n\nPlease use email/password to sign in.');
+		});
+	}
+
+	// Microsoft
+	const microsoftBtn = document.querySelector('button[type="button"]:has(img[alt="Microsoft"])');
+	if (microsoftBtn) {
+		microsoftBtn.addEventListener('click', function(e) {
+			e.preventDefault();
+			alert('Microsoft Sign-In is not configured yet.\n\nPlease use email/password to sign in.');
+		});
+	}
+
+	// Apple
+	const appleBtn = document.querySelector('button[type="button"]:has(img[alt="Apple"])');
+	if (appleBtn) {
+		appleBtn.addEventListener('click', function(e) {
+			e.preventDefault();
+			alert('Apple Sign-In is not configured yet.\n\nPlease use email/password to sign in.');
 		});
 	}
 });

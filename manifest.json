@@ -6,37 +6,37 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "window-controls-overlay"],
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#111827",
   "theme_color": "#38e07b",
   "orientation": "portrait-primary",
   "categories": ["productivity", "finance"],
   "icons": [
-    { "src": "images/icons/icon-72x72.png", "type": "image/png", "sizes": "72x72" },
-    { "src": "images/icons/icon-128x128.png", "type": "image/png", "sizes": "128x128" },
-    { "src": "images/icons/icon-152x152.png", "type": "image/png", "sizes": "152x152" },
-    { "src": "images/icons/icon-384x384.png", "type": "image/png", "sizes": "384x384" },
-    { "src": "images/icons/icon-512x512.png", "type": "image/png", "sizes": "512x512" },
-    { "src": "images/icons/icon-512x512.png", "type": "image/png", "sizes": "512x512", "purpose": "any maskable" }
+    { "src": "./images/icons/icon-72x72.png", "type": "image/png", "sizes": "72x72" },
+    { "src": "./images/icons/icon-128x128.png", "type": "image/png", "sizes": "128x128" },
+    { "src": "./images/icons/icon-152x152.png", "type": "image/png", "sizes": "152x152" },
+    { "src": "./images/icons/icon-384x384.png", "type": "image/png", "sizes": "384x384" },
+    { "src": "./images/icons/icon-512x512.png", "type": "image/png", "sizes": "512x512" },
+    { "src": "./images/icons/icon-512x512.png", "type": "image/png", "sizes": "512x512", "purpose": "any maskable" }
   ],
   "shortcuts": [
     {
       "name": "Scan Document",
       "short_name": "Scan",
       "url": "Document_Scan.html",
-      "icons": [{"src": "images/icons/icon-128x128.png", "sizes": "128x128"}]
+      "icons": [{"src": "./images/icons/icon-128x128.png", "sizes": "128x128"}]
     },
     {
       "name": "Search Documents",
       "short_name": "Search",
       "url": "Document_Management_Search.html",
-      "icons": [{"src": "images/icons/icon-128x128.png", "sizes": "128x128"}]
+      "icons": [{"src": "./images/icons/icon-128x128.png", "sizes": "128x128"}]
     },
     {
       "name": "Export Data",
       "short_name": "Export",
       "url": "Data_Export_Options.html",
-      "icons": [{"src": "images/icons/icon-128x128.png", "sizes": "128x128"}]
+      "icons": [{"src": "./images/icons/icon-128x128.png", "sizes": "128x128"}]
     }
   ]
 }

@@ -1,0 +1,13 @@
+1,Sales Documents,Date,Receipt #,Customer Name,Customer ID,Item/Service,Quantity,Unit Price,Subtotal,Tax Rate,Tax Amount,Total,Payment Method,Payment Reference,,,,,,
+2,Purchase Documents,Date,Invoice #,Vendor Name,Vendor ID,Item/Service,Quantity,Unit Price,Subtotal,Tax Amount,Total,Due Date,Payment Status,Payment Date,Category,,,,,
+3,Expense Documents,Date,Receipt #,Vendor,Expense Category,Description,Amount,Tax,Total,Payment Method,Business Purpose,Tax Deductible,Reimbursable,Project/Client,,,,,,
+4,Bank Statement,Date,Transaction ID,Description,Payee/Payer,Transaction Type,Debit,Credit,Balance,Category,Reference #,Reconciled,,,,,,,,
+5,Contract/Agreement,Date,Contract #,Contract Type,Party 1 Name,Party 1 ID,Party 2 Name,Party 2 ID,Service/Product,Payment Amount,Payment Frequency,Start Date,End Date,Renewal Terms,Cancellation Terms,Status,,,,
+6,Tax Document,Date,Form Type,Tax Year,Document #,Payer Name,Payer EIN/SSN,Payee Name,Payee EIN/SSN,Gross Income,Federal Tax,State Tax,Other Withhol,Net Amount,Filing Deadline,,,,,
+7,Payroll Record,Date,Pay Period Start,Pay Period End,Employee Name,Employee ID,Hours Worked,Hourly Rate,Gross Pay,Federal Tax,State Tax,Social Security,Medicare,Other Deductions,Net Pay,Check #,,,,
+8,Credit Card Statement,Date,Statement Period,Card Last 4,Transaction Date,Merchant,Category,Amount,Balance,Minimum Payment,Due Date,Interest Rate,Interest Charged,Fees,Credit Limit,,,,,
+9,Insurance Document,Date,Policy #,Policy Type,Insurer,Insured Name,Premium,Deductible,Coverage Limit,Effective Date,Expiration Date,Claim #,Claim Date,Claim Amount,Claim Status,,,,,
+10,Loan Document,Date,Loan #,Loan Type,Lender,Borrower,Principal,Interest Rate,Monthly Payment,Current Balance,Due Date,Term Length,Maturity Date,Late Fees,Payment Status,,,,,
+11,Purchase Order,Date,PO #,Vendor Name,Ship To,Bill To,Item Description,Quantity,Unit Price,Line Total,Subtotal,Tax,Shipping,Total,Delivery Date,Status,,,,
+12,Quote/Estimate,Date,Quote #,Vendor,Customer,Item/Service,Description,Quantity,Unit Price,Line Total,Subtotal,Tax Rate,Tax Amount,Total,Valid Until,Terms,,,,
+13,Other Documents,Date,Document Type,Document #,Party 1,Party 2,Reference #,Description,Amount 1,Amount 1 Label,Amount 2,Amount 2 Label,Amount 3,Amount 3 Label,Start Date,End Date,Status,Notes,Category,Location/URL

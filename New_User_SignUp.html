@@ -6,14 +6,14 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="ScanLedger" />
-<link rel="apple-touch-icon" href="images/icons/icon-152x152.png" />
+<link rel="apple-touch-icon" href="./images/icons/icon-152x152.png" />
 <title>New_User_SignUp.html</title>
 <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link rel="stylesheet" href="css/login_registration.css" />
-<link rel="stylesheet" href="css/mobile_base.css" />
-<script src="js/viewport_fix.js" defer></script>
+<link rel="stylesheet" href="./css/login_registration.css" />
+<link rel="stylesheet" href="./css/mobile_base.css" />
+<!-- <script src="./js/viewport_fix.js" defer></script> -->
 </head>
 <body class="bg-[var(--background-color)] text-[var(--text-color)]">
 <div class="flex flex-col min-h-screen">
@@ -91,6 +91,10 @@
 </footer>
 </div>
 
-<script src="js/api_base.js" defer></script>
-<script src="js/new_user_signup.js" defer></script>
+<!-- Add these scripts before closing </body> tag in New_User_SignUp.html -->
+<script src="./js/config.js" defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="./js/google_oauth.js" defer></script>
+<script src="./js/api_base.js" defer></script>
+<script src="./js/new_user_signup.js" defer></script>
 </body></html>

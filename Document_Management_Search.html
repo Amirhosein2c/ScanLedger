@@ -1,107 +1,152 @@
-<html><head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<!-- iOS PWA fullscreen meta -->
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="ScanLedger" />
-<link rel="apple-touch-icon" href="images/icons/icon-152x152.png" />
-<link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
-<link as="style" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Spline+Sans%3Awght%40400%3B500%3B700" onload="this.rel='stylesheet'" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
-<title>Document_Management_Search.html</title>
-<link href="data:image/x-icon;base64," rel="icon" type="image/x-icon"/>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link rel="stylesheet" href="css/document_management_search.css" />
-<link rel="stylesheet" href="css/mobile_base.css" />
-<script src="js/viewport_fix.js" defer></script>
-  </head>
-<body class="bg-[#111827]">
-<div class="relative flex size-full min-h-screen flex-col bg-[#111827] justify-between group/design-root overflow-x-hidden" style='font-family: "Spline Sans", "Noto Sans", sans-serif;'>
-<div class="flex-grow">
-<header class="sticky top-0 z-10 bg-[#111827]/80 backdrop-blur-sm pt-safe">
-<div class="flex items-center p-4 justify-between">
-<div class="w-12"></div>
-<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Documents</h2>
-<div class="flex w-12 items-center justify-end">
-<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 w-12 bg-transparent text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0 hover:bg-white/10 transition-colors">
-<span class="material-symbols-outlined text-3xl">
-                  add
-                </span>
-</button>
-</div>
-</div>
-<div class="px-4 pb-3">
-<div class="relative">
-<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#96c5a9]">
-                    search
-                </span>
-<input class="form-input w-full rounded-full text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] border-none bg-[#1F2937] h-12 placeholder:text-[#D1D5DB] pl-11 pr-4 text-base font-normal leading-normal" placeholder="Search documents" value=""/>
-</div>
-</div>
-<div class="flex gap-2 p-3 overflow-x-auto">
-<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#1F2937] pl-4 pr-3 text-sm font-medium text-white hover:bg-white/10 transition-colors">
-<span>Date</span>
-<span class="material-symbols-outlined text-xl">
-                    keyboard_arrow_down
-                </span>
-</button>
-<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#1F2937] pl-4 pr-3 text-sm font-medium text-white hover:bg-white/10 transition-colors">
-<span>Category</span>
-<span class="material-symbols-outlined text-xl">
-                    keyboard_arrow_down
-                </span>
-</button>
-<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#1F2937] pl-4 pr-3 text-sm font-medium text-white hover:bg-white/10 transition-colors">
-<span>Vendor</span>
-<span class="material-symbols-outlined text-xl">
-                    keyboard_arrow_down
-                </span>
-</button>
-</div>
-</header>
-<main class="px-4">
-<div class="flex justify-between items-center pb-2 pt-4">
-<h3 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Recent</h3>
-<button class="flex items-center gap-1 text-sm text-[var(--primary-color)] font-medium">
-<span>Sort</span>
-<span class="material-symbols-outlined text-xl">
-                swap_vert
-              </span>
-</button>
-</div>
-<div class="space-y-2"></div>
-</main>
-</div>
-<footer class="sticky bottom-0 bg-[#1b3124]/80 backdrop-blur-sm border-t border-[#264532] pb-safe">
-<div class="flex justify-around pt-2">
-<a class="flex flex-col items-center justify-end gap-1 text-[#D1D5DB] hover:text-[var(--primary-color)] transition-colors w-1/4" href="Document_Scan.html">
-<span class="material-symbols-outlined text-2xl">
-              photo_camera
-            </span>
-<p class="text-xs font-medium leading-normal tracking-[0.015em]">Scan</p>
-</a>
-<a class="flex flex-col items-center justify-end gap-1 text-[var(--primary-color)] font-semibold w-1/4" href="Document_Management_Search.html">
-<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1">
-              description
-            </span>
-<p class="text-xs font-medium leading-normal tracking-[0.015em]">Documents</p>
-</a>
-<a class="flex flex-col items-center justify-end gap-1 text-[#D1D5DB] hover:text-[var(--primary-color)] transition-colors w-1/4" href="Dashboard_Overview.html">
-<span class="material-symbols-outlined text-2xl">
-              bar_chart
-            </span>
-<p class="text-xs font-medium leading-normal tracking-[0.015em]">Dashboard</p>
-</a>
-<a class="flex flex-col items-center justify-end gap-1 text-[#D1D5DB] hover:text-[var(--primary-color)] transition-colors w-1/4" href="User_Profile_Settings.html">
-<span class="material-symbols-outlined text-2xl">
-              settings
-            </span>
-<p class="text-xs font-medium leading-normal tracking-[0.015em]">Settings</p>
-</a>
-</div>
-<div class="h-5"></div>
-</footer>
-</div>
+<html>
 
-<script src="js/document_management_search.js" defer></script></body></html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <!-- iOS PWA fullscreen meta -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ScanLedger" />
+  <link rel="apple-touch-icon" href="images/icons/icon-152x152.png" />
+  <link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect" />
+  <link as="style"
+    href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Spline+Sans%3Awght%40400%3B500%3B700"
+    onload="this.rel='stylesheet'" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <title>Document_Management_Search.html</title>
+
+  <!-- <script src="js/auth_guard.js"></script> -->
+
+  <link href="data:image/x-icon;base64," rel="icon" type="image/x-icon" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="stylesheet" href="css/document_management_search.css" />
+  <link rel="stylesheet" href="css/mobile_base.css" />
+  <!-- <script src="js/viewport_fix.js" defer></script> -->
+</head>
+
+<body class="bg-[#111827]">
+  <div
+    class="relative flex size-full min-h-screen flex-col bg-[#111827] justify-between group/design-root overflow-x-hidden"
+    style='font-family: "Spline Sans", "Noto Sans", sans-serif;'>
+    <div class="flex-grow">
+      <header class="sticky top-0 z-10 bg-[#111827]/80 backdrop-blur-sm pt-safe">
+        <div class="flex items-center p-4 flex-grow mt-8 justify-between">
+          <div class="w-12"></div>
+          <h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Documents</h2>
+          <div class="flex w-12 items-center justify-end">
+            <button
+              class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 w-12 bg-transparent text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0 hover:bg-white/10 transition-colors">
+              <span class="material-symbols-outlined text-3xl">
+                add
+              </span>
+            </button>
+          </div>
+        </div>
+        <div class="px-4 pb-3">
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#96c5a9]">
+              search
+            </span>
+            <input
+              class="form-input w-full rounded-full text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] border-none bg-[#1F2937] h-12 placeholder:text-[#D1D5DB] pl-11 pr-4 text-base font-normal leading-normal"
+              placeholder="Search documents" value="" />
+          </div>
+        </div>
+        <div class="flex gap-2 p-3 overflow-x-auto">
+          <button
+            class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#1F2937] pl-4 pr-3 text-sm font-medium text-white hover:bg-white/10 transition-colors">
+            <span>Date</span>
+            <span class="material-symbols-outlined text-xl">
+              keyboard_arrow_down
+            </span>
+          </button>
+          <button
+            class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#1F2937] pl-4 pr-3 text-sm font-medium text-white hover:bg-white/10 transition-colors">
+            <span>Category</span>
+            <span class="material-symbols-outlined text-xl">
+              keyboard_arrow_down
+            </span>
+          </button>
+          <button
+            class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#1F2937] pl-4 pr-3 text-sm font-medium text-white hover:bg-white/10 transition-colors">
+            <span>Vendor</span>
+            <span class="material-symbols-outlined text-xl">
+              keyboard_arrow_down
+            </span>
+          </button>
+        </div>
+      </header>
+      <main class="px-4">
+        <div class="flex justify-between items-center pb-2 pt-4">
+          <h3 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Recent</h3>
+          <button class="flex items-center gap-1 text-sm text-[var(--primary-color)] font-medium">
+            <span>Sort</span>
+            <span class="material-symbols-outlined text-xl">
+              swap_vert
+            </span>
+          </button>
+        </div>
+        <div class="space-y-2"></div>
+      </main>
+    </div>
+    <!-- <footer class="sticky bottom-0 bg-[#1b3124]/80 backdrop-blur-sm border-t border-[#264532] pb-safe">
+      <div class="flex justify-around pt-2">
+        <a class="flex flex-col items-center justify-end gap-1 text-[#D1D5DB] hover:text-[var(--primary-color)] transition-colors w-1/4"
+          href="Document_Scan.html">
+          <span class="material-symbols-outlined text-2xl">
+            photo_camera
+          </span>
+          <p class="text-xs font-medium leading-normal tracking-[0.015em]">Scan</p>
+        </a>
+        <a class="flex flex-col items-center justify-end gap-1 text-[var(--primary-color)] font-semibold w-1/4"
+          href="Document_Management_Search.html">
+          <span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1">
+            description
+          </span>
+          <p class="text-xs font-medium leading-normal tracking-[0.015em]">Documents</p>
+        </a>
+        <a class="flex flex-col items-center justify-end gap-1 text-[#D1D5DB] hover:text-[var(--primary-color)] transition-colors w-1/4"
+          href="Dashboard_Overview.html">
+          <span class="material-symbols-outlined text-2xl">
+            bar_chart
+          </span>
+          <p class="text-xs font-medium leading-normal tracking-[0.015em]">Dashboard</p>
+        </a>
+        <a class="flex flex-col items-center justify-end gap-1 text-[#D1D5DB] hover:text-[var(--primary-color)] transition-colors w-1/4"
+          href="User_Profile_Settings.html">
+          <span class="material-symbols-outlined text-2xl">
+            settings
+          </span>
+          <p class="text-xs font-medium leading-normal tracking-[0.015em]">Settings</p>
+        </a>
+      </div>
+      <div class="h-5"></div>
+    </footer> -->
+  </div>
+  <div class="sticky bottom-0">
+    <nav class="flex justify-around p-2">
+      <a class="flex flex-col items-center gap-1 p-2 text-[var(--primary-color)]" href="Document_Scan.html">
+        <span class="material-symbols-outlined"
+          style="font-variation-settings: 'FILL' 1, 'wght' 700;">photo_camera</span>
+        <span class="text-xs font-medium">Scan</span>
+      </a>
+      <a class="flex flex-col items-center gap-1 p-2 text-[var(--text-secondary)]"
+        href="Document_Management_Search.html">
+        <span class="material-symbols-outlined">description</span>
+        <span class="text-xs font-medium">Documents</span>
+      </a>
+      <a class="flex flex-col items-center gap-1 p-2 text-[var(--text-secondary)]" href="Dashboard_Overview.html">
+        <span class="material-symbols-outlined">bar_chart</span>
+        <span class="text-xs font-medium">Dashboard</span>
+      </a>
+      <a class="flex flex-col items-center gap-1 p-2 text-[var(--text-secondary)]" href="User_Profile_Settings.html">
+        <span class="material-symbols-outlined">settings</span>
+        <span class="text-xs font-medium">Settings</span>
+      </a>
+    </nav>
+  </div>
+  <script src="./js/config.js" defer></script>
+  <script src="./js/google_oauth.js" defer></script>
+  <script src="js/document_management_search.js" defer></script>
+</body>
+</html>
