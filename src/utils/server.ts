@@ -6,8 +6,9 @@ import { NextRequest } from "next/server";
 
 export const _GD = async (
   request: NextRequest,
-  _context?: { params?: Record<string, unknown> }
+  context?: { params?: Record<string, unknown> }
 ): Promise<Response> => {
+  void context;
   //   if (!SAFE_METHODS.has(request.method.toUpperCase())) {
   //     const csrfCookie = request.cookies.get(CSRF_COOKIE_NAME)?.value ?? "";
   //     const csrfHeader = request.headers.get(CSRF_HEADER_NAME) ?? "";

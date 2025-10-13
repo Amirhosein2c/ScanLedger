@@ -109,6 +109,9 @@ const DocumentDetailsEdit = () => {
     };
 
     const loadOcrData = async () => {
+      if (!searchParams) {
+        return;
+      }
       try {
         const ocrUrl = searchParams.get('ocr_url');
         const ocrInline = searchParams.get('ocr');
