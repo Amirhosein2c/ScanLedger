@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { FC } from 'react';
+import type { Route } from 'next';
 
 interface NavItem {
-  to: string;
+  to: Route;
   icon: string;
   label: string;
 }

@@ -27,7 +27,8 @@ const WelcomeOnboarding = () => {
       return undefined;
     }
 
-    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+    type TimerHandle = ReturnType<Window['setTimeout']>;
+    let fallbackTimer: TimerHandle | undefined;
 
     const beforeInstallHandler = (event: Event) => {
       event.preventDefault();
