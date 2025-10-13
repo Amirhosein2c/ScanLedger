@@ -1,7 +1,0 @@
-/ /Welcome_Onboarding.html 200
-# Use HTTPS for the proxy target!
-/webhook/*  https://api.perceptionist.top/webhook/:splat  200
-
-/document_scan        /Document_Scan.html          200
-/login_registration   /Login_Registration.html     200
-/new_user_signup      /New_User_SignUp.html        200

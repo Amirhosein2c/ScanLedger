@@ -1,8 +1,0 @@
-/* Extracted from Dashboard_Overview.html */
-:root {
-  --primary-color: #38e07b;
-}
-
-body {
-  min-height: max(804px, 100dvh);
-}
