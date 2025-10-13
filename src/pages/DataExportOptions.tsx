@@ -86,7 +86,7 @@ const DataExportOptions = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#111827] text-white">
+    <div className="flex min-h-screen flex-col bg-[#111827] pb-24 text-white">
       <header className="sticky top-0 z-10 bg-[#111827]/80 backdrop-blur-sm">
         <div className="mt-8 p-4">
           <h1 className="text-2xl font-bold tracking-tight">Export Options</h1>

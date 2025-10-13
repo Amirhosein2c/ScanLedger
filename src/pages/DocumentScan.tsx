@@ -117,7 +117,7 @@ const DocumentScan = () => {
   };
 
   return (
-    <div className="group/design-root relative flex min-h-screen flex-col justify-between bg-[#111827] text-white">
+    <div className="group/design-root relative flex min-h-screen flex-col justify-between bg-[#111827] pb-24 text-white">
       <div className="mt-8 flex flex-1 flex-col">
         <header className="flex items-center justify-between p-4">
           <button

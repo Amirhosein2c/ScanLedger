@@ -22,8 +22,8 @@ const BottomNav: FC = () => {
   const pathname = usePathname();
 
   return (
-    <div className="sticky bottom-0 bg-[#1F2937]">
-      <nav className="flex justify-around border-t border-[#1F2937] bg-[#1F2937] py-2">
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#1F2937]">
+      <nav className="mx-auto flex max-w-xl justify-around border-t border-[#1F2937] bg-[#1F2937] py-2">
         {navItems.map((item) => {
           const isActive = pathname === item.to;
           return (
@@ -38,7 +38,6 @@ const BottomNav: FC = () => {
           );
         })}
       </nav>
-      <div className="h-3 bg-[#1F2937]" />
     </div>
   );
 };

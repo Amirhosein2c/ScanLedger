@@ -101,7 +101,7 @@ const DocumentManagementSearch = () => {
   };
 
   return (
-    <div className="group/design-root relative flex min-h-screen flex-col justify-between overflow-x-hidden bg-[#111827] text-white">
+    <div className="group/design-root relative flex min-h-screen flex-col justify-between overflow-x-hidden bg-[#111827] pb-24 text-white">
       <div className="flex-grow">
         <header className="sticky top-0 z-10 bg-[#111827]/80 pt-safe backdrop-blur-sm">
           <div className="mt-8 flex items-center justify-between p-4">
@@ -143,7 +143,7 @@ const DocumentManagementSearch = () => {
             ))}
           </div>
         </header>
-        <main className="px-4">
+        <main className="px-4 pb-36">
           <div className="flex items-center justify-between pb-2 pt-4">
             <h3 className="text-lg font-bold text-white">Recent</h3>
             <button type="button" className="flex items-center gap-1 text-sm font-medium text-[var(--primary-color)]">
@@ -151,7 +151,7 @@ const DocumentManagementSearch = () => {
               <span className="material-symbols-outlined text-xl">swap_vert</span>
             </button>
           </div>
-          <div className="space-y-2 pb-24">
+          <div className="space-y-2 pb-6">
             {filteredDocuments.length === 0 && <p className="text-sm text-gray-400">No documents match your search.</p>}
             {filteredDocuments.map((document, index) => (
               <DocumentRow key={`${document.id || document.number || index}`} document={document} />
