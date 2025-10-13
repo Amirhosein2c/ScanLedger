@@ -1,8 +1,9 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
 import type { ChangeEvent } from 'react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
-import '../styles/user_profile_settings.css';
 
 interface ProfileState {
   name: string;
@@ -11,7 +12,7 @@ interface ProfileState {
 }
 
 const UserProfileSettings = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [profile, setProfile] = useState<ProfileState>({
     name: '',
     surname: '',
@@ -56,14 +57,14 @@ const UserProfileSettings = () => {
     window.localStorage.removeItem('user_surname');
     window.localStorage.removeItem('user_email');
     window.localStorage.removeItem('auth_method');
-    navigate('/login');
+    router.push('/login');
   };
 
   return (
     <div className="flex min-h-screen flex-col bg-[#111827] text-white">
       <header className="sticky top-0 z-10 bg-[#111827]/80 backdrop-blur-sm">
         <div className="mt-8 flex items-center p-4">
-          <button type="button" className="-ml-2 p-2" onClick={() => navigate(-1)}>
+          <button type="button" className="-ml-2 p-2" onClick={() => router.back()}>
             <span className="material-symbols-outlined text-3xl">arrow_back_ios_new</span>
           </button>
           <h1 className="flex-1 pr-8 text-center text-xl font-bold tracking-tight">Profile</h1>

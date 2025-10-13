@@ -1,6 +1,7 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import BottomNav from '../components/BottomNav';
-import '../styles/dataExportOptions.css';
 import { generateCsvFromFields, type OcrField } from '../utils/ocr';
 
 const DataExportOptions = () => {

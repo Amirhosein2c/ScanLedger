@@ -35,6 +35,24 @@ const usePwaSetup = (): void => {
 
     window.addEventListener('appinstalled', handleAppInstalled);
 
+    if ('serviceWorker' in window.navigator) {
+      const isProduction = process.env.NODE_ENV === 'production';
+      if (isProduction) {
+        window.navigator.serviceWorker
+          .register('/service-worker.js', { scope: '/' })
+          .catch((error) => {
+            console.warn('Service worker registration failed', error);
+          });
+      } else {
+        window.navigator.serviceWorker
+          .getRegistrations()
+          .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+          .catch((error) => {
+            console.warn('Failed to unregister service workers in development', error);
+          });
+      }
+    }
+
     return () => {
       window.removeEventListener('resize', setDocHeight);
       window.removeEventListener('appinstalled', handleAppInstalled);

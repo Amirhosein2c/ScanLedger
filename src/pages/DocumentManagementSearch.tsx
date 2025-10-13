@@ -1,7 +1,8 @@
-import type { ChangeEvent, FC } from 'react';
+'use client';
+
+import type { ChangeEvent, CSSProperties, FC } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import BottomNav from '../components/BottomNav';
-import '../styles/documentManagementSearch.css';
 
 interface DocumentSummary {
   id?: string;
@@ -19,7 +20,7 @@ interface DocumentRowProps {
 }
 
 const DocumentRow: FC<DocumentRowProps> = ({ document }) => {
-  const thumbnailStyle: React.CSSProperties = document.image
+  const thumbnailStyle: CSSProperties = document.image
     ? { backgroundImage: `url('${document.image}')` }
     : { backgroundColor: '#1F2937' };
 

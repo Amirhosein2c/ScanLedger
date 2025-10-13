@@ -1,13 +1,13 @@
-import { useCallback } from 'react';
-import { useApiMutation } from '../../../hooks/useApiMutation';
+import { useCallback } from "react";
+import { useApiMutation } from "../../../hooks/useApiMutation";
 import {
   extractUserProfile,
   getStoredProfile,
   mergeProfile,
   persistLoginPayload,
   persistUserProfile,
-  type UserProfile
-} from '../profile';
+  type UserProfile,
+} from "../profile";
 
 interface LoginCredentials {
   email: string;
@@ -29,27 +29,33 @@ interface UseLoginArgs<TResponse> {
 }
 
 interface UseLoginResult<TResponse> {
-  login: (credentials: LoginCredentials) => Promise<{ response: TResponse; profile: UserProfile }>;
+  login: (
+    credentials: LoginCredentials
+  ) => Promise<{ response: TResponse; profile: UserProfile }>;
   isLoading: boolean;
-  status: 'idle' | 'pending' | 'success' | 'error';
+  status: "idle" | "pending" | "success" | "error";
   error: Error | null;
 }
 
 export const useLogin = <TResponse = unknown>({
   onSuccess,
-  onError
+  onError,
 }: UseLoginArgs<TResponse> = {}): UseLoginResult<TResponse> => {
-  const loginMutation = useApiMutation<TResponse, { email: string }>({ path: '/user_login' });
+  const loginMutation = useApiMutation<TResponse, { email: string }>({
+    path: "/user_login",
+  });
 
   const login = useCallback(
     async ({ email, password }: LoginCredentials) => {
       const trimmedEmail = email?.trim();
       if (!trimmedEmail) {
-        throw new Error('Email is required');
+        throw new Error("Email is required");
       }
 
       try {
-        const response = await loginMutation.mutateAsync({ email: trimmedEmail });
+        const response = await loginMutation.mutateAsync({
+          email: trimmedEmail,
+        });
 
         persistLoginPayload(response);
 
@@ -58,7 +64,7 @@ export const useLogin = <TResponse = unknown>({
         const profile = mergeProfile({
           extracted: extractedProfile,
           fallbackEmail: trimmedEmail,
-          stored: storedProfile
+          stored: storedProfile,
         });
 
         persistUserProfile(profile);
@@ -66,12 +72,13 @@ export const useLogin = <TResponse = unknown>({
         onSuccess?.({
           profile,
           response,
-          credentials: { email: trimmedEmail, password }
+          credentials: { email: trimmedEmail, password },
         });
 
         return { response, profile };
       } catch (error) {
-        const normalizedError = error instanceof Error ? error : new Error(String(error));
+        const normalizedError =
+          error instanceof Error ? error : new Error(String(error));
         onError?.(normalizedError);
         throw normalizedError;
       }
@@ -83,6 +90,6 @@ export const useLogin = <TResponse = unknown>({
     login,
     isLoading: loginMutation.isPending,
     status: loginMutation.status,
-    error: loginMutation.error ?? null
+    error: loginMutation.error ?? null,
   };
 };

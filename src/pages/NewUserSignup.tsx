@@ -1,7 +1,10 @@
+'use client';
+
+/* eslint-disable @next/next/no-img-element */
+
+import { useRouter } from 'next/navigation';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import '../styles/loginRegistration.css';
 import { useGoogleOAuth } from '../hooks/useGoogleOAuth';
 import { useApiMutation } from '../hooks/useApiMutation';
 
@@ -22,7 +25,7 @@ const initialFormState: SignupForm = {
 };
 
 const NewUserSignup = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [form, setForm] = useState<SignupForm>(initialFormState);
   const [message, setMessage] = useState<string | null>(null);
   const signupMutation = useApiMutation({
@@ -35,7 +38,7 @@ const NewUserSignup = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSuccess = () => navigate('/dashboard');
+  const handleSuccess = () => router.push('/dashboard');
 
   const { isReady: googleReady, triggerSignIn } = useGoogleOAuth({
     onSuccess: handleSuccess,
@@ -277,7 +280,7 @@ const NewUserSignup = () => {
           <button
             type="button"
             className="font-medium text-[var(--primary-color)] hover:text-opacity-80"
-            onClick={() => navigate('/login')}
+            onClick={() => router.push('/login')}
           >
             Sign In
           </button>

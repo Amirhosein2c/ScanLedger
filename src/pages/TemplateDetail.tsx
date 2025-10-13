@@ -1,5 +1,7 @@
+'use client';
+
+import { useParams, useRouter } from 'next/navigation';
 import { useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 
 interface TemplateField {
@@ -52,8 +54,9 @@ const templates: Record<string, TemplateDefinition> = {
 };
 
 const TemplateDetail = () => {
-  const navigate = useNavigate();
-  const { templateId } = useParams<{ templateId: string }>();
+  const router = useRouter();
+  const params = useParams<{ templateId: string }>();
+  const templateId = params?.templateId;
 
   const template = useMemo<TemplateDefinition | null>(() => {
     if (!templateId) {
@@ -71,7 +74,7 @@ const TemplateDetail = () => {
             <button
               type="button"
               className="mt-4 rounded-full bg-[var(--primary-color)] px-6 py-2 text-sm font-bold text-[#111827]"
-              onClick={() => navigate('/templates')}
+              onClick={() => router.push('/templates')}
             >
               Back to Templates
             </button>
@@ -85,7 +88,7 @@ const TemplateDetail = () => {
     <div className="flex min-h-screen flex-col bg-[#111827] text-white">
       <header className="sticky top-0 z-10 bg-[#111827]/80 backdrop-blur-sm">
         <div className="mt-8 flex items-center p-4">
-          <button type="button" className="-ml-2 p-2" onClick={() => navigate('/templates')}>
+          <button type="button" className="-ml-2 p-2" onClick={() => router.push('/templates')}>
             <span className="material-symbols-outlined text-3xl">arrow_back_ios_new</span>
           </button>
           <h1 className="flex-1 pr-8 text-center text-xl font-bold tracking-tight">{template.name}</h1>

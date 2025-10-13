@@ -1,5 +1,9 @@
+'use client';
+
+/* eslint-disable @next/next/no-img-element */
+
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -7,18 +11,23 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const WelcomeOnboarding = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installLabel, setInstallLabel] = useState('Install App');
   const [installDisabled, setInstallDisabled] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    const globalWindow =
+      typeof globalThis === 'object' && 'addEventListener' in globalThis
+        ? (globalThis as Window & typeof globalThis)
+        : null;
+
+    if (!globalWindow) {
       return undefined;
     }
 
-    let fallbackTimer: number | undefined;
+    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
 
     const beforeInstallHandler = (event: Event) => {
       event.preventDefault();
@@ -28,7 +37,7 @@ const WelcomeOnboarding = () => {
       setInstallDisabled(false);
       setShowInstall(true);
       if (fallbackTimer) {
-        window.clearTimeout(fallbackTimer);
+        globalWindow.clearTimeout(fallbackTimer);
       }
     };
 
@@ -38,14 +47,17 @@ const WelcomeOnboarding = () => {
       setInstallDisabled(false);
     };
 
-    window.addEventListener('beforeinstallprompt', beforeInstallHandler);
-    window.addEventListener('appinstalled', installedHandler);
+    globalWindow.addEventListener('beforeinstallprompt', beforeInstallHandler);
+    globalWindow.addEventListener('appinstalled', installedHandler);
 
-    const navigatorStandalone = Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone);
-    const alreadyStandalone = window.matchMedia?.('(display-mode: standalone)').matches || navigatorStandalone;
+    const navigatorStandalone = Boolean(
+      (globalWindow.navigator as Navigator & { standalone?: boolean }).standalone,
+    );
+    const alreadyStandalone =
+      globalWindow.matchMedia?.('(display-mode: standalone)').matches || navigatorStandalone;
 
     if (!alreadyStandalone) {
-      fallbackTimer = window.setTimeout(() => {
+      fallbackTimer = globalWindow.setTimeout(() => {
         setShowInstall(true);
         setInstallLabel('Install via Browser Menu');
         setInstallDisabled(true);
@@ -53,10 +65,10 @@ const WelcomeOnboarding = () => {
     }
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', beforeInstallHandler);
-      window.removeEventListener('appinstalled', installedHandler);
+      globalWindow.removeEventListener('beforeinstallprompt', beforeInstallHandler);
+      globalWindow.removeEventListener('appinstalled', installedHandler);
       if (fallbackTimer) {
-        window.clearTimeout(fallbackTimer);
+        globalWindow.clearTimeout(fallbackTimer);
       }
     };
   }, []);
@@ -108,14 +120,14 @@ const WelcomeOnboarding = () => {
           <button
             type="button"
             className="flex h-14 w-full items-center justify-center rounded-full bg-[var(--primary-color)] text-lg font-bold text-[#111827] transition-transform active:scale-95"
-            onClick={() => navigate('/signup')}
+            onClick={() => router.push('/signup')}
           >
             Get Started
           </button>
           <button
             type="button"
             className="flex h-14 w-full items-center justify-center rounded-full bg-[#1F2937] text-lg font-bold text-white transition-transform active:scale-95"
-            onClick={() => navigate('/login')}
+            onClick={() => router.push('/login')}
           >
             Log In
           </button>

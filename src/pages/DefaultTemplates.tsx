@@ -1,5 +1,7 @@
+'use client';
+
+import Link from 'next/link';
 import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 
 interface TemplateSummary {
@@ -47,7 +49,7 @@ const DefaultTemplates = () => {
         {templates.map((template) => (
           <Link
             key={template.id}
-            to={`/templates/${template.id}`}
+            href={`/templates/${template.id}`}
             className="block rounded-2xl bg-[#1F2937] p-6 shadow-lg transition-transform hover:-translate-y-0.5"
           >
             <div className="flex items-start justify-between gap-4">

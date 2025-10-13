@@ -103,7 +103,13 @@ export const extractOcrFields = (data: unknown): OcrField[] => {
       ingestArray(fields, dataArray);
     }
     if (recordData?.items && Array.isArray(recordData.items)) {
-      const mapped = recordData.items.map((item) => (typeof item === 'object' && item !== null ? (item as any).json ?? item : item));
+      const mapped = recordData.items.map((item) => {
+        if (typeof item === 'object' && item !== null) {
+          const recordItem = item as Record<string, unknown>;
+          return (recordItem.json as Record<string, unknown> | undefined) ?? item;
+        }
+        return item;
+      });
       ingestArray(fields, mapped);
     }
     if (recordData) {

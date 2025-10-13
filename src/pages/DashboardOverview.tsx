@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import BottomNav from '../components/BottomNav';
-import '../styles/dashboardOverview.css';
 
 interface DocumentSummary {
   id?: string;
@@ -19,7 +20,7 @@ interface RecentScanCardProps {
 }
 
 const RecentScanCard = ({ document }: RecentScanCardProps) => {
-  const thumbnailStyle = useMemo<React.CSSProperties>(() => {
+  const thumbnailStyle = useMemo<CSSProperties>(() => {
     if (!document.image) {
       return {};
     }
@@ -53,7 +54,7 @@ const RecentScanCard = ({ document }: RecentScanCardProps) => {
 };
 
 const DashboardOverview = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [userName, setUserName] = useState<string>('User');
   const [recentScans, setRecentScans] = useState<DocumentSummary[]>([]);
 
@@ -134,7 +135,7 @@ const DashboardOverview = () => {
         <div className="flex justify-center p-4">
           <button
             type="button"
-            onClick={() => navigate('/documents/scan')}
+            onClick={() => router.push('/documents/scan')}
             className="flex h-14 w-full max-w-xs items-center justify-center gap-2 rounded-full bg-[var(--primary-color)] text-lg font-bold text-[#111827]"
           >
             <span className="material-symbols-outlined">qr_code_scanner</span>

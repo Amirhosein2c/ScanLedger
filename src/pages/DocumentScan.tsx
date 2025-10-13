@@ -1,12 +1,15 @@
+'use client';
+
+/* eslint-disable @next/next/no-img-element */
+
+import { useRouter } from 'next/navigation';
 import type { ChangeEvent } from 'react';
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
-import '../styles/documentScan.css';
 import { useApiMutation } from '../hooks/useApiMutation';
 
 const DocumentScan = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +108,7 @@ const DocumentScan = () => {
         window.localStorage?.setItem('ocrResultData', serialized);
       }
 
-      navigate('/documents/details');
+      router.push('/documents/details');
     } catch (uploadError) {
       const normalizedError = uploadError instanceof Error ? uploadError : new Error(String(uploadError));
       console.error(normalizedError);
@@ -128,7 +131,7 @@ const DocumentScan = () => {
           <button
             type="button"
             className="flex items-center justify-center rounded-full text-white/50 transition-colors hover:text-white"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => router.push('/dashboard')}
           >
             <span className="material-symbols-outlined">close</span>
           </button>

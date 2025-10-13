@@ -1,7 +1,10 @@
+'use client';
+
+/* eslint-disable @next/next/no-img-element */
+
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ChangeEvent, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
-import '../styles/documentDetailsEdit.css';
 import { extractOcrFields, generateCsvFromFields, inferSummaryFromFields, type OcrField } from '../utils/ocr';
 
 type InputType = 'text' | 'date' | 'currency' | 'email' | 'tel';
@@ -76,8 +79,8 @@ const formatDateForInput = (value: string): string => {
 };
 
 const DocumentDetailsEdit = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [imageSrc, setImageSrc] = useState<string>('');
   const [fields, setFields] = useState<OcrField[]>([]);
   const [defaultForm, setDefaultForm] = useState<DefaultFormState>({
@@ -201,7 +204,7 @@ const DocumentDetailsEdit = () => {
     } catch (error) {
       console.warn('Failed to clear cached scan', error);
     }
-    navigate('/documents/scan');
+    router.push('/documents/scan');
   };
 
   const handleSave = () => {
@@ -251,7 +254,7 @@ const DocumentDetailsEdit = () => {
           <button
             type="button"
             className="flex h-12 w-12 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"
-            onClick={() => navigate('/documents/scan')}
+            onClick={() => router.push('/documents/scan')}
           >
             <span className="material-symbols-outlined text-3xl">arrow_back</span>
           </button>
