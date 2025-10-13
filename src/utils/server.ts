@@ -49,9 +49,9 @@ export const _GD = async (
     `Bearer ${request.cookies.get("AdminAuthToken")?.value ?? ""}`
   );
 
-  const apiBaseUrl = process.env.API_BASE_URL;
+  const apiBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
   if (!apiBaseUrl) {
-    throw new Error("API_BASE_URL is not configured");
+    throw new Error("NEXT_PUBLIC_BASE_URL is not configured");
   }
 
   const normalizedPath = request.nextUrl.pathname.replace(/^\/(api|gd)/, "");

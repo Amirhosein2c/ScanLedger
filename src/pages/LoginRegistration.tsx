@@ -1,16 +1,21 @@
 "use client";
 import type { FormEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 // import "../styles/loginRegistration.css";
-import { useGoogleOAuth } from "../hooks/useGoogleOAuth";
 import { useLogin } from "../features/auth/hooks/useLogin";
+import {
+  ensureGoogleOAuth,
+  fetchGoogleProfile,
+  GOOGLE_SCOPE,
+} from "../utils/googleClient";
 
 const LoginRegistration = () => {
-  // const navigate = useNavigate();
+  const router = useRouter();
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [message, setMessage] = useState<string | null>(null);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -22,28 +27,13 @@ const LoginRegistration = () => {
     }
   }, []);
 
-  // const handleAuthSuccess = useMemo(
-  //   () => () => {
-  //     navigate("/dashboard");
-  //   },
-  //   [navigate]
-  // );
-
   const { login, isLoading } = useLogin({
     onSuccess: () => {
       setMessage(null);
-      // handleAuthSuccess();
+      router.push("/dashboard");
     },
     onError: (error) => {
       setMessage(error.message || "Network error. Please retry.");
-    },
-  });
-
-  const { isReady: googleReady, triggerSignIn } = useGoogleOAuth({
-    // onSuccess: handleAuthSuccess,
-    onSuccess: () => {},
-    onError: (err) => {
-      setMessage(err.message);
     },
   });
 
@@ -63,6 +53,81 @@ const LoginRegistration = () => {
       console.error("Login webhook error", error);
     }
   };
+
+  async function continueWithGoogle() {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setMessage("Google login is not configured. Missing client ID.");
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      setMessage("Running outside the browser.");
+      return;
+    }
+
+    try {
+      setMessage(null);
+      setIsGoogleLoading(true);
+      await ensureGoogleOAuth();
+
+      const google = window.google;
+      if (!google?.accounts?.oauth2) {
+        throw new Error("Google OAuth client is unavailable.");
+      }
+
+      const tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: GOOGLE_SCOPE,
+        prompt: "select_account",
+        callback: async (tokenResponse) => {
+          try {
+            const accessToken = tokenResponse?.access_token;
+            if (!accessToken) {
+              throw new Error(
+                tokenResponse?.error || "No access token received from Google."
+              );
+            }
+
+            const profile = await fetchGoogleProfile(accessToken);
+
+            if (profile.email && typeof window !== "undefined") {
+              window.localStorage.setItem(
+                "user_email",
+                profile.email.toLowerCase()
+              );
+              if (profile.given_name) {
+                window.localStorage.setItem("user_name", profile.given_name);
+              }
+              if (profile.family_name) {
+                window.localStorage.setItem(
+                  "user_surname",
+                  profile.family_name
+                );
+              }
+            }
+
+            router.push("/dashboard");
+          } catch (callbackError) {
+            console.error("Google sign-in callback failed", callbackError);
+            setMessage(
+              callbackError instanceof Error
+                ? callbackError.message
+                : "Google sign-in failed."
+            );
+          } finally {
+            setIsGoogleLoading(false);
+          }
+        },
+      });
+
+      tokenClient.requestAccessToken({ prompt: "consent" });
+    } catch (error) {
+      console.error("Google sign-in start failed", error);
+      setMessage("Google sign-in could not start. Please try again.");
+      setIsGoogleLoading(false);
+    }
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--background-color)] text-[var(--text-color)]">
@@ -166,8 +231,8 @@ const LoginRegistration = () => {
             <button
               type="button"
               className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-white py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={() => triggerSignIn()}
-              disabled={!googleReady || isLoading}
+              onClick={continueWithGoogle}
+              disabled={isGoogleLoading || isLoading}
             >
               <img
                 src="https://www.gstatic.com/images/branding/product/1x/googleg_24dp.png"
@@ -175,7 +240,9 @@ const LoginRegistration = () => {
                 className="h-5 w-5"
               />
               <span>
-                {googleReady ? "Login with Google" : "Loading Google..."}
+                {isGoogleLoading
+                  ? "Connecting to Google..."
+                  : "Login with Google"}
               </span>
             </button>
             <button
@@ -240,7 +307,7 @@ const LoginRegistration = () => {
           <button
             type="button"
             className="font-medium text-[var(--primary-color)] hover:text-opacity-80"
-            onClick={() => navigate("/signup")}
+            onClick={() => router.push("/signup")}
           >
             Sign Up
           </button>

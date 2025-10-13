@@ -5,8 +5,12 @@
 import { useRouter } from 'next/navigation';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useState } from 'react';
-import { useGoogleOAuth } from '../hooks/useGoogleOAuth';
 import { useApiMutation } from '../hooks/useApiMutation';
+import {
+  ensureGoogleOAuth,
+  fetchGoogleProfile,
+  GOOGLE_SCOPE
+} from '../utils/googleClient';
 
 interface SignupForm {
   name: string;
@@ -28,6 +32,7 @@ const NewUserSignup = () => {
   const router = useRouter();
   const [form, setForm] = useState<SignupForm>(initialFormState);
   const [message, setMessage] = useState<string | null>(null);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const signupMutation = useApiMutation({
     path: '/user_auth'
   });
@@ -39,11 +44,6 @@ const NewUserSignup = () => {
   };
 
   const handleSuccess = () => router.push('/dashboard');
-
-  const { isReady: googleReady, triggerSignIn } = useGoogleOAuth({
-    onSuccess: handleSuccess,
-    onError: (err) => setMessage(err.message)
-  });
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -79,6 +79,75 @@ const NewUserSignup = () => {
       const normalizedError = error instanceof Error ? error : new Error(String(error));
       console.error('Signup webhook error', normalizedError);
       setMessage(normalizedError.message || 'Network error. Please retry.');
+    }
+  };
+
+  const continueWithGoogle = async () => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setMessage('Google signup is not configured. Missing client ID.');
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      setMessage('Running outside the browser.');
+      return;
+    }
+
+    try {
+      setMessage(null);
+      setIsGoogleLoading(true);
+      await ensureGoogleOAuth();
+
+      const google = window.google;
+      if (!google?.accounts?.oauth2) {
+        throw new Error('Google OAuth client is unavailable.');
+      }
+
+      const tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: GOOGLE_SCOPE,
+        prompt: 'select_account',
+        callback: async (tokenResponse) => {
+          try {
+            const accessToken = tokenResponse?.access_token;
+            if (!accessToken) {
+              throw new Error(
+                tokenResponse?.error || 'No access token received from Google.'
+              );
+            }
+
+            const profile = await fetchGoogleProfile(accessToken);
+
+            if (profile.email && typeof window !== 'undefined') {
+              window.localStorage.setItem('user_email', profile.email.toLowerCase());
+              if (profile.given_name) {
+                window.localStorage.setItem('user_name', profile.given_name);
+              }
+              if (profile.family_name) {
+                window.localStorage.setItem('user_surname', profile.family_name);
+              }
+            }
+
+            handleSuccess();
+          } catch (callbackError) {
+            console.error('Google signup callback failed', callbackError);
+            setMessage(
+              callbackError instanceof Error
+                ? callbackError.message
+                : 'Google signup failed.'
+            );
+          } finally {
+            setIsGoogleLoading(false);
+          }
+        }
+      });
+
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+    } catch (error) {
+      console.error('Google signup start failed', error);
+      setMessage('Google signup could not start. Please try again.');
+      setIsGoogleLoading(false);
     }
   };
 
@@ -225,15 +294,17 @@ const NewUserSignup = () => {
             <button
               type="button"
               className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-white py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={() => triggerSignIn()}
-              disabled={!googleReady || isSubmitting}
+              onClick={continueWithGoogle}
+              disabled={isSubmitting || isGoogleLoading}
             >
               <img
                 src="https://www.gstatic.com/images/branding/product/1x/googleg_24dp.png"
                 alt="Google"
                 className="h-5 w-5"
               />
-              <span>{googleReady ? 'Signup with Google' : 'Loading Google...'}</span>
+              <span>
+                {isGoogleLoading ? 'Connecting to Google...' : 'Signup with Google'}
+              </span>
             </button>
             <button
               type="button"
