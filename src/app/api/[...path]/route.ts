@@ -10,6 +10,8 @@ type RouteContext = {
 };
 
 const handleRequest = async (request: NextRequest, context: RouteContext) => {
+  console.log("before GD");
+
   return _GD(request, context);
 };
 

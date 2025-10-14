@@ -46,7 +46,7 @@ interface ApiError extends Error {
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: REQUEST_TIMEOUT,
+  // timeout: REQUEST_TIMEOUT,
   headers: {
     Accept: "application/json",
   },
