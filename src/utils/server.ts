@@ -25,6 +25,8 @@ export const _GD = async (
   //     return new NextResponse("Not Valid", { status: 419 });
   // }
 
+  console.log("in the GD");
+
   const arrBuffer = await request.arrayBuffer().catch((error) => {
     console.error("Failed to read request body", error);
     return undefined;
@@ -50,10 +52,14 @@ export const _GD = async (
     `Bearer ${request.cookies.get("AdminAuthToken")?.value ?? ""}`
   );
 
-  const apiBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  // const apiBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const apiBaseUrl = "https://api.perceptionist.top/webhook";
   if (!apiBaseUrl) {
     throw new Error("NEXT_PUBLIC_BASE_URL is not configured");
   }
+  console.log(request);
+  console.log(request.nextUrl);
+  console.log(request.nextUrl.pathname);
 
   const normalizedPath = request.nextUrl.pathname.replace(/^\/(api|gd)/, "");
   const targetPath = normalizedPath.startsWith("/")

@@ -201,6 +201,21 @@ const DocumentScan = () => {
               >
                 <span className="material-symbols-outlined">check</span>
               </Button>
+
+              {isUploading && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0b1324]/80 px-6 text-center backdrop-blur-sm">
+                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full border-4 border-white/20 border-t-[var(--primary-color)] animate-spin" />
+                  <p className="text-lg font-semibold text-white">
+                    Processing the document,
+                    <br />
+                    Please wait!
+                  </p>
+                  <p className="mt-3 text-sm text-white/70">
+                    Do not close this tab. Upload &amp; OCR may take a few
+                    seconds.
+                  </p>
+                </div>
+              )}
             </Card>
           </div>
 
@@ -240,7 +255,9 @@ const DocumentScan = () => {
               onClick={handleSelectFile}
               disabled={isUploading}
             >
-              <span className="material-symbols-outlined text-3xl text-[#0f172a]">camera</span>
+              <span className="material-symbols-outlined text-3xl text-[#0f172a]">
+                camera
+              </span>
             </Button>
             <Button
               variant="ghost"
