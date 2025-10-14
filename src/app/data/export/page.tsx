@@ -1,4 +1,4 @@
-import DataExportOptions from '../../../pages/DataExportOptions';
+import DataExportOptions from '../../../views/DataExportOptions';
 
 const DataExportPage = () => <DataExportOptions />;
 

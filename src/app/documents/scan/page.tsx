@@ -1,4 +1,4 @@
-import DocumentScan from '../../../pages/DocumentScan';
+import DocumentScan from '../../../views/DocumentScan';
 
 const DocumentScanPage = () => <DocumentScan />;
 

@@ -1,4 +1,4 @@
-import UserProfileSettings from '../../pages/UserProfileSettings';
+import UserProfileSettings from '../../views/UserProfileSettings';
 
 const ProfilePage = () => <UserProfileSettings />;
 

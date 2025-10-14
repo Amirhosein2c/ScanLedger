@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
+import type { Route } from 'next';
 import { usePathname, useRouter } from 'next/navigation';
 import { readStoredAuthSnapshot } from '../session';
 
 interface AuthRedirectOptions {
-  redirectAuthenticatedTo?: string;
-  redirectUnauthenticatedTo?: string;
+  redirectAuthenticatedTo?: Route;
+  redirectUnauthenticatedTo?: Route;
   enabled?: boolean;
 }
 

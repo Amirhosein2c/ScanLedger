@@ -1,4 +1,4 @@
-import DefaultTemplates from '../../pages/DefaultTemplates';
+import DefaultTemplates from '../../views/DefaultTemplates';
 
 const TemplatesPage = () => <DefaultTemplates />;
 
