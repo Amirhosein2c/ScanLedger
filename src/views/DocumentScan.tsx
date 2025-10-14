@@ -211,7 +211,8 @@ const DocumentScan = () => {
                     Please wait!
                   </p>
                   <p className="mt-3 text-sm text-white/70">
-                    Do not close this tab. Upload &amp; OCR may take a few seconds.
+                    Do not close this tab. Upload &amp; OCR may take a few
+                    seconds.
                   </p>
                 </div>
               )}
@@ -254,7 +255,9 @@ const DocumentScan = () => {
               onClick={handleSelectFile}
               disabled={isUploading}
             >
-              <span className="material-symbols-outlined text-3xl text-[#0f172a]">camera</span>
+              <span className="material-symbols-outlined text-3xl text-[#0f172a]">
+                camera
+              </span>
             </Button>
             <Button
               variant="ghost"

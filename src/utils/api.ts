@@ -37,7 +37,7 @@ const SERVER_API_BASE_URL = normalizeBaseUrl(
   process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL
 );
 const API_BASE_URL = isBrowser ? PUBLIC_API_BASE_URL : SERVER_API_BASE_URL;
-const REQUEST_TIMEOUT = Number.isFinite(API_TIMEOUT) ? API_TIMEOUT : 30000;
+const REQUEST_TIMEOUT = Number.isFinite(API_TIMEOUT) ? API_TIMEOUT : 1200000;
 
 interface ApiError extends Error {
   status?: number;
@@ -46,7 +46,7 @@ interface ApiError extends Error {
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  // timeout: REQUEST_TIMEOUT,
+  timeout: REQUEST_TIMEOUT,
   headers: {
     Accept: "application/json",
   },
