@@ -1,0 +1,10 @@
+
+> scanledger@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.33
+  - Environments: .env
+  - Experiments (use with caution):
+    · typedRoutes
+
+   Creating an optimized production build ...

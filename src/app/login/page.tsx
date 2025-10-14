@@ -1,4 +1,4 @@
-import LoginRegistration from '../../pages/LoginRegistration';
+import LoginRegistration from '../../views/LoginRegistration';
 
 const LoginPage = () => <LoginRegistration />;
 

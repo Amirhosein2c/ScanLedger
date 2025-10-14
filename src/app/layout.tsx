@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import Providers from './providers';
 import './globals.css';
@@ -6,12 +6,15 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'ScanLedger',
   description: 'ScanLedger helps you digitize and organize financial documents effortlessly.',
-  themeColor: '#111827',
   manifest: '/manifest.webmanifest',
   icons: {
     icon: [{ url: '/images/icons/icon-512x512.png', type: 'image/png', sizes: '512x512' }],
     apple: [{ url: '/images/icons/icon-152x152.png', type: 'image/png', sizes: '152x152' }]
   }
+};
+
+export const viewport: Viewport = {
+  themeColor: '#111827'
 };
 
 const RootLayout = ({ children }: { children: ReactNode }) => (

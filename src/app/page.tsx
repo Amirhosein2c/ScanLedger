@@ -1,4 +1,4 @@
-import WelcomeOnboarding from '../pages/WelcomeOnboarding';
+import WelcomeOnboarding from '../views/WelcomeOnboarding';
 
 const HomePage = () => <WelcomeOnboarding />;
 

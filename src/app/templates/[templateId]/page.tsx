@@ -1,4 +1,4 @@
-import TemplateDetail from '../../../pages/TemplateDetail';
+import TemplateDetail from '../../../views/TemplateDetail';
 
 const TemplateDetailPage = () => <TemplateDetail />;
 

@@ -1,5 +1,10 @@
-import DocumentDetailsEdit from '../../../pages/DocumentDetailsEdit';
+import { Suspense } from 'react';
+import DocumentDetailsEdit from '../../../views/DocumentDetailsEdit';
 
-const DocumentDetailsPage = () => <DocumentDetailsEdit />;
+const DocumentDetailsPage = () => (
+  <Suspense fallback={null}>
+    <DocumentDetailsEdit />
+  </Suspense>
+);
 
 export default DocumentDetailsPage;

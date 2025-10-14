@@ -1,4 +1,4 @@
-import DocumentManagementSearch from '../../../pages/DocumentManagementSearch';
+import DocumentManagementSearch from '../../../views/DocumentManagementSearch';
 
 const DocumentSearchPage = () => <DocumentManagementSearch />;
 

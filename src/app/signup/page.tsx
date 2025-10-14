@@ -1,4 +1,4 @@
-import NewUserSignup from '../../pages/NewUserSignup';
+import NewUserSignup from '../../views/NewUserSignup';
 
 const SignupPage = () => <NewUserSignup />;
 

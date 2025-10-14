@@ -1,4 +1,4 @@
-import DashboardOverview from '../../pages/DashboardOverview';
+import DashboardOverview from '../../views/DashboardOverview';
 
 const DashboardPage = () => <DashboardOverview />;
 
