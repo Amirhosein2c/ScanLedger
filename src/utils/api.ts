@@ -7,39 +7,37 @@ import axios, {
 } from "axios";
 import { API_TIMEOUT } from "../config";
 
-const ensureLeadingSlash = (value: string) =>
-  value.startsWith("/") ? value : `/${value}`;
-const stripTrailingSlash = (value: string) => value.replace(/\/$/, "");
+const isBrowser = typeof window !== "undefined";
 
-const PUBLIC_GATEWAY_PATH = ensureLeadingSlash(
-  process.env.NEXT_PUBLIC_API_PATH?.trim() || "/api"
-);
-const INTERNAL_GATEWAY_ORIGIN = process.env.API_GATEWAY_INTERNAL_ORIGIN?.trim();
-const PUBLIC_APP_ORIGIN = process.env.NEXT_PUBLIC_APP_URL?.trim();
-const VERCEL_ORIGIN = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : undefined;
-const DEFAULT_SERVER_ORIGIN = VERCEL_ORIGIN ?? "http://localhost:3000";
+const normalizeBaseUrl = (value: string | undefined | null): string => {
+  if (!value) {
+    return "/api";
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "/api";
+  }
+  const withoutTrailing = trimmed.replace(/\/+$/, "");
 
-const resolveGatewayBase = (): string => {
-  if (typeof window !== "undefined") {
-    return PUBLIC_GATEWAY_PATH;
+  if (
+    withoutTrailing.startsWith("http://") ||
+    withoutTrailing.startsWith("https://") ||
+    withoutTrailing.startsWith("/")
+  ) {
+    return withoutTrailing;
   }
 
-  const origin =
-    INTERNAL_GATEWAY_ORIGIN ||
-    PUBLIC_APP_ORIGIN ||
-    VERCEL_ORIGIN ||
-    DEFAULT_SERVER_ORIGIN;
-  if (origin) {
-    return `${stripTrailingSlash(origin)}${PUBLIC_GATEWAY_PATH}`;
-  }
-
-  return PUBLIC_GATEWAY_PATH;
+  return `/${withoutTrailing}`;
 };
 
-const API_BASE = resolveGatewayBase();
-const DEFAULT_TIMEOUT = Number.isFinite(API_TIMEOUT) ? API_TIMEOUT : 30000;
+const PUBLIC_API_BASE_URL = normalizeBaseUrl(
+  process.env.NEXT_PUBLIC_API_BASE_URL
+);
+const SERVER_API_BASE_URL = normalizeBaseUrl(
+  process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL
+);
+const API_BASE_URL = isBrowser ? PUBLIC_API_BASE_URL : SERVER_API_BASE_URL;
+const REQUEST_TIMEOUT = Number.isFinite(API_TIMEOUT) ? API_TIMEOUT : 30000;
 
 interface ApiError extends Error {
   status?: number;
@@ -47,32 +45,33 @@ interface ApiError extends Error {
 }
 
 const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE,
-  timeout: DEFAULT_TIMEOUT,
+  baseURL: API_BASE_URL,
+  timeout: REQUEST_TIMEOUT,
   headers: {
     Accept: "application/json",
   },
   withCredentials: false,
 });
 
-apiClient.interceptors.request.use(
-  (config) => {
-    if (config.data instanceof FormData) {
-      delete config.headers["Content-Type"];
-    } else if (
-      config.data &&
-      typeof config.data === "object" &&
-      !Array.isArray(config.data) &&
-      !config.headers?.["Content-Type"]
-    ) {
-      config.headers = config.headers || {};
-      config.headers["Content-Type"] = "application/json";
-    }
-
+apiClient.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    delete config.headers?.["Content-Type"];
     return config;
-  },
-  (error) => Promise.reject(error)
-);
+  }
+
+  const isJsonPayload =
+    config.data &&
+    typeof config.data === "object" &&
+    !Array.isArray(config.data) &&
+    !(config.data instanceof Blob);
+
+  if (isJsonPayload && !config.headers?.["Content-Type"]) {
+    config.headers = config.headers || {};
+    config.headers["Content-Type"] = "application/json";
+  }
+
+  return config;
+});
 
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response.data,
@@ -123,6 +122,7 @@ export const apiRequest = async <T = unknown>(
   const data = await apiClient.request<T>(config);
   return data as T;
 };
+
 export const apiGet = <T = unknown>(
   path: string,
   config: AxiosRequestConfig = {}
@@ -153,4 +153,4 @@ export const apiDelete = <T = unknown>(
 ): Promise<T> => apiClient.delete<T>(path, config) as unknown as Promise<T>;
 
 export type { Method as HttpMethod };
-export { API_BASE, apiClient };
+export { API_BASE_URL, apiClient };
