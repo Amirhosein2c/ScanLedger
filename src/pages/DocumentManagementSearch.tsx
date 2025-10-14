@@ -6,6 +6,7 @@ import BottomNav from '../components/BottomNav';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
 
 interface DocumentSummary {
   id?: string;
@@ -54,6 +55,7 @@ const DocumentRow: FC<DocumentRowProps> = ({ document }) => {
 };
 
 const DocumentManagementSearch = () => {
+  useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
   const [query, setQuery] = useState<string>('');
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
 

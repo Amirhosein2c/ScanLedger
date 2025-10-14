@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import BottomNav from '../components/BottomNav';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
 
 interface DocumentSummary {
   id?: string;
@@ -57,6 +58,7 @@ const RecentScanCard = ({ document }: RecentScanCardProps) => {
 
 const DashboardOverview = () => {
   const router = useRouter();
+  useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
   const [userName, setUserName] = useState<string>('User');
   const [recentScans, setRecentScans] = useState<DocumentSummary[]>([]);
 

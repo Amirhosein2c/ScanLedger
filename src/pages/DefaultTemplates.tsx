@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import BottomNav from '../components/BottomNav';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
 
 interface TemplateSummary {
   id: string;
@@ -14,6 +15,7 @@ interface TemplateSummary {
 }
 
 const DefaultTemplates = () => {
+  useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
   const templates = useMemo<TemplateSummary[]>(
     () => [
       {

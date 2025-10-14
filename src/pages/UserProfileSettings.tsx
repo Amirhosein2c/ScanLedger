@@ -8,6 +8,7 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Separator } from '../components/ui/separator';
+import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
 
 interface ProfileState {
   name: string;
@@ -17,6 +18,7 @@ interface ProfileState {
 
 const UserProfileSettings = () => {
   const router = useRouter();
+  useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
   const [profile, setProfile] = useState<ProfileState>({
     name: '',
     surname: '',
