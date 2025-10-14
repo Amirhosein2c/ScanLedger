@@ -4,6 +4,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -12,6 +13,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 const WelcomeOnboarding = () => {
   const router = useRouter();
+  useAuthRedirect({ redirectAuthenticatedTo: '/dashboard' });
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installLabel, setInstallLabel] = useState('Install App');
   const [installDisabled, setInstallDisabled] = useState(false);

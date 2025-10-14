@@ -5,8 +5,10 @@ import BottomNav from '../components/BottomNav';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { generateCsvFromFields, type OcrField } from '../utils/ocr';
+import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
 
 const DataExportOptions = () => {
+  useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
   const [csvContent, setCsvContent] = useState<string>('');
   const [message, setMessage] = useState<string | null>(null);
 

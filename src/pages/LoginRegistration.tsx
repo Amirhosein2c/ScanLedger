@@ -10,6 +10,7 @@ import {
   fetchGoogleProfile,
   GOOGLE_SCOPE,
 } from "../utils/googleClient";
+import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 
 const LoginRegistration = () => {
   const router = useRouter();
@@ -17,6 +18,8 @@ const LoginRegistration = () => {
   const [password, setPassword] = useState<string>("");
   const [message, setMessage] = useState<string | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  useAuthRedirect({ redirectAuthenticatedTo: "/dashboard" });
 
   useEffect(() => {
     if (typeof window === "undefined") {

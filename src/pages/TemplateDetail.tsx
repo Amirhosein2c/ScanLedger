@@ -6,6 +6,7 @@ import BottomNav from '../components/BottomNav';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
 
 interface TemplateField {
   label: string;
@@ -58,6 +59,7 @@ const templates: Record<string, TemplateDefinition> = {
 
 const TemplateDetail = () => {
   const router = useRouter();
+  useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
   const params = useParams<{ templateId: string }>();
   const templateId = params?.templateId;
 

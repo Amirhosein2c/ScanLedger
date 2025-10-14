@@ -34,7 +34,9 @@ export const ensureGoogleOAuth = async (): Promise<void> => {
       );
 
       if (existingScript) {
-        existingScript.addEventListener("load", () => resolve(), { once: true });
+        existingScript.addEventListener("load", () => resolve(), {
+          once: true,
+        });
         existingScript.addEventListener(
           "error",
           () => reject(new Error("Failed to load Google auth script.")),

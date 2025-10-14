@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ChangeEvent, useEffect, useMemo, useState } from 'react';
 import BottomNav from '../components/BottomNav';
 import { extractOcrFields, generateCsvFromFields, inferSummaryFromFields, type OcrField } from '../utils/ocr';
+import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
 
 type InputType = 'text' | 'date' | 'currency' | 'email' | 'tel';
 
@@ -80,6 +81,7 @@ const formatDateForInput = (value: string): string => {
 
 const DocumentDetailsEdit = () => {
   const router = useRouter();
+  useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
   const searchParams = useSearchParams();
   const [imageSrc, setImageSrc] = useState<string>('');
   const [fields, setFields] = useState<OcrField[]>([]);

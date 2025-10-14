@@ -1,16 +1,17 @@
-'use client';
+"use client";
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useRouter } from 'next/navigation';
-import type { ChangeEvent, FormEvent } from 'react';
-import { useState } from 'react';
-import { useApiMutation } from '../hooks/useApiMutation';
+import { useRouter } from "next/navigation";
+import type { ChangeEvent, FormEvent } from "react";
+import { useState } from "react";
+import { useApiMutation } from "../hooks/useApiMutation";
 import {
   ensureGoogleOAuth,
   fetchGoogleProfile,
-  GOOGLE_SCOPE
-} from '../utils/googleClient';
+  GOOGLE_SCOPE,
+} from "../utils/googleClient";
+import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 
 interface SignupForm {
   name: string;
@@ -21,11 +22,11 @@ interface SignupForm {
 }
 
 const initialFormState: SignupForm = {
-  name: '',
-  surname: '',
-  email: '',
-  password: '',
-  confirmPassword: ''
+  name: "",
+  surname: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
 };
 
 const NewUserSignup = () => {
@@ -33,8 +34,9 @@ const NewUserSignup = () => {
   const [form, setForm] = useState<SignupForm>(initialFormState);
   const [message, setMessage] = useState<string | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  useAuthRedirect({ redirectAuthenticatedTo: "/dashboard" });
   const signupMutation = useApiMutation({
-    path: '/user_auth'
+    path: "/user_auth",
   });
   const isSubmitting = signupMutation.isPending;
 
@@ -43,19 +45,19 @@ const NewUserSignup = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSuccess = () => router.push('/dashboard');
+  const handleSuccess = () => router.push("/dashboard");
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage(null);
 
     if (Object.values(form).some((value) => !value.trim())) {
-      setMessage('Please fill in all fields.');
+      setMessage("Please fill in all fields.");
       return;
     }
 
     if (form.password !== form.confirmPassword) {
-      setMessage('Passwords do not match.');
+      setMessage("Passwords do not match.");
       return;
     }
 
@@ -64,33 +66,34 @@ const NewUserSignup = () => {
         email: form.email.trim(),
         password: form.password,
         name: form.name.trim(),
-        surname: form.surname.trim()
+        surname: form.surname.trim(),
       };
       await signupMutation.mutateAsync(payload);
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem('user_name', payload.name);
-        window.localStorage.setItem('user_surname', payload.surname);
-        window.localStorage.setItem('user_email', payload.email.toLowerCase());
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("user_name", payload.name);
+        window.localStorage.setItem("user_surname", payload.surname);
+        window.localStorage.setItem("user_email", payload.email.toLowerCase());
       }
 
       handleSuccess();
     } catch (error) {
-      const normalizedError = error instanceof Error ? error : new Error(String(error));
-      console.error('Signup webhook error', normalizedError);
-      setMessage(normalizedError.message || 'Network error. Please retry.');
+      const normalizedError =
+        error instanceof Error ? error : new Error(String(error));
+      console.error("Signup webhook error", normalizedError);
+      setMessage(normalizedError.message || "Network error. Please retry.");
     }
   };
 
   const continueWithGoogle = async () => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (!clientId) {
-      setMessage('Google signup is not configured. Missing client ID.');
+      setMessage("Google signup is not configured. Missing client ID.");
       return;
     }
 
-    if (typeof window === 'undefined') {
-      setMessage('Running outside the browser.');
+    if (typeof window === "undefined") {
+      setMessage("Running outside the browser.");
       return;
     }
 
@@ -101,52 +104,58 @@ const NewUserSignup = () => {
 
       const google = window.google;
       if (!google?.accounts?.oauth2) {
-        throw new Error('Google OAuth client is unavailable.');
+        throw new Error("Google OAuth client is unavailable.");
       }
 
       const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: GOOGLE_SCOPE,
-        prompt: 'select_account',
+        prompt: "select_account",
         callback: async (tokenResponse) => {
           try {
             const accessToken = tokenResponse?.access_token;
             if (!accessToken) {
               throw new Error(
-                tokenResponse?.error || 'No access token received from Google.'
+                tokenResponse?.error || "No access token received from Google."
               );
             }
 
             const profile = await fetchGoogleProfile(accessToken);
 
-            if (profile.email && typeof window !== 'undefined') {
-              window.localStorage.setItem('user_email', profile.email.toLowerCase());
+            if (profile.email && typeof window !== "undefined") {
+              window.localStorage.setItem(
+                "user_email",
+                profile.email.toLowerCase()
+              );
               if (profile.given_name) {
-                window.localStorage.setItem('user_name', profile.given_name);
+                window.localStorage.setItem("user_name", profile.given_name);
               }
               if (profile.family_name) {
-                window.localStorage.setItem('user_surname', profile.family_name);
+                window.localStorage.setItem(
+                  "user_surname",
+                  profile.family_name
+                );
               }
             }
 
             handleSuccess();
           } catch (callbackError) {
-            console.error('Google signup callback failed', callbackError);
+            console.error("Google signup callback failed", callbackError);
             setMessage(
               callbackError instanceof Error
                 ? callbackError.message
-                : 'Google signup failed.'
+                : "Google signup failed."
             );
           } finally {
             setIsGoogleLoading(false);
           }
-        }
+        },
       });
 
-      tokenClient.requestAccessToken({ prompt: 'consent' });
+      tokenClient.requestAccessToken({ prompt: "consent" });
     } catch (error) {
-      console.error('Google signup start failed', error);
-      setMessage('Google signup could not start. Please try again.');
+      console.error("Google signup start failed", error);
+      setMessage("Google signup could not start. Please try again.");
       setIsGoogleLoading(false);
     }
   };
@@ -170,8 +179,12 @@ const NewUserSignup = () => {
                 strokeWidth="2"
               />
             </svg>
-            <h1 className="text-4xl font-bold tracking-tighter">Create Account</h1>
-            <p className="mt-2 text-lg text-[var(--secondary-text-color)]">Join ScanLedger to get started</p>
+            <h1 className="text-4xl font-bold tracking-tighter">
+              Create Account
+            </h1>
+            <p className="mt-2 text-lg text-[var(--secondary-text-color)]">
+              Join ScanLedger to get started
+            </p>
           </div>
 
           {message && (
@@ -272,7 +285,7 @@ const NewUserSignup = () => {
                 className="flex w-full justify-center rounded-md bg-[var(--primary-color)] px-4 py-3 text-sm font-semibold leading-6 text-gray-900 shadow-sm transition-colors hover:bg-opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-color)]"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Submitting...' : 'Sign Up'}
+                {isSubmitting ? "Submitting..." : "Sign Up"}
               </button>
             </div>
           </form>
@@ -303,15 +316,22 @@ const NewUserSignup = () => {
                 className="h-5 w-5"
               />
               <span>
-                {isGoogleLoading ? 'Connecting to Google...' : 'Signup with Google'}
+                {isGoogleLoading
+                  ? "Connecting to Google..."
+                  : "Signup with Google"}
               </span>
             </button>
             <button
               type="button"
               className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-[#1877F2] py-3 text-sm font-medium text-white transition-colors hover:bg-[#266fe0]"
-              onClick={() => setMessage('Facebook signup coming soon!')}
+              onClick={() => setMessage("Facebook signup coming soon!")}
             >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+              <svg
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                fill="currentColor"
+              >
                 <path d="M22.675 0H1.325C.593 0 0 .593 0 1.326v21.348C0 23.406.593 24 1.325 24h11.494v-9.294H9.847v-3.622h2.972V8.413c0-2.943 1.796-4.549 4.416-4.549 1.255 0 2.336.093 2.651.135v3.07h-1.82c-1.428 0-1.703.679-1.703 1.675v2.196h3.406l-.444 3.622h-2.962V24h5.807C23.406 24 24 23.406 24 22.674V1.326C24 .593 23.406 0 22.675 0z" />
               </svg>
               <span>Signup with Facebook</span>
@@ -319,7 +339,7 @@ const NewUserSignup = () => {
             <button
               type="button"
               className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-[#111827] py-3 text-sm font-medium text-white transition-colors hover:bg-[#1f2937]"
-              onClick={() => setMessage('Microsoft signup coming soon!')}
+              onClick={() => setMessage("Microsoft signup coming soon!")}
             >
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
@@ -331,13 +351,13 @@ const NewUserSignup = () => {
             <button
               type="button"
               className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-black py-3 text-sm font-medium text-white transition-colors hover:bg-gray-900"
-              onClick={() => setMessage('Apple signup coming soon!')}
+              onClick={() => setMessage("Apple signup coming soon!")}
             >
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg"
                 alt="Apple"
                 className="h-5 w-5"
-                style={{ filter: 'invert(1)' }}
+                style={{ filter: "invert(1)" }}
               />
               <span>Signup with Apple</span>
             </button>
@@ -347,11 +367,11 @@ const NewUserSignup = () => {
 
       <footer className="px-6 py-8 sm:px-8">
         <div className="text-center text-sm text-[var(--secondary-text-color)]">
-          Already have an account?{' '}
+          Already have an account?{" "}
           <button
             type="button"
             className="font-medium text-[var(--primary-color)] hover:text-opacity-80"
-            onClick={() => router.push('/login')}
+            onClick={() => router.push("/login")}
           >
             Sign In
           </button>

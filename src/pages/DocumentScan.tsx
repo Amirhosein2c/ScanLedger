@@ -9,9 +9,11 @@ import BottomNav from "../components/BottomNav";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { useApiMutation } from "../hooks/useApiMutation";
+import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 
 const DocumentScan = () => {
   const router = useRouter();
+  useAuthRedirect({ redirectUnauthenticatedTo: "/login" });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
