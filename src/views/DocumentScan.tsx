@@ -43,6 +43,73 @@ const stopMediaStream = (stream: MediaStream | null) => {
   stream?.getTracks().forEach((track) => track.stop());
 };
 
+const PREFERRED_CAMERA_STORAGE_KEY = "preferredRearCameraDeviceId";
+
+const getPreferredCameraDeviceId = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage?.getItem(PREFERRED_CAMERA_STORAGE_KEY);
+  } catch (storageError) {
+    console.warn("Unable to read preferred camera id", storageError);
+    return null;
+  }
+};
+
+const setPreferredCameraDeviceId = (deviceId: string) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage?.setItem(PREFERRED_CAMERA_STORAGE_KEY, deviceId);
+  } catch (storageError) {
+    console.warn("Unable to persist preferred camera id", storageError);
+  }
+};
+
+const buildCameraConstraints = (deviceId?: string): MediaStreamConstraints => {
+  const base: MediaTrackConstraints = {
+    width: { ideal: 1920 },
+    height: { ideal: 1080 },
+    frameRate: { ideal: 30 },
+  };
+
+  return {
+    audio: false,
+    video: deviceId
+      ? {
+          ...base,
+          deviceId: { exact: deviceId },
+          facingMode: { ideal: "environment" },
+        }
+      : {
+          ...base,
+          facingMode: { ideal: "environment" },
+        },
+  };
+};
+
+const isLikelyUltraWideLabel = (label: string) => {
+  const normalized = label.toLowerCase();
+  return (
+    normalized.includes("ultra") ||
+    normalized.includes("0.5") ||
+    normalized.includes("0,5")
+  );
+};
+
+const isLikelyRearLabel = (label: string) => {
+  const normalized = label.toLowerCase();
+  return (
+    normalized.includes("back") ||
+    normalized.includes("rear") ||
+    normalized.includes("environment")
+  );
+};
+
 const getLegacyGetUserMedia = (): LegacyGetUserMedia | undefined => {
   if (typeof navigator === "undefined") return undefined;
   const nav = navigator as LegacyNavigator;
@@ -71,37 +138,103 @@ const getUserMediaPromise = (constraints: MediaStreamConstraints) => {
   );
 };
 
-// const requestCameraStream = async (isSecure: boolean, hostname: string) => {
-//   ensureSecureCameraContext(isSecure, hostname);
+const findPreferredRearCameraDeviceId = async (): Promise<string | null> => {
+  if (
+    typeof navigator === "undefined" ||
+    !navigator.mediaDevices?.enumerateDevices
+  ) {
+    return null;
+  }
 
-//   const mediaDevices = navigator.mediaDevices;
-//   if (mediaDevices?.getUserMedia) {
-//     return mediaDevices.getUserMedia({
-//       video: { facingMode: { ideal: "environment" } },
-//     });
-//   }
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoInputs = devices.filter(
+      (device) => device.kind === "videoinput"
+    );
 
-//   const legacyGetUserMedia = getLegacyGetUserMedia();
-//   if (legacyGetUserMedia) {
-//     return new Promise<MediaStream>((resolve, reject) => {
-//       legacyGetUserMedia.call(
-//         navigator,
-//         { video: { facingMode: "environment" } },
-//         resolve,
-//         reject
-//       );
-//     });
-//   }
+    if (!videoInputs.length) {
+      return null;
+    }
 
-//   throw new Error(
-//     "Camera access is not supported by this browser. Try updating it or using the native camera upload."
-//   );
-// };
+    const preferredMatch =
+      videoInputs.find(
+        (device) =>
+          isLikelyRearLabel(device.label) &&
+          !isLikelyUltraWideLabel(device.label)
+      ) ??
+      videoInputs.find((device) => isLikelyRearLabel(device.label)) ??
+      null;
+
+    return preferredMatch?.deviceId ?? null;
+  } catch (error) {
+    console.warn("Unable to enumerate video devices", error);
+    return null;
+  }
+};
+
+const ensurePreferredRearCamera = async (
+  stream: MediaStream
+): Promise<MediaStream> => {
+  if (typeof navigator === "undefined") {
+    return stream;
+  }
+
+  const [track] = stream.getVideoTracks();
+  const label = track?.label ?? "";
+  const settings = track?.getSettings();
+
+  if (!label) {
+    return stream;
+  }
+
+  if (!isLikelyUltraWideLabel(label) && settings?.deviceId) {
+    setPreferredCameraDeviceId(settings.deviceId);
+    return stream;
+  }
+
+  const preferredDeviceId = await findPreferredRearCameraDeviceId();
+  if (!preferredDeviceId || preferredDeviceId === settings?.deviceId) {
+    return stream;
+  }
+
+  try {
+    const preferredStream = await getUserMediaPromise(
+      buildCameraConstraints(preferredDeviceId)
+    );
+    setPreferredCameraDeviceId(preferredDeviceId);
+    return preferredStream;
+  } catch (error) {
+    console.warn("Unable to switch to preferred rear camera", error);
+    return stream;
+  }
+};
+
 const requestCameraStream = async (isSecure: boolean, hostname: string) => {
   ensureSecureCameraContext(isSecure, hostname);
-  return getUserMediaPromise({
-    video: { facingMode: { ideal: "environment" } },
-  });
+
+  const constraintsQueue: MediaStreamConstraints[] = [];
+  const storedDeviceId = getPreferredCameraDeviceId();
+  if (storedDeviceId) {
+    constraintsQueue.push(buildCameraConstraints(storedDeviceId));
+  }
+  constraintsQueue.push(buildCameraConstraints());
+
+  let lastError: unknown = null;
+  for (const constraints of constraintsQueue) {
+    try {
+      return await getUserMediaPromise(constraints);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError instanceof Error) {
+    throw lastError;
+  }
+
+  throw new Error(
+    "Camera access is not supported by this browser. Try updating it or using the native camera upload."
+  );
 };
 const normalizeCameraError = (
   cameraErr: unknown,
@@ -208,11 +341,25 @@ const DocumentScan = () => {
       setCameraError(null);
 
       try {
-        const stream = await requestCameraStream(isSecure, hostname);
+        let stream = await requestCameraStream(isSecure, hostname);
 
         if (!isSubscribed) {
           stopMediaStream(stream);
           return;
+        }
+
+        const preferredStream = await ensurePreferredRearCamera(stream);
+        if (!isSubscribed) {
+          stopMediaStream(preferredStream);
+          if (preferredStream !== stream) {
+            stopMediaStream(stream);
+          }
+          return;
+        }
+
+        if (preferredStream !== stream) {
+          stopMediaStream(stream);
+          stream = preferredStream;
         }
 
         streamRef.current = stream;
@@ -268,10 +415,38 @@ const DocumentScan = () => {
   };
 
   const handleSelectFile = () => {
-    fileInputRef.current?.click();
+    const input = fileInputRef.current;
+    if (!input) {
+      return;
+    }
+
+    input.value = "";
+    input.removeAttribute("capture");
+    input.click();
+  };
+
+  const handleOpenUserCamera = () => {
+    const input = fileInputRef.current;
+    if (!input) {
+      return;
+    }
+
+    setImagePreview(null);
+    setError(null);
+    setCameraError(null);
+
+    input.value = "";
+    input.setAttribute("capture", "environment");
+    input.click();
+    input.removeAttribute("capture");
   };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { current } = fileInputRef;
+    if (current) {
+      current.removeAttribute("capture");
+    }
+
     const file = event.target.files?.[0];
     if (!file) {
       return;
@@ -299,6 +474,7 @@ const DocumentScan = () => {
     setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+      fileInputRef.current.removeAttribute("capture");
     }
   };
 
@@ -484,11 +660,11 @@ const DocumentScan = () => {
                 variant="secondary"
                 size="icon"
                 className="pointer-events-auto absolute bottom-4 left-4 rounded-full bg-white/15 text-white hover:bg-white/25"
-                onClick={imagePreview ? handleRetake : handleSelectFile}
+                onClick={imagePreview ? handleRetake : handleOpenUserCamera}
                 disabled={isUploading}
               >
                 <span className="material-symbols-outlined">
-                  {imagePreview ? "refresh" : "photo_library"}
+                  {imagePreview ? "refresh" : "photo_camera"}
                 </span>
               </Button>
 
@@ -574,7 +750,6 @@ const DocumentScan = () => {
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           className="hidden"
           onChange={handleFileChange}
         />
