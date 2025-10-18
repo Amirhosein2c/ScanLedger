@@ -31,12 +31,26 @@ const stopMediaStream = (stream: MediaStream | null) => {
   stream?.getTracks().forEach((track) => track.stop());
 };
 
-const getLegacyGetUserMedia = () =>
-  navigator.getUserMedia ||
-  // @ts-expect-error vendor-prefixed API
-  navigator.webkitGetUserMedia ||
-  // @ts-expect-error vendor-prefixed API
-  navigator.mozGetUserMedia;
+type LegacyGetUserMedia = (
+  constraints: MediaStreamConstraints,
+  successCallback: (stream: MediaStream) => void,
+  errorCallback?: (error: MediaStream | DOMException) => void
+) => void;
+
+type LegacyNavigator = Navigator & {
+  getUserMedia?: LegacyGetUserMedia;
+  webkitGetUserMedia?: LegacyGetUserMedia;
+  mozGetUserMedia?: LegacyGetUserMedia;
+};
+
+const getLegacyGetUserMedia = (): LegacyGetUserMedia | undefined => {
+  const legacyNavigator = navigator as LegacyNavigator;
+  return (
+    legacyNavigator.getUserMedia ??
+    legacyNavigator.webkitGetUserMedia ??
+    legacyNavigator.mozGetUserMedia
+  );
+};
 
 const requestCameraStream = async (isSecure: boolean, hostname: string) => {
   ensureSecureCameraContext(isSecure, hostname);

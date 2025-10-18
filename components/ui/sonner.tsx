@@ -1,12 +1,23 @@
 "use client";
 
 import { useEffect } from "react";
+import type { ComponentProps, CSSProperties } from "react";
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, toast, type ExternalToast } from "sonner";
 import { CheckCircle2, XCircle, Info, AlertTriangle } from "lucide-react";
 
-type ToasterProps = React.ComponentProps<typeof Sonner>;
+type ToasterProps = ComponentProps<typeof Sonner>;
 type Variant = "success" | "error" | "info" | "warning";
+type CssVariableKeys =
+  | "--bg"
+  | "--fg"
+  | "--bd"
+  | "--icon-bg"
+  | "--icon-fg"
+  | "--close-fg"
+  | "--close-bg-hover";
+
+type ThemedStyle = CSSProperties & Partial<Record<CssVariableKeys, string>>;
 
 const THEME: Record<
   Variant,
@@ -65,24 +76,29 @@ const THEME: Record<
 
 function themed(variant: Variant, opts: ExternalToast = {}): ExternalToast {
   const t = THEME[variant];
+
+  const mergedClassName = [
+    "sonner-themed rounded-2xl px-4 py-3 shadow-lg border",
+    opts.className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const mergedStyle: ThemedStyle = {
+    ...(opts.style ?? {}),
+    "--bg": t.bg,
+    "--fg": t.fg,
+    "--bd": t.bd ?? "transparent",
+    "--icon-bg": t.iconBg ?? "transparent",
+    "--icon-fg": t.iconFg ?? t.fg,
+    "--close-fg": t.closeFg ?? t.fg,
+    "--close-bg-hover": t.closeHoverBg ?? "rgba(0,0,0,0.06)",
+  };
+
   return {
     ...opts,
-    className: [
-      "sonner-themed rounded-2xl px-4 py-3 shadow-lg border",
-      opts.className,
-    ]
-      .filter(Boolean)
-      .join(" "),
-    style: {
-      ...opts.style,
-      ["--bg" as any]: t.bg,
-      ["--fg" as any]: t.fg,
-      ["--bd" as any]: t.bd ?? "transparent",
-      ["--icon-bg" as any]: t.iconBg ?? "transparent",
-      ["--icon-fg" as any]: t.iconFg ?? t.fg,
-      ["--close-fg" as any]: t.closeFg ?? t.fg,
-      ["--close-bg-hover" as any]: t.closeHoverBg ?? "rgba(0,0,0,0.06)",
-    },
+    className: mergedClassName,
+    style: mergedStyle,
     icon: opts.icon ?? t.icon,
     // closeButton: opts.closeButton ?? true,
   };
@@ -93,23 +109,34 @@ export function Toaster(props: ToasterProps) {
 
   // Patch default toast.* so you don't have to import a custom "notify"
   useEffect(() => {
-    const s = toast.success.bind(toast);
-    const e = toast.error.bind(toast);
-    const i = toast.info.bind(toast);
-    const w = toast.warning.bind(toast);
-    (toast as any).success = (m: any, o?: ExternalToast) =>
-      s(m, themed("success", o));
-    (toast as any).error = (m: any, o?: ExternalToast) =>
-      e(m, themed("error", o));
-    (toast as any).info = (m: any, o?: ExternalToast) =>
-      i(m, themed("info", o));
-    (toast as any).warning = (m: any, o?: ExternalToast) =>
-      w(m, themed("warning", o));
+    type ToastHandler = (
+      message: Parameters<typeof toast.success>[0],
+      options?: ExternalToast
+    ) => ReturnType<typeof toast.success>;
+
+    const original = {
+      success: toast.success.bind(toast) as ToastHandler,
+      error: toast.error.bind(toast) as ToastHandler,
+      info: toast.info.bind(toast) as ToastHandler,
+      warning: toast.warning.bind(toast) as ToastHandler,
+    };
+
+    const patched = toast as typeof toast;
+
+    patched.success = (message, options) =>
+      original.success(message, themed("success", options));
+    patched.error = (message, options) =>
+      original.error(message, themed("error", options));
+    patched.info = (message, options) =>
+      original.info(message, themed("info", options));
+    patched.warning = (message, options) =>
+      original.warning(message, themed("warning", options));
+
     return () => {
-      (toast as any).success = s;
-      (toast as any).error = e;
-      (toast as any).info = i;
-      (toast as any).warning = w;
+      patched.success = original.success;
+      patched.error = original.error;
+      patched.info = original.info;
+      patched.warning = original.warning;
     };
   }, []);
 
