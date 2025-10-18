@@ -11,18 +11,126 @@ import { Card } from "../components/ui/card";
 import { useApiMutation } from "../hooks/useApiMutation";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { toast } from "sonner";
+
+const SECURE_CONTEXT_MESSAGE =
+  "Camera access requires HTTPS or running from localhost during development.";
+
+const isLoopbackHost = (normalizedHost: string) =>
+  normalizedHost === "localhost" ||
+  normalizedHost === "127.0.0.1" ||
+  normalizedHost === "[::1]" ||
+  normalizedHost === "0.0.0.0";
+
+const ensureSecureCameraContext = (isSecure: boolean, hostname: string) => {
+  if (!isSecure && !isLoopbackHost(hostname.toLowerCase())) {
+    throw new Error(SECURE_CONTEXT_MESSAGE);
+  }
+};
+
+const stopMediaStream = (stream: MediaStream | null) => {
+  stream?.getTracks().forEach((track) => track.stop());
+};
+
+const getLegacyGetUserMedia = () =>
+  navigator.getUserMedia ||
+  // @ts-expect-error vendor-prefixed API
+  navigator.webkitGetUserMedia ||
+  // @ts-expect-error vendor-prefixed API
+  navigator.mozGetUserMedia;
+
+const requestCameraStream = async (isSecure: boolean, hostname: string) => {
+  ensureSecureCameraContext(isSecure, hostname);
+
+  const mediaDevices = navigator.mediaDevices;
+  if (mediaDevices?.getUserMedia) {
+    return mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } },
+    });
+  }
+
+  const legacyGetUserMedia = getLegacyGetUserMedia();
+  if (legacyGetUserMedia) {
+    return new Promise<MediaStream>((resolve, reject) => {
+      legacyGetUserMedia.call(
+        navigator,
+        { video: { facingMode: "environment" } },
+        resolve,
+        reject
+      );
+    });
+  }
+
+  throw new Error(
+    "Camera access is not supported by this browser. Try updating it or using the native camera upload."
+  );
+};
+
+const normalizeCameraError = (
+  cameraErr: unknown,
+  {
+    isSecure,
+    hostname,
+  }: {
+    isSecure: boolean;
+    hostname: string;
+  }
+) => {
+  const normalizedHost = hostname.toLowerCase();
+  if (!isSecure && !isLoopbackHost(normalizedHost)) {
+    return SECURE_CONTEXT_MESSAGE;
+  }
+
+  if (cameraErr && typeof cameraErr === "object") {
+    const errWithName = cameraErr as { name?: string; message?: string };
+    const errorMessage = errWithName.message ?? "";
+
+    if (errWithName.name === "NotAllowedError") {
+      return "Camera permission denied. Enable it in your browser or device settings.";
+    }
+    if (errWithName.name === "NotFoundError") {
+      return "No camera device detected. Connect a camera and try again.";
+    }
+    if (errorMessage) {
+      return errorMessage;
+    }
+  } else if (cameraErr instanceof Error && cameraErr.message) {
+    return cameraErr.message;
+  }
+
+  return "Unable to access the camera. Please allow camera permissions or use a secure/trusted local connection.";
+};
+
+const dataUrlToBlob = (dataUrl: string): Blob => {
+  const [meta, base64] = dataUrl.split(",");
+  const mimeMatch = /data:(.*?);base64/.exec(meta);
+  const mime = mimeMatch ? mimeMatch[1] : "image/png";
+  const binary = atob(base64);
+  const buffer = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i += 1) {
+    buffer[i] = binary.charCodeAt(i);
+  }
+
+  return new Blob([buffer], { type: mime });
+};
 const DocumentScan = () => {
   const router = useRouter();
   useAuthRedirect({ redirectUnauthenticatedTo: "/login" });
+
+  // References to DOM elements we manipulate directly.
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Stateful data that drives what the user sees.
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [captureMode, setCaptureMode] = useState<"single" | "batch">("single");
+
+  // API client used to submit the captured image for OCR.
   const ocrMutation = useApiMutation<string, FormData>({
     path: "/multi-agent-ocr",
     method: "POST",
@@ -31,127 +139,70 @@ const DocumentScan = () => {
   const isUploading = ocrMutation.isPending;
 
   useEffect(() => {
-    let isMounted = true;
+    // Boot the camera stream when the component mounts.
+    if (typeof window === "undefined") {
+      return;
+    }
 
-    const startCamera = async () => {
-      if (typeof window === "undefined") {
+    let isSubscribed = true;
+    const hostname = window.location.hostname;
+    const isSecure =
+      window.isSecureContext || window.location.protocol === "https:";
+
+    const attachStreamToVideo = (stream: MediaStream) => {
+      const videoElement = videoRef.current;
+      if (!videoElement) {
+        setIsCameraReady(true);
         return;
       }
 
-      const hostname = window.location.hostname;
-      const protocol = window.location.protocol;
-      const isSecure = window.isSecureContext || protocol === "https:";
-      const normalizedHost = hostname.toLowerCase();
-      const isLoopbackHost =
-        normalizedHost === "localhost" ||
-        normalizedHost === "127.0.0.1" ||
-        normalizedHost === "[::1]" ||
-        normalizedHost === "0.0.0.0";
-      const secureContextMessage =
-        "Camera access requires HTTPS or running from localhost during development.";
+      videoElement.srcObject = stream;
+      videoElement.setAttribute("playsinline", "true");
+      videoElement
+        .play()
+        .then(() => setIsCameraReady(true))
+        .catch(() => setIsCameraReady(true));
+    };
 
-      const mediaDevices = navigator.mediaDevices;
+    const startCamera = async () => {
+      // Reset UI state before trying to acquire a new stream.
+      setIsCameraReady(false);
+      setCameraError(null);
+
       try {
-        if (!isSecure && !isLoopbackHost) {
-          throw new Error(secureContextMessage);
-        }
+        const stream = await requestCameraStream(isSecure, hostname);
 
-        const stream = await (() => {
-          if (mediaDevices?.getUserMedia) {
-            return mediaDevices.getUserMedia({
-              video: { facingMode: { ideal: "environment" } },
-            });
-          }
-
-          const legacyGetUserMedia =
-            navigator.getUserMedia ||
-            // @ts-expect-error vendor-prefixed API
-            navigator.webkitGetUserMedia ||
-            // @ts-expect-error vendor-prefixed API
-            navigator.mozGetUserMedia;
-
-          if (legacyGetUserMedia) {
-            return new Promise<MediaStream>((resolve, reject) => {
-              legacyGetUserMedia.call(
-                navigator,
-                { video: { facingMode: "environment" } },
-                resolve,
-                reject
-              );
-            });
-          }
-
-          throw new Error(
-            "Camera access is not supported by this browser. Try updating it or using the native camera upload."
-          );
-        })();
-
-        if (!isMounted) {
-          stream.getTracks().forEach((track) => track.stop());
+        if (!isSubscribed) {
+          stopMediaStream(stream);
           return;
         }
 
         streamRef.current = stream;
-
-        const videoElement = videoRef.current;
-        if (videoElement) {
-          videoElement.srcObject = stream;
-          videoElement.setAttribute("playsinline", "true");
-          videoElement
-            .play()
-            .then(() => setIsCameraReady(true))
-            .catch(() => setIsCameraReady(true));
-        } else {
-          setIsCameraReady(true);
-        }
-
+        attachStreamToVideo(stream);
         setCameraError(null);
       } catch (cameraErr) {
-        let message =
-          "Unable to access the camera. Please allow camera permissions or use a secure/trusted local connection.";
-
-        if (cameraErr && typeof cameraErr === "object") {
-          const errWithName = cameraErr as { name?: string; message?: string };
-          const errorMessage = errWithName.message ?? "";
-          const isSecureContextIssue =
-            !isSecure &&
-            !isLoopbackHost &&
-            (errWithName.name === "SecurityError" ||
-              errWithName.name === "NotAllowedError" ||
-              /secure|https/i.test(errorMessage));
-
-          if (isSecureContextIssue) {
-            message = secureContextMessage;
-          } else if (errWithName.name === "NotAllowedError") {
-            message =
-              "Camera permission denied. Enable it in your browser or device settings.";
-          } else if (errWithName.name === "NotFoundError") {
-            message =
-              "No camera device detected. Connect a camera and try again.";
-          } else if (errorMessage) {
-            message = errorMessage;
-          }
-        } else if (cameraErr instanceof Error && cameraErr.message) {
-          message = cameraErr.message;
+        if (!isSubscribed) {
+          return;
         }
-
-        setCameraError(message);
+        setCameraError(
+          normalizeCameraError(cameraErr, {
+            isSecure,
+            hostname,
+          })
+        );
       }
     };
 
-    setIsCameraReady(false);
-    setCameraError(null);
     startCamera();
 
     return () => {
-      isMounted = false;
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-      }
+      isSubscribed = false;
+      stopMediaStream(streamRef.current);
+      streamRef.current = null;
     };
   }, []);
 
+  // Persist the preview so we can return to it after navigating away.
   const persistImageDataUrl = (dataUrl: string) => {
     setImagePreview(dataUrl);
     setError(null);
@@ -163,6 +214,18 @@ const DocumentScan = () => {
       }
     } catch (storageError) {
       console.warn("Unable to store preview in session storage", storageError);
+    }
+  };
+
+  const persistOcrResult = (payload: string) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    try {
+      window.sessionStorage?.setItem("ocrResultData", payload);
+      window.localStorage?.setItem("ocrResultData", payload);
+    } catch (storageError) {
+      console.warn("Unable to store OCR result locally", storageError);
     }
   };
 
@@ -201,19 +264,6 @@ const DocumentScan = () => {
     }
   };
 
-  const dataUrlToBlob = (dataUrl: string): Blob => {
-    const [meta, base64] = dataUrl.split(",");
-    const mimeMatch = /data:(.*?);base64/.exec(meta);
-    const mime = mimeMatch ? mimeMatch[1] : "image/png";
-    const binary = atob(base64);
-    const len = binary.length;
-    const buffer = new Uint8Array(len);
-    for (let i = 0; i < len; i += 1) {
-      buffer[i] = binary.charCodeAt(i);
-    }
-    return new Blob([buffer], { type: mime });
-  };
-
   const handleCapture = () => {
     const videoElement = videoRef.current;
     if (!videoElement) {
@@ -227,6 +277,7 @@ const DocumentScan = () => {
     }
 
     if (!canvasRef.current && typeof document !== "undefined") {
+      // Lazily create an off-screen canvas used to snapshot the current frame.
       canvasRef.current = document.createElement("canvas");
     }
 
@@ -272,6 +323,7 @@ const DocumentScan = () => {
     setError(null);
 
     try {
+      // Build the form payload that the OCR endpoint expects.
       const blob = dataUrlToBlob(imagePreview);
       const formData = new FormData();
       formData.append("file", blob, "scanned_image.png");
@@ -295,11 +347,8 @@ const DocumentScan = () => {
         ? JSON.stringify(parsedResult)
         : String(textBody ?? "");
 
-      if (typeof window !== "undefined") {
-        window.sessionStorage?.setItem("ocrResultData", serialized);
-        window.localStorage?.setItem("ocrResultData", serialized);
-      }
-
+      // Store for the details page so it can preload the OCR output.
+      persistOcrResult(serialized);
       router.push("/documents/details");
     } catch (uploadError) {
       const normalizedError =
@@ -311,28 +360,16 @@ const DocumentScan = () => {
     }
   };
 
+  // Surface new error messages through a toast notification.
   useEffect(() => {
     const activeMessage = error || cameraError;
     if (!activeMessage) {
       return;
     }
-    console.log("show toast", activeMessage);
-
     toast.error(activeMessage);
-
-    // setToastMessage(activeMessage);
   }, [error, cameraError]);
 
-  // useEffect(() => {
-  //   if (!toastMessage) {
-  //     return;
-  //   }
-  //   // const timer = window.setTimeout(() => {
-  //     // setToastMessage(null);
-  //   // }, 3000);
-  //   return () => window.clearTimeout(timer);
-  // }, [toastMessage]);
-
+  // Custom header to match the camera capture UI.
   const header = (
     <div className="flex items-center justify-between">
       <Button
