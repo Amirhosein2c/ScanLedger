@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import BottomNav from '../components/BottomNav';
+import AppLayout from '../components/layout/AppLayout';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { generateCsvFromFields, type OcrField } from '../utils/ocr';
@@ -89,77 +89,79 @@ const DataExportOptions = () => {
     setTimeout(() => setMessage(null), 2500);
   };
 
-  return (
-    <div className="flex min-h-screen flex-col bg-[#111827] pb-24 text-white">
-      <header className="sticky top-0 z-10 bg-[#111827]/80 backdrop-blur-sm">
-        <div className="mt-8 p-4">
-          <h1 className="text-2xl font-bold tracking-tight">Export Options</h1>
-          <p className="mt-2 text-sm text-gray-400">Download your OCR results or share them with other systems.</p>
-        </div>
-      </header>
-
-      <main className="flex-1 space-y-6 p-4 pb-32">
-        <Card className="bg-[#1F2937]">
-          <CardHeader>
-            <CardTitle>CSV Export</CardTitle>
-            <p className="text-sm text-gray-400">
-              Export your recent OCR results as a CSV file for Excel, Google Sheets, or your accounting software.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button className="w-full" size="lg" onClick={handleDownloadCsv}>
-              Download CSV
-            </Button>
-            <Button variant="secondary" className="w-full" size="lg" onClick={handleCopyCsv}>
-              Copy CSV to Clipboard
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#1F2937]">
-          <CardHeader>
-            <CardTitle>Integrations</CardTitle>
-            <p className="text-sm text-gray-400">
-              Webhooks and direct integrations are handled by the ScanLedger automation workflows.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-500">
-              Configure destinations in your n8n workflow to sync exports automatically.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#1F2937]">
-          <CardHeader>
-            <CardTitle>History</CardTitle>
-            <p className="text-sm text-gray-400">
-              Manage stored documents on this device. Clearing history does not remove records from backend storage.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="outline"
-              className="w-full border-red-400/60 text-red-200 hover:bg-red-500/10"
-              size="lg"
-              onClick={handleClearExports}
-            >
-              Clear Local Export History
-            </Button>
-          </CardContent>
-        </Card>
-
-        {message && (
-          <Card className="border-emerald-400/60 bg-emerald-400/10">
-            <CardContent className="px-4 py-2 text-center text-sm text-emerald-200">
-              {message}
-            </CardContent>
-          </Card>
-        )}
-      </main>
-
-      <BottomNav />
+  const header = (
+    <div>
+      <h1 className="text-2xl font-bold tracking-tight">Export Options</h1>
+      <p className="mt-2 text-sm text-gray-400">
+        Download your OCR results or share them with other systems.
+      </p>
     </div>
+  );
+
+  return (
+    <AppLayout
+      header={header}
+      className="bg-[#111827] text-white"
+      contentClassName="space-y-6"
+    >
+      <Card className="bg-[#1F2937]">
+        <CardHeader>
+          <CardTitle>CSV Export</CardTitle>
+          <p className="text-sm text-gray-400">
+            Export your recent OCR results as a CSV file for Excel, Google Sheets, or your accounting software.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button className="w-full" size="lg" onClick={handleDownloadCsv}>
+            Download CSV
+          </Button>
+          <Button variant="secondary" className="w-full" size="lg" onClick={handleCopyCsv}>
+            Copy CSV to Clipboard
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-[#1F2937]">
+        <CardHeader>
+          <CardTitle>Integrations</CardTitle>
+          <p className="text-sm text-gray-400">
+            Webhooks and direct integrations are handled by the ScanLedger automation workflows.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-500">
+            Configure destinations in your n8n workflow to sync exports automatically.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-[#1F2937]">
+        <CardHeader>
+          <CardTitle>History</CardTitle>
+          <p className="text-sm text-gray-400">
+            Manage stored documents on this device. Clearing history does not remove records from backend storage.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            className="w-full border-red-400/60 text-red-200 hover:bg-red-500/10"
+            size="lg"
+            onClick={handleClearExports}
+          >
+            Clear Local Export History
+          </Button>
+        </CardContent>
+      </Card>
+
+      {message && (
+        <Card className="border-emerald-400/60 bg-emerald-400/10">
+          <CardContent className="px-4 py-2 text-center text-sm text-emerald-200">
+            {message}
+          </CardContent>
+        </Card>
+      )}
+    </AppLayout>
   );
 };
 

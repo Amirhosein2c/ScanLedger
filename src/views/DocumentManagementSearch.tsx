@@ -2,7 +2,7 @@
 
 import type { ChangeEvent, CSSProperties, FC } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import BottomNav from '../components/BottomNav';
+import AppLayout from '../components/layout/AppLayout';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -107,75 +107,75 @@ const DocumentManagementSearch = () => {
     setQuery(event.target.value);
   };
 
-  return (
-    <div className="group/design-root relative flex min-h-screen flex-col justify-between overflow-x-hidden bg-[#111827] pb-24 text-white">
-      <div className="flex-grow">
-        <header className="sticky top-0 z-10 bg-[#111827]/80 pt-safe backdrop-blur-sm">
-          <div className="mt-8 flex items-center justify-between p-4">
-            <div className="w-12" />
-            <h2 className="flex-1 text-center text-lg font-bold">Documents</h2>
-            <div className="flex w-12 items-center justify-end">
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="rounded-full hover:bg-white/10"
-                title="Add document"
-              >
-                <span className="material-symbols-outlined text-3xl">add</span>
-              </Button>
-            </div>
-          </div>
-          <div className="px-4 pb-3">
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#96c5a9]">
-                search
-              </span>
-              <Input
-                className="h-12 pl-11 pr-4 text-base"
-                placeholder="Search documents"
-                value={query}
-                onChange={handleQueryChange}
-              />
-            </div>
-          </div>
-          <div className="flex gap-2 overflow-x-auto p-3">
-            {['Date', 'Category', 'Vendor'].map((filter) => (
-              <Button
-                key={filter}
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="h-10 shrink-0 gap-x-2 rounded-full bg-[#1F2937] text-sm text-white hover:bg-white/10"
-              >
-                <span>{filter}</span>
-                <span className="material-symbols-outlined text-xl">keyboard_arrow_down</span>
-              </Button>
-            ))}
-          </div>
-        </header>
-        <main className="px-4 pb-36">
-          <div className="flex items-center justify-between pb-2 pt-4">
-            <h3 className="text-lg font-bold text-white">Recent</h3>
-            <Button
-              type="button"
-              variant="ghost"
-              className="gap-1 text-[var(--primary-color)] hover:bg-white/5"
-            >
-              <span>Sort</span>
-              <span className="material-symbols-outlined text-xl">swap_vert</span>
-            </Button>
-          </div>
-          <div className="space-y-2 pb-6">
-            {filteredDocuments.length === 0 && <p className="text-sm text-gray-400">No documents match your search.</p>}
-            {filteredDocuments.map((document, index) => (
-              <DocumentRow key={`${document.id || document.number || index}`} document={document} />
-            ))}
-          </div>
-        </main>
+  const header = (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="w-12" />
+        <h2 className="text-lg font-bold">Documents</h2>
+        <div className="flex w-12 items-center justify-end">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="rounded-full hover:bg-white/10"
+            title="Add document"
+          >
+            <span className="material-symbols-outlined text-3xl">add</span>
+          </Button>
+        </div>
       </div>
-      <BottomNav />
+      <div className="relative">
+        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#96c5a9]">
+          search
+        </span>
+        <Input
+          className="h-12 pl-11 pr-4 text-base"
+          placeholder="Search documents"
+          value={query}
+          onChange={handleQueryChange}
+        />
+      </div>
+      <div className="flex gap-2 overflow-x-auto">
+        {['Date', 'Category', 'Vendor'].map((filter) => (
+          <Button
+            key={filter}
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="h-10 shrink-0 gap-x-2 rounded-full bg-[#1F2937] text-sm text-white hover:bg-white/10"
+          >
+            <span>{filter}</span>
+            <span className="material-symbols-outlined text-xl">keyboard_arrow_down</span>
+          </Button>
+        ))}
+      </div>
     </div>
+  );
+
+  return (
+    <AppLayout
+      header={header}
+      className="bg-[#111827] text-white"
+      contentClassName="flex flex-col gap-6"
+    >
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-bold text-white">Recent</h3>
+        <Button
+          type="button"
+          variant="ghost"
+          className="gap-1 text-[var(--primary-color)] hover:bg-white/5"
+        >
+          <span>Sort</span>
+          <span className="material-symbols-outlined text-xl">swap_vert</span>
+        </Button>
+      </div>
+      <div className="space-y-2 pb-6">
+        {filteredDocuments.length === 0 && <p className="text-sm text-gray-400">No documents match your search.</p>}
+        {filteredDocuments.map((document, index) => (
+          <DocumentRow key={`${document.id || document.number || index}`} document={document} />
+        ))}
+      </div>
+    </AppLayout>
   );
 };
 

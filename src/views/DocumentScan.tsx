@@ -4,19 +4,24 @@
 
 import { useRouter } from "next/navigation";
 import type { ChangeEvent } from "react";
-import { useRef, useState } from "react";
-import BottomNav from "../components/BottomNav";
+import { useEffect, useRef, useState } from "react";
+import AppLayout from "../components/layout/AppLayout";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { useApiMutation } from "../hooks/useApiMutation";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
-
+import { toast } from "sonner";
 const DocumentScan = () => {
   const router = useRouter();
   useAuthRedirect({ redirectUnauthenticatedTo: "/login" });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isCameraReady, setIsCameraReady] = useState(false);
   const [captureMode, setCaptureMode] = useState<"single" | "batch">("single");
   const ocrMutation = useApiMutation<string, FormData>({
     path: "/multi-agent-ocr",
@@ -24,6 +29,142 @@ const DocumentScan = () => {
     config: { responseType: "text" },
   });
   const isUploading = ocrMutation.isPending;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const startCamera = async () => {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      const hostname = window.location.hostname;
+      const protocol = window.location.protocol;
+      const isSecure = window.isSecureContext || protocol === "https:";
+      const normalizedHost = hostname.toLowerCase();
+      const isLoopbackHost =
+        normalizedHost === "localhost" ||
+        normalizedHost === "127.0.0.1" ||
+        normalizedHost === "[::1]" ||
+        normalizedHost === "0.0.0.0";
+      const secureContextMessage =
+        "Camera access requires HTTPS or running from localhost during development.";
+
+      const mediaDevices = navigator.mediaDevices;
+      try {
+        if (!isSecure && !isLoopbackHost) {
+          throw new Error(secureContextMessage);
+        }
+
+        const stream = await (() => {
+          if (mediaDevices?.getUserMedia) {
+            return mediaDevices.getUserMedia({
+              video: { facingMode: { ideal: "environment" } },
+            });
+          }
+
+          const legacyGetUserMedia =
+            navigator.getUserMedia ||
+            // @ts-expect-error vendor-prefixed API
+            navigator.webkitGetUserMedia ||
+            // @ts-expect-error vendor-prefixed API
+            navigator.mozGetUserMedia;
+
+          if (legacyGetUserMedia) {
+            return new Promise<MediaStream>((resolve, reject) => {
+              legacyGetUserMedia.call(
+                navigator,
+                { video: { facingMode: "environment" } },
+                resolve,
+                reject
+              );
+            });
+          }
+
+          throw new Error(
+            "Camera access is not supported by this browser. Try updating it or using the native camera upload."
+          );
+        })();
+
+        if (!isMounted) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+
+        const videoElement = videoRef.current;
+        if (videoElement) {
+          videoElement.srcObject = stream;
+          videoElement.setAttribute("playsinline", "true");
+          videoElement
+            .play()
+            .then(() => setIsCameraReady(true))
+            .catch(() => setIsCameraReady(true));
+        } else {
+          setIsCameraReady(true);
+        }
+
+        setCameraError(null);
+      } catch (cameraErr) {
+        let message =
+          "Unable to access the camera. Please allow camera permissions or use a secure/trusted local connection.";
+
+        if (cameraErr && typeof cameraErr === "object") {
+          const errWithName = cameraErr as { name?: string; message?: string };
+          const errorMessage = errWithName.message ?? "";
+          const isSecureContextIssue =
+            !isSecure &&
+            !isLoopbackHost &&
+            (errWithName.name === "SecurityError" ||
+              errWithName.name === "NotAllowedError" ||
+              /secure|https/i.test(errorMessage));
+
+          if (isSecureContextIssue) {
+            message = secureContextMessage;
+          } else if (errWithName.name === "NotAllowedError") {
+            message =
+              "Camera permission denied. Enable it in your browser or device settings.";
+          } else if (errWithName.name === "NotFoundError") {
+            message =
+              "No camera device detected. Connect a camera and try again.";
+          } else if (errorMessage) {
+            message = errorMessage;
+          }
+        } else if (cameraErr instanceof Error && cameraErr.message) {
+          message = cameraErr.message;
+        }
+
+        setCameraError(message);
+      }
+    };
+
+    setIsCameraReady(false);
+    setCameraError(null);
+    startCamera();
+
+    return () => {
+      isMounted = false;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
+
+  const persistImageDataUrl = (dataUrl: string) => {
+    setImagePreview(dataUrl);
+    setError(null);
+    setCameraError(null);
+    try {
+      if (typeof window !== "undefined") {
+        window.sessionStorage?.setItem("scannedImageDataUrl", dataUrl);
+        window.localStorage?.setItem("scannedImageDataUrl", dataUrl);
+      }
+    } catch (storageError) {
+      console.warn("Unable to store preview in session storage", storageError);
+    }
+  };
 
   const handleSelectFile = () => {
     fileInputRef.current?.click();
@@ -43,22 +184,10 @@ const DocumentScan = () => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = typeof reader.result === "string" ? reader.result : null;
-      setImagePreview(result);
-      setError(null);
       if (!result) {
         return;
       }
-      try {
-        if (typeof window !== "undefined") {
-          window.sessionStorage?.setItem("scannedImageDataUrl", result);
-          window.localStorage?.setItem("scannedImageDataUrl", result);
-        }
-      } catch (storageError) {
-        console.warn(
-          "Unable to store preview in session storage",
-          storageError
-        );
-      }
+      persistImageDataUrl(result);
     };
     reader.onerror = () => setError("Failed to read image. Please try again.");
     reader.readAsDataURL(file);
@@ -66,6 +195,7 @@ const DocumentScan = () => {
 
   const handleRetake = () => {
     setImagePreview(null);
+    setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -82,6 +212,54 @@ const DocumentScan = () => {
       buffer[i] = binary.charCodeAt(i);
     }
     return new Blob([buffer], { type: mime });
+  };
+
+  const handleCapture = () => {
+    const videoElement = videoRef.current;
+    if (!videoElement) {
+      setError("Camera is not ready yet. Please try again.");
+      return;
+    }
+
+    if (videoElement.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+      setError("Camera is still initializing. Hold on a second and retry.");
+      return;
+    }
+
+    if (!canvasRef.current && typeof document !== "undefined") {
+      canvasRef.current = document.createElement("canvas");
+    }
+
+    const canvasElement = canvasRef.current;
+    if (!canvasElement) {
+      setError("Unable to capture image. Please try again.");
+      return;
+    }
+
+    canvasElement.width = videoElement.videoWidth || 1080;
+    canvasElement.height = videoElement.videoHeight || 1440;
+
+    const context = canvasElement.getContext("2d");
+    if (!context) {
+      setError("Unable to capture image. Please try again.");
+      return;
+    }
+
+    context.drawImage(
+      videoElement,
+      0,
+      0,
+      canvasElement.width,
+      canvasElement.height
+    );
+
+    try {
+      const dataUrl = canvasElement.toDataURL("image/png");
+      persistImageDataUrl(dataUrl);
+    } catch (captureError) {
+      console.error(captureError);
+      setError("Failed to capture image from camera.");
+    }
   };
 
   const handleProcess = async () => {
@@ -133,50 +311,96 @@ const DocumentScan = () => {
     }
   };
 
-  return (
-    <div className="group/design-root relative flex min-h-screen flex-col justify-between bg-[#111827] pb-24 text-white">
-      <div className="mt-8 flex flex-1 flex-col">
-        <header className="flex items-center justify-between p-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full text-white/60 hover:bg-white/10 hover:text-white"
-            onClick={() =>
-              setError("Flash toggle is not available in this build.")
-            }
-          >
-            <span className="material-symbols-outlined">flash_on</span>
-          </Button>
-          <h2 className="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em]">
-            Scan Document
-          </h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full text-white/60 hover:bg-white/10 hover:text-white"
-            onClick={() => router.push("/dashboard")}
-          >
-            <span className="material-symbols-outlined">close</span>
-          </Button>
-        </header>
+  useEffect(() => {
+    const activeMessage = error || cameraError;
+    if (!activeMessage) {
+      return;
+    }
+    console.log("show toast", activeMessage);
 
-        <main className="flex flex-1 flex-col items-center px-4">
-          <div className="mt-4 flex w-full flex-1 items-center justify-center">
-            <Card className="relative flex aspect-[3/4] w-full max-w-sm items-center justify-center overflow-hidden rounded-[1.75rem] border-2 border-dashed border-white/25 bg-[#2f3649]/70">
+    toast.error(activeMessage);
+
+    // setToastMessage(activeMessage);
+  }, [error, cameraError]);
+
+  // useEffect(() => {
+  //   if (!toastMessage) {
+  //     return;
+  //   }
+  //   // const timer = window.setTimeout(() => {
+  //     // setToastMessage(null);
+  //   // }, 3000);
+  //   return () => window.clearTimeout(timer);
+  // }, [toastMessage]);
+
+  const header = (
+    <div className="flex items-center justify-between">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+        onClick={() => setError("Flash toggle is not available in this build.")}
+      >
+        <span className="material-symbols-outlined">flash_on</span>
+      </Button>
+      <h2 className="text-lg font-bold leading-tight tracking-[-0.015em]">
+        Scan Document
+      </h2>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+        onClick={() => router.push("/dashboard")}
+      >
+        <span className="material-symbols-outlined">close</span>
+      </Button>
+    </div>
+  );
+
+  return (
+    <AppLayout
+      header={header}
+      className="bg-[#111827] text-white h-[100dvh] max-h-[100dvh] overflow-hidden"
+      contentClassName="flex flex-1 min-h-0 flex-col gap-4 pb-24"
+      isContentScrollable={false}
+    >
+      <div className="flex flex-1 min-h-0 flex-col">
+        <div className="flex flex-1 min-h-0 flex-col items-center gap-4">
+          <div className="flex w-full flex-1 min-h-0 items-center justify-center">
+            <Card className="relative flex aspect-[3/4] h-full max-h-full w-full max-w-sm items-center justify-center overflow-hidden rounded-[1.75rem] border-2 border-dashed border-white/25 bg-[#2f3649]/70">
               {imagePreview ? (
                 <img
                   src={imagePreview}
                   alt="Captured document"
                   className="h-full w-full object-cover"
                 />
-              ) : (
+              ) : cameraError ? (
                 <div className="flex flex-col items-center justify-center px-8 text-center text-sm text-white/80">
-                  <p>
-                    Position document within the frame
-                    <br />
-                    Then press the capture button
-                  </p>
+                  <p>{cameraError}</p>
                 </div>
+              ) : (
+                <>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="h-full w-full object-cover"
+                    onLoadedMetadata={() => setIsCameraReady(true)}
+                  />
+                  {!isCameraReady && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-[#0b1324]/60 text-sm text-white/80 backdrop-blur-sm">
+                      Initializing camera…
+                    </div>
+                  )}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center px-6 text-center text-sm text-white/80">
+                    <p>
+                      Position document within the frame
+                      <br />
+                      Then press the capture button
+                    </p>
+                  </div>
+                </>
               )}
 
               <div className="pointer-events-none absolute inset-0 rounded-[1.75rem] border border-white/10" />
@@ -219,7 +443,7 @@ const DocumentScan = () => {
             </Card>
           </div>
 
-          <div className="mt-8 flex w-full max-w-xs items-center justify-between rounded-full bg-[#0b1324] p-1 text-sm font-medium">
+          <div className="flex w-full max-w-xs items-center justify-between rounded-full bg-[#0b1324] p-1 text-sm font-medium">
             {(["single", "batch"] as const).map((mode) => {
               const isActive = captureMode === mode;
               return (
@@ -238,38 +462,38 @@ const DocumentScan = () => {
               );
             })}
           </div>
+        </div>
 
-          <div className="mt-8 mb-6 flex items-center justify-center gap-12">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-12 w-12 rounded-full bg-[#1f2736] text-white hover:bg-[#253048]"
-              onClick={handleSelectFile}
-              disabled={isUploading}
-            >
-              <span className="material-symbols-outlined">photo_library</span>
-            </Button>
-            <Button
-              size="icon"
-              className="h-20 w-20 rounded-full bg-white text-[#111827] shadow-[0_12px_28px_rgba(12,15,30,0.55)] hover:bg-white"
-              onClick={handleSelectFile}
-              disabled={isUploading}
-            >
-              <span className="material-symbols-outlined text-3xl text-[#0f172a]">
-                camera
-              </span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-12 w-12 rounded-full bg-[#1f2736] text-white hover:bg-[#253048]"
-              onClick={handleProcess}
-              disabled={!imagePreview || isUploading}
-            >
-              <span className="material-symbols-outlined">description</span>
-            </Button>
-          </div>
-        </main>
+        <div className="mt-4 flex items-center justify-center gap-12">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-12 w-12 rounded-full bg-[#1f2736] text-white hover:bg-[#253048]"
+            onClick={handleSelectFile}
+            disabled={isUploading}
+          >
+            <span className="material-symbols-outlined">photo_library</span>
+          </Button>
+          <Button
+            size="icon"
+            className="h-20 w-20 rounded-full bg-white text-[#111827] shadow-[0_12px_28px_rgba(12,15,30,0.55)] hover:bg-white"
+            onClick={handleCapture}
+            disabled={isUploading || !isCameraReady}
+          >
+            <span className="material-symbols-outlined text-3xl text-[#0f172a]">
+              camera
+            </span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-12 w-12 rounded-full bg-[#1f2736] text-white hover:bg-[#253048]"
+            onClick={handleProcess}
+            disabled={!imagePreview || isUploading}
+          >
+            <span className="material-symbols-outlined">description</span>
+          </Button>
+        </div>
 
         <input
           ref={fileInputRef}
@@ -279,16 +503,8 @@ const DocumentScan = () => {
           className="hidden"
           onChange={handleFileChange}
         />
-
-        {error && (
-          <div className="px-4 pb-4 text-center text-sm text-red-300">
-            {error}
-          </div>
-        )}
       </div>
-
-      <BottomNav />
-    </div>
+    </AppLayout>
   );
 };
 

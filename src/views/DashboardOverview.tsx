@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import BottomNav from '../components/BottomNav';
+import AppLayout from '../components/layout/AppLayout';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
@@ -90,67 +90,63 @@ const DashboardOverview = () => {
     }
   }, []);
 
-  return (
-    <div className="group/design-root relative flex min-h-screen flex-col justify-between bg-[#111827] pb-24 text-white">
-      <div className="mt-8 flex-grow">
-        <header className="sticky top-0 z-10 bg-[#111827]/80 pt-safe backdrop-blur-sm">
-          <div className="flex items-center p-4">
-            <div className="flex items-center gap-4">
-              <div
-                className="size-10 rounded-full bg-cover bg-center bg-no-repeat"
-                style={{ backgroundImage: 'url("https://www.gravatar.com/avatar/?d=mp&s=128")', backgroundColor: '#374151' }}
-              />
-              <div>
-                <p className="text-sm text-gray-400">Welcome back,</p>
-                <h1 className="text-xl font-bold text-white">{userName}</h1>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <main className="p-4 pb-36">
-          <section className="mb-8 grid grid-cols-2 gap-4">
-            <Card className="bg-[#1F2937]">
-              <CardContent className="flex flex-col gap-2 p-4">
-                <p className="text-sm font-medium text-gray-300">Total Docs</p>
-                <p className="text-2xl font-bold text-white">0</p>
-                <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-[#1F2937]">
-              <CardContent className="flex flex-col gap-2 p-4">
-                <p className="text-sm font-medium text-gray-300">Monthly Scans</p>
-                <p className="text-2xl font-bold text-white">0</p>
-                <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
-              </CardContent>
-            </Card>
-          </section>
-
-          <section>
-            <h2 className="mb-3 text-lg font-bold text-white">Recent Scans</h2>
-            <div className="space-y-2">
-              {recentScans.length === 0 && <p className="text-sm text-gray-400">No recent scans yet.</p>}
-              {recentScans.map((doc, index) => (
-                <RecentScanCard key={`${doc.id || doc.number || index}`} document={doc} />
-              ))}
-            </div>
-            <div className="h-4" />
-          </section>
-
-          <div className="mt-8 flex justify-center">
-            <Button
-              size="lg"
-              className="h-14 w-full max-w-xs text-base font-semibold"
-              onClick={() => router.push('/documents/scan')}
-            >
-              <span className="material-symbols-outlined">qr_code_scanner</span>
-              <span className="ml-2">Scan New Document</span>
-            </Button>
-          </div>
-        </main>
+  const header = (
+    <div className="flex items-center gap-4">
+      <div
+        className="size-10 rounded-full bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: 'url("https://www.gravatar.com/avatar/?d=mp&s=128")', backgroundColor: '#374151' }}
+      />
+      <div>
+        <p className="text-sm text-gray-400">Welcome back,</p>
+        <h1 className="text-xl font-bold text-white">{userName}</h1>
       </div>
-      <BottomNav />
     </div>
+  );
+
+  return (
+    <AppLayout
+      header={header}
+      className="bg-[#111827] text-white"
+      contentClassName="flex flex-col gap-8"
+    >
+      <section className="grid grid-cols-2 gap-4">
+        <Card className="bg-[#1F2937]">
+          <CardContent className="flex flex-col gap-2 p-4">
+            <p className="text-sm font-medium text-gray-300">Total Docs</p>
+            <p className="text-2xl font-bold text-white">0</p>
+            <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-[#1F2937]">
+          <CardContent className="flex flex-col gap-2 p-4">
+            <p className="text-sm font-medium text-gray-300">Monthly Scans</p>
+            <p className="text-2xl font-bold text-white">0</p>
+            <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-lg font-bold text-white">Recent Scans</h2>
+        <div className="space-y-2">
+          {recentScans.length === 0 && <p className="text-sm text-gray-400">No recent scans yet.</p>}
+          {recentScans.map((doc, index) => (
+            <RecentScanCard key={`${doc.id || doc.number || index}`} document={doc} />
+          ))}
+        </div>
+      </section>
+
+      <div className="flex justify-center pb-4">
+        <Button
+          size="lg"
+          className="h-14 w-full max-w-xs text-base font-semibold"
+          onClick={() => router.push('/documents/scan')}
+        >
+          <span className="material-symbols-outlined">qr_code_scanner</span>
+          <span className="ml-2">Scan New Document</span>
+        </Button>
+      </div>
+    </AppLayout>
   );
 };
 
