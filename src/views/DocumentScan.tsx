@@ -12,6 +12,18 @@ import { useApiMutation } from "../hooks/useApiMutation";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { toast } from "sonner";
 
+type LegacyGetUserMedia = (
+  constraints: MediaStreamConstraints,
+  success: (stream: MediaStream) => void,
+  error?: (err: DOMException) => void
+) => void;
+
+type LegacyNavigator = Navigator & {
+  getUserMedia?: LegacyGetUserMedia;
+  webkitGetUserMedia?: LegacyGetUserMedia;
+  mozGetUserMedia?: LegacyGetUserMedia;
+};
+
 const SECURE_CONTEXT_MESSAGE =
   "Camera access requires HTTPS or running from localhost during development.";
 
@@ -31,54 +43,66 @@ const stopMediaStream = (stream: MediaStream | null) => {
   stream?.getTracks().forEach((track) => track.stop());
 };
 
-type LegacyGetUserMedia = (
-  constraints: MediaStreamConstraints,
-  successCallback: (stream: MediaStream) => void,
-  errorCallback?: (error: MediaStream | DOMException) => void
-) => void;
-
-type LegacyNavigator = Navigator & {
-  getUserMedia?: LegacyGetUserMedia;
-  webkitGetUserMedia?: LegacyGetUserMedia;
-  mozGetUserMedia?: LegacyGetUserMedia;
-};
-
 const getLegacyGetUserMedia = (): LegacyGetUserMedia | undefined => {
-  const legacyNavigator = navigator as LegacyNavigator;
-  return (
-    legacyNavigator.getUserMedia ??
-    legacyNavigator.webkitGetUserMedia ??
-    legacyNavigator.mozGetUserMedia
-  );
+  if (typeof navigator === "undefined") return undefined;
+  const nav = navigator as LegacyNavigator;
+  return nav.getUserMedia ?? nav.webkitGetUserMedia ?? nav.mozGetUserMedia;
 };
 
-const requestCameraStream = async (isSecure: boolean, hostname: string) => {
-  ensureSecureCameraContext(isSecure, hostname);
-
-  const mediaDevices = navigator.mediaDevices;
-  if (mediaDevices?.getUserMedia) {
-    return mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" } },
-    });
+const getUserMediaPromise = (constraints: MediaStreamConstraints) => {
+  // Modern, spec API first
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.mediaDevices?.getUserMedia
+  ) {
+    return navigator.mediaDevices.getUserMedia(constraints);
   }
-
-  const legacyGetUserMedia = getLegacyGetUserMedia();
-  if (legacyGetUserMedia) {
+  // Legacy fallbacks
+  const legacy = getLegacyGetUserMedia();
+  if (legacy) {
     return new Promise<MediaStream>((resolve, reject) => {
-      legacyGetUserMedia.call(
-        navigator,
-        { video: { facingMode: "environment" } },
-        resolve,
-        reject
+      legacy.call(navigator as LegacyNavigator, constraints, resolve, (e) =>
+        reject(e)
       );
     });
   }
-
-  throw new Error(
-    "Camera access is not supported by this browser. Try updating it or using the native camera upload."
+  return Promise.reject(
+    new Error("getUserMedia is not supported in this browser.")
   );
 };
 
+// const requestCameraStream = async (isSecure: boolean, hostname: string) => {
+//   ensureSecureCameraContext(isSecure, hostname);
+
+//   const mediaDevices = navigator.mediaDevices;
+//   if (mediaDevices?.getUserMedia) {
+//     return mediaDevices.getUserMedia({
+//       video: { facingMode: { ideal: "environment" } },
+//     });
+//   }
+
+//   const legacyGetUserMedia = getLegacyGetUserMedia();
+//   if (legacyGetUserMedia) {
+//     return new Promise<MediaStream>((resolve, reject) => {
+//       legacyGetUserMedia.call(
+//         navigator,
+//         { video: { facingMode: "environment" } },
+//         resolve,
+//         reject
+//       );
+//     });
+//   }
+
+//   throw new Error(
+//     "Camera access is not supported by this browser. Try updating it or using the native camera upload."
+//   );
+// };
+const requestCameraStream = async (isSecure: boolean, hostname: string) => {
+  ensureSecureCameraContext(isSecure, hostname);
+  return getUserMediaPromise({
+    video: { facingMode: { ideal: "environment" } },
+  });
+};
 const normalizeCameraError = (
   cameraErr: unknown,
   {
