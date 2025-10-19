@@ -1,11 +1,12 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import AppLayout from '../components/layout/AppLayout';
-import { Card, CardContent } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import AppLayout from "../components/layout/AppLayout";
+import { Card, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
+import { useTranslation } from "@/src/lib/i18n";
 
 interface DocumentSummary {
   id?: string;
@@ -23,34 +24,40 @@ interface RecentScanCardProps {
 }
 
 const RecentScanCard = ({ document }: RecentScanCardProps) => {
+  const { t } = useTranslation();
   const thumbnailStyle = useMemo<CSSProperties>(() => {
     if (!document.image) {
       return {};
     }
     return {
-      backgroundImage: `url('${document.image}')`
+      backgroundImage: `url('${document.image}')`,
     };
   }, [document.image]);
 
   return (
     <div className="flex items-center gap-4 rounded-2xl bg-[#1F2937] p-3">
-      <div className="size-14 rounded-lg bg-cover bg-center bg-no-repeat" style={thumbnailStyle} />
+      <div
+        className="size-14 rounded-lg bg-cover bg-center bg-no-repeat"
+        style={thumbnailStyle}
+      />
       <div className="flex-1">
         <p className="line-clamp-1 text-base font-medium text-white">
-          {document.type || 'Document'}
-          {document.number ? ` #${document.number}` : ''}
+          {document.type || t("documents.common.document")}
+          {document.number ? ` #${document.number}` : ""}
         </p>
-        <p className="line-clamp-2 text-sm text-[#D1D5DB]">{document.date || ''}</p>
+        <p className="line-clamp-2 text-sm text-[#D1D5DB]">
+          {document.date || ""}
+        </p>
       </div>
       <div className="text-right">
         <p className="text-base font-bold text-white">
           {document.amount
-            ? document.amount.startsWith('$')
+            ? document.amount.startsWith("$")
               ? document.amount
               : `$${document.amount}`
-            : ''}
+            : ""}
         </p>
-        <p className="text-sm text-[#D1D5DB]">{document.vendor || ''}</p>
+        <p className="text-sm text-[#D1D5DB]">{document.vendor || ""}</p>
       </div>
     </div>
   );
@@ -58,22 +65,34 @@ const RecentScanCard = ({ document }: RecentScanCardProps) => {
 
 const DashboardOverview = () => {
   const router = useRouter();
-  useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
-  const [userName, setUserName] = useState<string>('User');
+  useAuthRedirect({ redirectUnauthenticatedTo: "/login" });
+  const { t } = useTranslation();
+  const [userName, setUserName] = useState<string>(() =>
+    t("dashboard.defaultUserName")
+  );
   const [recentScans, setRecentScans] = useState<DocumentSummary[]>([]);
 
+  const [picture, setPicture] = useState<string>("");
+
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    const localStoragePicture =
+      window.localStorage.getItem("user_picture") ||
+      `https://www.gravatar.com/avatar/?d=mp&s=128`;
+    setPicture(localStoragePicture);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
       return;
     }
 
-    const firstName = window.localStorage.getItem('user_name') || '';
-    const surname = window.localStorage.getItem('user_surname') || '';
+    const firstName = window.localStorage.getItem("user_name") || "";
+    const surname = window.localStorage.getItem("user_surname") || "";
     const fullName = `${firstName} ${surname}`.trim();
-    setUserName(fullName || 'User');
+    setUserName(fullName || t("dashboard.defaultUserName"));
 
     try {
-      const raw = window.localStorage.getItem('exportedDocuments');
+      const raw = window.localStorage.getItem("exportedDocuments");
       if (!raw) {
         setRecentScans([]);
         return;
@@ -85,19 +104,24 @@ const DashboardOverview = () => {
         setRecentScans([]);
       }
     } catch (error) {
-      console.warn('Failed to parse recent scans', error);
+      console.warn("Failed to parse recent scans", error);
       setRecentScans([]);
     }
-  }, []);
+  }, [t]);
 
   const header = (
     <div className="flex items-center gap-4">
       <div
         className="size-10 rounded-full bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: 'url("https://www.gravatar.com/avatar/?d=mp&s=128")', backgroundColor: '#374151' }}
+        style={{
+          backgroundImage: `url(${picture})`,
+          backgroundColor: "#374151",
+        }}
       />
       <div>
-        <p className="text-sm text-gray-400">Welcome back,</p>
+        <p className="text-sm text-gray-400">
+          {t("dashboard.header.welcomeBack")}
+        </p>
         <h1 className="text-xl font-bold text-white">{userName}</h1>
       </div>
     </div>
@@ -112,26 +136,43 @@ const DashboardOverview = () => {
       <section className="grid grid-cols-2 gap-4">
         <Card className="bg-[#1F2937]">
           <CardContent className="flex flex-col gap-2 p-4">
-            <p className="text-sm font-medium text-gray-300">Total Docs</p>
+            <p className="text-sm font-medium text-gray-300">
+              {t("dashboard.stats.totalDocs")}
+            </p>
             <p className="text-2xl font-bold text-white">0</p>
-            <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
+            <p className="text-sm font-medium text-[var(--primary-color)]">
+              0%
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-[#1F2937]">
           <CardContent className="flex flex-col gap-2 p-4">
-            <p className="text-sm font-medium text-gray-300">Monthly Scans</p>
+            <p className="text-sm font-medium text-gray-300">
+              {t("dashboard.stats.monthlyScans")}
+            </p>
             <p className="text-2xl font-bold text-white">0</p>
-            <p className="text-sm font-medium text-[var(--primary-color)]">0%</p>
+            <p className="text-sm font-medium text-[var(--primary-color)]">
+              0%
+            </p>
           </CardContent>
         </Card>
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-bold text-white">Recent Scans</h2>
+        <h2 className="mb-3 text-lg font-bold text-white">
+          {t("dashboard.recentScans.title")}
+        </h2>
         <div className="space-y-2">
-          {recentScans.length === 0 && <p className="text-sm text-gray-400">No recent scans yet.</p>}
+          {recentScans.length === 0 && (
+            <p className="text-sm text-gray-400">
+              {t("dashboard.recentScans.empty")}
+            </p>
+          )}
           {recentScans.map((doc, index) => (
-            <RecentScanCard key={`${doc.id || doc.number || index}`} document={doc} />
+            <RecentScanCard
+              key={`${doc.id || doc.number || index}`}
+              document={doc}
+            />
           ))}
         </div>
       </section>
@@ -140,10 +181,10 @@ const DashboardOverview = () => {
         <Button
           size="lg"
           className="h-14 w-full max-w-xs text-base font-semibold"
-          onClick={() => router.push('/documents/scan')}
+          onClick={() => router.push("/documents/scan")}
         >
           <span className="material-symbols-outlined">qr_code_scanner</span>
-          <span className="ml-2">Scan New Document</span>
+          <span className="ml-2">{t("dashboard.actions.scanNewDocument")}</span>
         </Button>
       </div>
     </AppLayout>

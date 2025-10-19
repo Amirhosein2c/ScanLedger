@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type { MouseEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AppLayout from "../components/layout/AppLayout";
 import { Button } from "../components/ui/button";
 import {
@@ -14,6 +14,7 @@ import {
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
+import { useTranslation } from "@/src/lib/i18n";
 
 interface ProfileState {
   name: string;
@@ -24,6 +25,7 @@ interface ProfileState {
 const UserProfileSettings = () => {
   const router = useRouter();
   useAuthRedirect({ redirectUnauthenticatedTo: "/login" });
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<ProfileState>({
     name: "",
     surname: "",
@@ -49,8 +51,8 @@ const UserProfileSettings = () => {
       .filter(Boolean)
       .join(" ")
       .trim();
-    return name || "Guest User";
-  }, [profile.name, profile.surname]);
+    return name || t("profile.guestUser");
+  }, [profile.name, profile.surname, t]);
 
   const handleLogout = () => {
     if (typeof window === "undefined") {
@@ -60,38 +62,64 @@ const UserProfileSettings = () => {
     window.localStorage.removeItem("user_surname");
     window.localStorage.removeItem("user_email");
     window.localStorage.removeItem("auth_method");
+    window.localStorage.removeItem("user_picture");
     router.push("/login");
   };
 
-  const handleTemplateAction = (event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    setMessage("Coming soon.");
-    setTimeout(() => setMessage(null), 2000);
-  };
+  const handleTemplateAction = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      setMessage(t("profile.messages.comingSoon"));
+      setTimeout(() => setMessage(null), 2000);
+    },
+    [t]
+  );
 
-  const sections = [
-    {
-      title: "Documents Templates",
-      items: [
-        { label: "Default Templates", action: handleTemplateAction },
-        { label: "Add New Class/Template", action: handleTemplateAction },
-      ],
-    },
-    {
-      title: "Export Options",
-      items: [
-        { label: "Export Destination", action: handleTemplateAction },
-        { label: "File Format", action: handleTemplateAction },
-      ],
-    },
-    {
-      title: "Support",
-      items: [
-        { label: "Help Center", action: handleTemplateAction },
-        { label: "Contact Support", action: handleTemplateAction },
-      ],
-    },
-  ] as const;
+  const sections = useMemo(
+    () =>
+      [
+        {
+          title: t("profile.sections.templates.title"),
+          items: [
+            {
+              label: t("profile.sections.templates.items.default"),
+              action: handleTemplateAction,
+            },
+            {
+              label: t("profile.sections.templates.items.add"),
+              action: handleTemplateAction,
+            },
+          ],
+        },
+        {
+          title: t("profile.sections.export.title"),
+          items: [
+            {
+              label: t("profile.sections.export.items.destination"),
+              action: handleTemplateAction,
+            },
+            {
+              label: t("profile.sections.export.items.format"),
+              action: handleTemplateAction,
+            },
+          ],
+        },
+        {
+          title: t("profile.sections.support.title"),
+          items: [
+            {
+              label: t("profile.sections.support.items.help"),
+              action: handleTemplateAction,
+            },
+            {
+              label: t("profile.sections.support.items.contact"),
+              action: handleTemplateAction,
+            },
+          ],
+        },
+      ] as const,
+    [handleTemplateAction, t]
+  );
 
   const header = (
     <div className="flex items-center">
@@ -106,10 +134,18 @@ const UserProfileSettings = () => {
         </span>
       </Button>
       <h1 className="flex-1 pr-12 text-center text-xl font-semibold tracking-tight">
-        Settings
+        {t("profile.header.title")}
       </h1>
     </div>
   );
+  const [picture, setPicture] = useState<string>("");
+
+  useEffect(() => {
+    const localStoragePicture =
+      window.localStorage.getItem("user_picture") ||
+      `https://www.gravatar.com/avatar/?d=mp&s=128`;
+    setPicture(localStoragePicture);
+  }, []);
 
   return (
     <AppLayout
@@ -120,17 +156,20 @@ const UserProfileSettings = () => {
     >
       <Card className="bg-[#131C2E] text-center">
         <CardHeader className="flex items-center gap-3 text-center">
-          <div className="flex h-28 w-28 items-center justify-center rounded-full bg-[#1F2937]">
-            <span className="material-symbols-outlined text-6xl text-white/60">
-              person
-            </span>
-          </div>
+          <div
+            className="size-28 rounded-full bg-cover bg-center bg-no-repeat"
+            style={{
+              backgroundImage: `url(${picture})`,
+              backgroundColor: "#374151",
+            }}
+          />
+
           <div className="flex flex-col items-center">
             <CardTitle className="text-2xl font-semibold text-white">
               {fullName}
             </CardTitle>
             <Badge variant="success" className="mt-2">
-              Free Member
+              {t("profile.badge.freeMember")}
             </Badge>
             {profile.email && (
               <p className="mt-2 text-xs text-white/60">{profile.email}</p>
@@ -173,8 +212,12 @@ const UserProfileSettings = () => {
       <Card className="bg-[#131C2E]">
         <CardContent className="flex items-center justify-between px-5 py-4">
           <div>
-            <p className="text-base font-semibold text-red-300">Logout</p>
-            <p className="text-xs text-white/50">Sign out from this device</p>
+            <p className="text-base font-semibold text-red-300">
+              {t("profile.logout.title")}
+            </p>
+            <p className="text-xs text-white/50">
+              {t("profile.logout.subtitle")}
+            </p>
           </div>
           <Button
             variant="outline"

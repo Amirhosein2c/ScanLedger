@@ -12,6 +12,8 @@ import {
   GOOGLE_SCOPE,
 } from "../utils/googleClient";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
+import { useTranslation } from "@/src/lib/i18n";
+import { buildSocialAuthButtons } from "@/src/features/auth/constants/socialAuth";
 
 interface SignupForm {
   name: string;
@@ -19,6 +21,7 @@ interface SignupForm {
   email: string;
   password: string;
   confirmPassword: string;
+  picture: string;
 }
 
 const initialFormState: SignupForm = {
@@ -27,6 +30,7 @@ const initialFormState: SignupForm = {
   email: "",
   password: "",
   confirmPassword: "",
+  picture: "",
 };
 
 const NewUserSignup = () => {
@@ -34,66 +38,27 @@ const NewUserSignup = () => {
   const [form, setForm] = useState<SignupForm>(initialFormState);
   const [message, setMessage] = useState<string | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { t } = useTranslation();
   useAuthRedirect({ redirectAuthenticatedTo: "/dashboard" });
   const signupMutation = useApiMutation({
     path: "/user_auth",
   });
   const isSubmitting = signupMutation.isPending;
-
+  const isLoading = signupMutation.isPending;
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSuccess = () => router.push("/dashboard");
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setMessage(null);
-
-    if (Object.values(form).some((value) => !value.trim())) {
-      setMessage("Please fill in all fields.");
-      return;
-    }
-
-    if (form.password !== form.confirmPassword) {
-      setMessage("Passwords do not match.");
-      return;
-    }
-
-    try {
-      const payload = {
-        email: form.email.trim(),
-        password: form.password,
-        name: form.name.trim(),
-        surname: form.surname.trim(),
-      };
-      await signupMutation.mutateAsync(payload);
-
-      if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem("user_name", payload.name);
-        window.localStorage.setItem("user_surname", payload.surname);
-        window.localStorage.setItem("user_email", payload.email.toLowerCase());
-      }
-
-      handleSuccess();
-    } catch (error) {
-      const normalizedError =
-        error instanceof Error ? error : new Error(String(error));
-      console.error("Signup webhook error", normalizedError);
-      setMessage(normalizedError.message || "Network error. Please retry.");
-    }
-  };
-
   const continueWithGoogle = async () => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (!clientId) {
-      setMessage("Google signup is not configured. Missing client ID.");
+      setMessage(t("auth.signup.errors.googleClientIdMissing"));
       return;
     }
 
     if (typeof window === "undefined") {
-      setMessage("Running outside the browser.");
+      setMessage(t("errors.browserOnly"));
       return;
     }
 
@@ -104,7 +69,7 @@ const NewUserSignup = () => {
 
       const google = window.google;
       if (!google?.accounts?.oauth2) {
-        throw new Error("Google OAuth client is unavailable.");
+        throw new Error(t("errors.googleClientUnavailable"));
       }
 
       const tokenClient = google.accounts.oauth2.initTokenClient({
@@ -116,7 +81,7 @@ const NewUserSignup = () => {
             const accessToken = tokenResponse?.access_token;
             if (!accessToken) {
               throw new Error(
-                tokenResponse?.error || "No access token received from Google."
+                tokenResponse?.error || t("errors.googleNoAccessToken")
               );
             }
 
@@ -136,15 +101,26 @@ const NewUserSignup = () => {
                   profile.family_name
                 );
               }
+              if (profile.picture) {
+                window.localStorage.setItem("user_picture", profile.picture);
+              }
             }
 
+            const payload = {
+              email: profile.email,
+              password: profile.sub,
+              name: profile.given_name,
+              surname: profile.family_name,
+              picture: profile.picture,
+            };
+            await signupMutation.mutateAsync(payload);
             handleSuccess();
           } catch (callbackError) {
             console.error("Google signup callback failed", callbackError);
             setMessage(
               callbackError instanceof Error
                 ? callbackError.message
-                : "Google signup failed."
+                : t("auth.signup.errors.googleFailed")
             );
           } finally {
             setIsGoogleLoading(false);
@@ -155,8 +131,58 @@ const NewUserSignup = () => {
       tokenClient.requestAccessToken({ prompt: "consent" });
     } catch (error) {
       console.error("Google signup start failed", error);
-      setMessage("Google signup could not start. Please try again.");
+      setMessage(t("auth.signup.errors.googleStartFailed"));
       setIsGoogleLoading(false);
+    }
+  };
+
+  const socialAuthBtns = buildSocialAuthButtons({
+    t,
+    isBusy: isLoading,
+    isGoogleLoading,
+    onGoogle: continueWithGoogle,
+    providers: ["google"],
+  });
+
+  const handleSuccess = () => router.push("/dashboard");
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMessage(null);
+
+    if (Object.values(form).some((value) => !value.trim())) {
+      setMessage(t("auth.signup.errors.missingFields"));
+      return;
+    }
+
+    if (form.password !== form.confirmPassword) {
+      setMessage(t("auth.signup.errors.passwordMismatch"));
+      return;
+    }
+
+    try {
+      const payload = {
+        email: form.email.trim(),
+        password: form.password,
+        name: form.name.trim(),
+        surname: form.surname.trim(),
+        picture: form.picture || "",
+      };
+      await signupMutation.mutateAsync(payload);
+
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("user_name", payload.name);
+        window.localStorage.setItem("user_surname", payload.surname);
+        window.localStorage.setItem("user_email", payload.email.toLowerCase());
+        window.localStorage.setItem("user_picture", payload.picture);
+      }
+
+      handleSuccess();
+    } catch (error) {
+      const normalizedError =
+        error instanceof Error ? error : new Error(String(error));
+      console.error("Signup webhook error", normalizedError);
+      setMessage(normalizedError.message || t("errors.networkRetry"));
     }
   };
 
@@ -180,10 +206,10 @@ const NewUserSignup = () => {
               />
             </svg>
             <h1 className="text-4xl font-bold tracking-tighter">
-              Create Account
+              {t("auth.signup.title")}
             </h1>
             <p className="mt-2 text-lg text-[var(--secondary-text-color)]">
-              Join ScanLedger to get started
+              {t("auth.signup.subtitle")}
             </p>
           </div>
 
@@ -196,7 +222,7 @@ const NewUserSignup = () => {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className="sr-only" htmlFor="signup_name">
-                Name
+                {t("auth.signup.fields.name.label")}
               </label>
               <input
                 id="signup_name"
@@ -204,7 +230,7 @@ const NewUserSignup = () => {
                 type="text"
                 autoComplete="given-name"
                 required
-                placeholder="Name"
+                placeholder={t("auth.signup.fields.name.placeholder")}
                 className="block w-full appearance-none rounded-md border-0 bg-[var(--field-background)] px-4 py-3 text-[var(--text-color)] placeholder-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-1 focus:ring-offset-[var(--background-color)] sm:text-sm"
                 value={form.name}
                 onChange={handleChange}
@@ -213,7 +239,7 @@ const NewUserSignup = () => {
             </div>
             <div>
               <label className="sr-only" htmlFor="signup_surname">
-                Surname
+                {t("auth.signup.fields.surname.label")}
               </label>
               <input
                 id="signup_surname"
@@ -221,7 +247,7 @@ const NewUserSignup = () => {
                 type="text"
                 autoComplete="family-name"
                 required
-                placeholder="Surname"
+                placeholder={t("auth.signup.fields.surname.placeholder")}
                 className="block w-full appearance-none rounded-md border-0 bg-[var(--field-background)] px-4 py-3 text-[var(--text-color)] placeholder-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-1 focus:ring-offset-[var(--background-color)] sm:text-sm"
                 value={form.surname}
                 onChange={handleChange}
@@ -230,7 +256,7 @@ const NewUserSignup = () => {
             </div>
             <div>
               <label className="sr-only" htmlFor="signup_email">
-                Email
+                {t("auth.signup.fields.email.label")}
               </label>
               <input
                 id="signup_email"
@@ -238,7 +264,7 @@ const NewUserSignup = () => {
                 type="email"
                 autoComplete="email"
                 required
-                placeholder="Email"
+                placeholder={t("auth.signup.fields.email.placeholder")}
                 className="block w-full appearance-none rounded-md border-0 bg-[var(--field-background)] px-4 py-3 text-[var(--text-color)] placeholder-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-1 focus:ring-offset-[var(--background-color)] sm:text-sm"
                 value={form.email}
                 onChange={handleChange}
@@ -247,7 +273,7 @@ const NewUserSignup = () => {
             </div>
             <div>
               <label className="sr-only" htmlFor="signup_password">
-                Password
+                {t("auth.signup.fields.password.label")}
               </label>
               <input
                 id="signup_password"
@@ -255,7 +281,7 @@ const NewUserSignup = () => {
                 type="password"
                 autoComplete="new-password"
                 required
-                placeholder="Password"
+                placeholder={t("auth.signup.fields.password.placeholder")}
                 className="block w-full appearance-none rounded-md border-0 bg-[var(--field-background)] px-4 py-3 text-[var(--text-color)] placeholder-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-1 focus:ring-offset-[var(--background-color)] sm:text-sm"
                 value={form.password}
                 onChange={handleChange}
@@ -264,7 +290,7 @@ const NewUserSignup = () => {
             </div>
             <div>
               <label className="sr-only" htmlFor="signup_confirm_password">
-                Confirm Password
+                {t("auth.signup.fields.confirmPassword.label")}
               </label>
               <input
                 id="signup_confirm_password"
@@ -272,7 +298,9 @@ const NewUserSignup = () => {
                 type="password"
                 autoComplete="new-password"
                 required
-                placeholder="Confirm Password"
+                placeholder={t(
+                  "auth.signup.fields.confirmPassword.placeholder"
+                )}
                 className="block w-full appearance-none rounded-md border-0 bg-[var(--field-background)] px-4 py-3 text-[var(--text-color)] placeholder-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-1 focus:ring-offset-[var(--background-color)] sm:text-sm"
                 value={form.confirmPassword}
                 onChange={handleChange}
@@ -285,7 +313,9 @@ const NewUserSignup = () => {
                 className="flex w-full justify-center rounded-md bg-[var(--primary-color)] px-4 py-3 text-sm font-semibold leading-6 text-gray-900 shadow-sm transition-colors hover:bg-opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary-color)]"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Submitting..." : "Sign Up"}
+                {isSubmitting
+                  ? t("auth.signup.status.submitting")
+                  : t("auth.signup.actions.signUp")}
               </button>
             </div>
           </form>
@@ -297,83 +327,38 @@ const NewUserSignup = () => {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="bg-[var(--background-color)] px-3 text-[var(--secondary-text-color)]">
-                  Or continue with
+                  {t("auth.shared.orContinueWith")}
                 </span>
               </div>
             </div>
           </div>
 
           <div className="mt-10 space-y-3">
-            <button
-              type="button"
-              className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-white py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={continueWithGoogle}
-              disabled={isSubmitting || isGoogleLoading}
-            >
-              <img
-                src="https://www.gstatic.com/images/branding/product/1x/googleg_24dp.png"
-                alt="Google"
-                className="h-5 w-5"
-              />
-              <span>
-                {isGoogleLoading
-                  ? "Connecting to Google..."
-                  : "Signup with Google"}
-              </span>
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-[#1877F2] py-3 text-sm font-medium text-white transition-colors hover:bg-[#266fe0]"
-              onClick={() => setMessage("Facebook signup coming soon!")}
-            >
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                fill="currentColor"
+            {socialAuthBtns.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={p.className}
+                onClick={p.onClick}
+                disabled={p.disabled}
               >
-                <path d="M22.675 0H1.325C.593 0 0 .593 0 1.326v21.348C0 23.406.593 24 1.325 24h11.494v-9.294H9.847v-3.622h2.972V8.413c0-2.943 1.796-4.549 4.416-4.549 1.255 0 2.336.093 2.651.135v3.07h-1.82c-1.428 0-1.703.679-1.703 1.675v2.196h3.406l-.444 3.622h-2.962V24h5.807C23.406 24 24 23.406 24 22.674V1.326C24 .593 23.406 0 22.675 0z" />
-              </svg>
-              <span>Signup with Facebook</span>
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-[#111827] py-3 text-sm font-medium text-white transition-colors hover:bg-[#1f2937]"
-              onClick={() => setMessage("Microsoft signup coming soon!")}
-            >
-              <img
-                src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"
-                alt="Microsoft"
-                className="h-5 w-5"
-              />
-              <span>Signup with Microsoft</span>
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-black py-3 text-sm font-medium text-white transition-colors hover:bg-gray-900"
-              onClick={() => setMessage("Apple signup coming soon!")}
-            >
-              <img
-                src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg"
-                alt="Apple"
-                className="h-5 w-5"
-                style={{ filter: "invert(1)" }}
-              />
-              <span>Signup with Apple</span>
-            </button>
+                {p.icon}
+                <span>{p.text}</span>
+              </button>
+            ))}
           </div>
         </div>
       </main>
 
       <footer className="px-6 py-8 sm:px-8">
         <div className="text-center text-sm text-[var(--secondary-text-color)]">
-          Already have an account?{" "}
+          {t("auth.signup.prompt.haveAccount")}{" "}
           <button
             type="button"
             className="font-medium text-[var(--primary-color)] hover:text-opacity-80"
             onClick={() => router.push("/login")}
           >
-            Sign In
+            {t("auth.signup.actions.signIn")}
           </button>
         </div>
       </footer>

@@ -1,3 +1,5 @@
+import { translate } from "../lib/i18n";
+
 const GOOGLE_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
 const GOOGLE_USERINFO_URL =
   "https://www.googleapis.com/oauth2/v3/userinfo?alt=json";
@@ -20,7 +22,7 @@ export interface GoogleProfile {
 
 export const ensureGoogleOAuth = async (): Promise<void> => {
   if (!isBrowser()) {
-    throw new Error("Google auth can only run in the browser.");
+    throw new Error(translate("errors.googleBrowserOnly"));
   }
 
   if (window.google?.accounts?.oauth2) {
@@ -39,7 +41,7 @@ export const ensureGoogleOAuth = async (): Promise<void> => {
         });
         existingScript.addEventListener(
           "error",
-          () => reject(new Error("Failed to load Google auth script.")),
+          () => reject(new Error(translate("errors.googleScriptLoad"))),
           { once: true }
         );
         return;
@@ -53,7 +55,7 @@ export const ensureGoogleOAuth = async (): Promise<void> => {
 
       script.onload = () => resolve();
       script.onerror = () =>
-        reject(new Error("Failed to load Google auth script."));
+        reject(new Error(translate("errors.googleScriptLoad")));
 
       document.head.appendChild(script);
     });
@@ -63,7 +65,7 @@ export const ensureGoogleOAuth = async (): Promise<void> => {
 
   if (!window.google?.accounts?.oauth2) {
     scriptLoadingPromise = null;
-    throw new Error("Google auth client did not initialise.");
+    throw new Error(translate("errors.googleClientInit"));
   }
 };
 
@@ -78,7 +80,7 @@ export const fetchGoogleProfile = async (
   });
 
   if (!response.ok) {
-    throw new Error("Could not fetch Google profile.");
+    throw new Error(translate("errors.googleProfileFetch"));
   }
 
   return (await response.json()) as GoogleProfile;

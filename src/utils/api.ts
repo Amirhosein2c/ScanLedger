@@ -6,6 +6,7 @@ import axios, {
   type Method,
 } from "axios";
 import { API_TIMEOUT } from "../config";
+import { translate } from "../lib/i18n";
 
 const isBrowser = typeof window !== "undefined";
 
@@ -77,7 +78,7 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => response.data,
   (error: AxiosError) => {
     if (axios.isCancel(error)) {
-      return Promise.reject(new Error("Request was cancelled"));
+      return Promise.reject(new Error(translate("errors.requestCancelled")));
     }
 
     if (
@@ -85,7 +86,7 @@ apiClient.interceptors.response.use(
       error.message?.toLowerCase().includes("timeout")
     ) {
       return Promise.reject(
-        new Error("Request timeout - please check your connection")
+        new Error(translate("errors.requestTimeout"))
       );
     }
 
@@ -95,7 +96,12 @@ apiClient.interceptors.response.use(
         (data as Record<string, unknown>)?.message ||
         (data as Record<string, unknown>)?.error;
       const normalizedError: ApiError = new Error(
-        message ? String(message) : `Request failed: ${status} ${statusText}`
+        message
+          ? String(message)
+          : translate("errors.requestFailed", {
+              defaultValue: `Request failed: ${status} ${statusText}`,
+              values: { status, statusText },
+            })
       );
       normalizedError.status = status;
       normalizedError.data = data;
@@ -104,7 +110,7 @@ apiClient.interceptors.response.use(
 
     if (error.request) {
       return Promise.reject(
-        new Error("Network error - unable to reach the server")
+        new Error(translate("errors.networkUnavailable"))
       );
     }
 
@@ -116,7 +122,7 @@ export const apiRequest = async <T = unknown>(
   config: AxiosRequestConfig
 ): Promise<T> => {
   if (!config?.url) {
-    throw new Error("Request configuration requires a url");
+    throw new Error(translate("errors.requestConfigMissingUrl"));
   }
 
   const data = await apiClient.request<T>(config);

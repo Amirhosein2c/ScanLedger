@@ -1,3 +1,5 @@
+import { translate } from '../lib/i18n';
+
 export interface OcrField {
   label: string;
   value: string;
@@ -127,7 +129,10 @@ export const generateCsvFromFields = (fields: OcrField[]): string => {
     return '';
   }
 
-  const header = ['Field', 'Value'];
+  const header = [
+    translate('ocr.csv.headers.field'),
+    translate('ocr.csv.headers.value')
+  ];
   const lines = [header.join(',')];
   fields.forEach((field) => {
     const row = [
