@@ -6,7 +6,7 @@ import AppLayout from "../components/layout/AppLayout";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation } from "@/src/lib/i18n";
 
 interface DocumentSummary {
   id?: string;

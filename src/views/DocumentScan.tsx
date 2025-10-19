@@ -11,7 +11,7 @@ import { Card } from "../components/ui/card";
 import { useApiMutation } from "../hooks/useApiMutation";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { toast } from "sonner";
-import { translate, useTranslation } from "@/lib/i18n";
+import { translate, useTranslation } from "@/src/lib/i18n";
 
 type LegacyGetUserMedia = (
   constraints: MediaStreamConstraints,

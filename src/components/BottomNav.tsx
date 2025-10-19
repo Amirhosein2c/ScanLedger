@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { FC } from "react";
 import type { Route } from "next";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation } from "@/src/lib/i18n";
 
 interface NavItem {
   to: Route;

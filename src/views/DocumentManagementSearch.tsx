@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import type { ChangeEvent, CSSProperties, FC } from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import AppLayout from '../components/layout/AppLayout';
-import { Input } from '../components/ui/input';
-import { Button } from '../components/ui/button';
-import { Card, CardContent } from '../components/ui/card';
-import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
-import { useTranslation } from '@/lib/i18n';
+import type { ChangeEvent, CSSProperties, FC } from "react";
+import { useEffect, useMemo, useState } from "react";
+import AppLayout from "../components/layout/AppLayout";
+import { Input } from "../components/ui/input";
+import { Button } from "../components/ui/button";
+import { Card, CardContent } from "../components/ui/card";
+import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
+import { useTranslation } from "@/src/lib/i18n";
 
 interface DocumentSummary {
   id?: string;
@@ -28,28 +28,33 @@ const DocumentRow: FC<DocumentRowProps> = ({ document }) => {
   const { t } = useTranslation();
   const thumbnailStyle: CSSProperties = document.image
     ? { backgroundImage: `url('${document.image}')` }
-    : { backgroundColor: '#1F2937' };
+    : { backgroundColor: "#1F2937" };
 
   return (
     <Card className="bg-[#1F2937]">
       <CardContent className="flex items-center gap-4 p-3">
-        <div className="size-14 rounded-lg bg-cover bg-center bg-no-repeat" style={thumbnailStyle} />
+        <div
+          className="size-14 rounded-lg bg-cover bg-center bg-no-repeat"
+          style={thumbnailStyle}
+        />
         <div className="flex-1">
           <p className="line-clamp-1 text-base font-medium text-white">
-          {document.type || t('documents.common.document')}
-            {document.number ? ` #${document.number}` : ''}
+            {document.type || t("documents.common.document")}
+            {document.number ? ` #${document.number}` : ""}
           </p>
-          <p className="line-clamp-2 text-sm text-[#D1D5DB]">{document.date || ''}</p>
+          <p className="line-clamp-2 text-sm text-[#D1D5DB]">
+            {document.date || ""}
+          </p>
         </div>
         <div className="text-right">
           <p className="text-base font-bold text-white">
             {document.amount
-              ? document.amount.startsWith('$')
+              ? document.amount.startsWith("$")
                 ? document.amount
                 : `$${document.amount}`
-              : ''}
+              : ""}
           </p>
-          <p className="text-sm text-[#D1D5DB]">{document.vendor || ''}</p>
+          <p className="text-sm text-[#D1D5DB]">{document.vendor || ""}</p>
         </div>
       </CardContent>
     </Card>
@@ -57,18 +62,18 @@ const DocumentRow: FC<DocumentRowProps> = ({ document }) => {
 };
 
 const DocumentManagementSearch = () => {
-  useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
+  useAuthRedirect({ redirectUnauthenticatedTo: "/login" });
   const { t } = useTranslation();
-  const [query, setQuery] = useState<string>('');
+  const [query, setQuery] = useState<string>("");
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return;
     }
 
     try {
-      const raw = window.localStorage.getItem('exportedDocuments');
+      const raw = window.localStorage.getItem("exportedDocuments");
       if (!raw) {
         setDocuments([]);
         return;
@@ -80,7 +85,7 @@ const DocumentManagementSearch = () => {
         setDocuments([]);
       }
     } catch (error) {
-      console.warn('Failed to parse document list', error);
+      console.warn("Failed to parse document list", error);
       setDocuments([]);
     }
   }, []);
@@ -97,10 +102,10 @@ const DocumentManagementSearch = () => {
         doc.vendor,
         doc.amount,
         doc.date,
-        doc.status
+        doc.status,
       ]
         .filter(Boolean)
-        .join(' ')
+        .join(" ")
         .toLowerCase();
       return haystack.includes(normalized);
     });
@@ -114,14 +119,14 @@ const DocumentManagementSearch = () => {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="w-12" />
-        <h2 className="text-lg font-bold">{t('documents.header.title')}</h2>
+        <h2 className="text-lg font-bold">{t("documents.header.title")}</h2>
         <div className="flex w-12 items-center justify-end">
           <Button
             type="button"
             size="icon"
             variant="ghost"
             className="rounded-full hover:bg-white/10"
-            title={t('documents.actions.add')}
+            title={t("documents.actions.add")}
           >
             <span className="material-symbols-outlined text-3xl">add</span>
           </Button>
@@ -133,13 +138,13 @@ const DocumentManagementSearch = () => {
         </span>
         <Input
           className="h-12 pl-11 pr-4 text-base"
-          placeholder={t('documents.search.placeholder')}
+          placeholder={t("documents.search.placeholder")}
           value={query}
           onChange={handleQueryChange}
         />
       </div>
       <div className="flex gap-2 overflow-x-auto">
-        {(['date', 'category', 'vendor'] as const).map((filter) => (
+        {(["date", "category", "vendor"] as const).map((filter) => (
           <Button
             key={filter}
             type="button"
@@ -148,7 +153,9 @@ const DocumentManagementSearch = () => {
             className="h-10 shrink-0 gap-x-2 rounded-full bg-[#1F2937] text-sm text-white hover:bg-white/10"
           >
             <span>{t(`documents.filters.${filter}`)}</span>
-            <span className="material-symbols-outlined text-xl">keyboard_arrow_down</span>
+            <span className="material-symbols-outlined text-xl">
+              keyboard_arrow_down
+            </span>
           </Button>
         ))}
       </div>
@@ -162,20 +169,27 @@ const DocumentManagementSearch = () => {
       contentClassName="flex flex-col gap-6"
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-white">{t('documents.sections.recent')}</h3>
+        <h3 className="text-lg font-bold text-white">
+          {t("documents.sections.recent")}
+        </h3>
         <Button
           type="button"
           variant="ghost"
           className="gap-1 text-[var(--primary-color)] hover:bg-white/5"
         >
-          <span>{t('documents.actions.sort')}</span>
+          <span>{t("documents.actions.sort")}</span>
           <span className="material-symbols-outlined text-xl">swap_vert</span>
         </Button>
       </div>
       <div className="space-y-2 pb-6">
-        {filteredDocuments.length === 0 && <p className="text-sm text-gray-400">{t('documents.search.empty')}</p>}
+        {filteredDocuments.length === 0 && (
+          <p className="text-sm text-gray-400">{t("documents.search.empty")}</p>
+        )}
         {filteredDocuments.map((document, index) => (
-          <DocumentRow key={`${document.id || document.number || index}`} document={document} />
+          <DocumentRow
+            key={`${document.id || document.number || index}`}
+            document={document}
+          />
         ))}
       </div>
     </AppLayout>

@@ -2,8 +2,11 @@ import en from '../../locales/en.json';
 
 export type Locale = 'en';
 
-type TranslationValue = string | TranslationDictionary;
-type TranslationDictionary = Record<string, TranslationValue>;
+type TranslationValue = string | TranslationRecord;
+
+interface TranslationRecord {
+  [key: string]: TranslationValue;
+}
 
 interface TranslateOptions {
   locale?: Locale;
@@ -13,8 +16,8 @@ interface TranslateOptions {
 
 type Translator = (key: string, options?: Omit<TranslateOptions, 'locale'>) => string;
 
-const resources: Record<Locale, TranslationDictionary> = {
-  en: en as TranslationDictionary
+const resources: Record<Locale, TranslationRecord> = {
+  en: en as TranslationRecord
 };
 
 const availableLocales = Object.keys(resources) as Locale[];
@@ -22,7 +25,7 @@ const availableLocales = Object.keys(resources) as Locale[];
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
-const lookupMessage = (dictionary: TranslationDictionary, key: string): string | undefined => {
+const lookupMessage = (dictionary: TranslationRecord, key: string): string | undefined => {
   const segments = key.split('.');
   let current: TranslationValue | undefined = dictionary;
 

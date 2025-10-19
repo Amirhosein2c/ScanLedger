@@ -12,8 +12,8 @@ import {
   GOOGLE_SCOPE,
 } from "../utils/googleClient";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
-import { useTranslation } from "@/lib/i18n";
-import { buildSocialAuthButtons } from "@/features/auth/constants/socialAuth";
+import { useTranslation } from "@/src/lib/i18n";
+import { buildSocialAuthButtons } from "@/src/features/auth/constants/socialAuth";
 
 interface SignupForm {
   name: string;

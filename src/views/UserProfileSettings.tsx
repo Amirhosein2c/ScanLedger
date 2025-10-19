@@ -14,7 +14,7 @@ import {
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation } from "@/src/lib/i18n";
 
 interface ProfileState {
   name: string;
