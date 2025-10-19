@@ -4,13 +4,14 @@
 
 import { useRouter } from "next/navigation";
 import type { ChangeEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AppLayout from "../components/layout/AppLayout";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { useApiMutation } from "../hooks/useApiMutation";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { toast } from "sonner";
+import { translate, useTranslation } from "@/lib/i18n";
 
 type LegacyGetUserMedia = (
   constraints: MediaStreamConstraints,
@@ -24,8 +25,7 @@ type LegacyNavigator = Navigator & {
   mozGetUserMedia?: LegacyGetUserMedia;
 };
 
-const SECURE_CONTEXT_MESSAGE =
-  "Camera access requires HTTPS or running from localhost during development.";
+const SECURE_CONTEXT_MESSAGE_KEY = "documentScan.errors.secureContext";
 
 const isLoopbackHost = (normalizedHost: string) =>
   normalizedHost === "localhost" ||
@@ -35,7 +35,7 @@ const isLoopbackHost = (normalizedHost: string) =>
 
 const ensureSecureCameraContext = (isSecure: boolean, hostname: string) => {
   if (!isSecure && !isLoopbackHost(hostname.toLowerCase())) {
-    throw new Error(SECURE_CONTEXT_MESSAGE);
+    throw new Error(translate(SECURE_CONTEXT_MESSAGE_KEY));
   }
 };
 
@@ -134,7 +134,7 @@ const getUserMediaPromise = (constraints: MediaStreamConstraints) => {
     });
   }
   return Promise.reject(
-    new Error("getUserMedia is not supported in this browser.")
+    new Error(translate("documentScan.errors.getUserMediaUnsupported"))
   );
 };
 
@@ -232,9 +232,7 @@ const requestCameraStream = async (isSecure: boolean, hostname: string) => {
     throw lastError;
   }
 
-  throw new Error(
-    "Camera access is not supported by this browser. Try updating it or using the native camera upload."
-  );
+  throw new Error(translate("documentScan.errors.cameraUnsupported"));
 };
 const normalizeCameraError = (
   cameraErr: unknown,
@@ -248,7 +246,7 @@ const normalizeCameraError = (
 ) => {
   const normalizedHost = hostname.toLowerCase();
   if (!isSecure && !isLoopbackHost(normalizedHost)) {
-    return SECURE_CONTEXT_MESSAGE;
+    return translate(SECURE_CONTEXT_MESSAGE_KEY);
   }
 
   if (cameraErr && typeof cameraErr === "object") {
@@ -256,10 +254,10 @@ const normalizeCameraError = (
     const errorMessage = errWithName.message ?? "";
 
     if (errWithName.name === "NotAllowedError") {
-      return "Camera permission denied. Enable it in your browser or device settings.";
+      return translate("documentScan.errors.permissionDenied");
     }
     if (errWithName.name === "NotFoundError") {
-      return "No camera device detected. Connect a camera and try again.";
+      return translate("documentScan.errors.noCameraFound");
     }
     if (errorMessage) {
       return errorMessage;
@@ -268,7 +266,7 @@ const normalizeCameraError = (
     return cameraErr.message;
   }
 
-  return "Unable to access the camera. Please allow camera permissions or use a secure/trusted local connection.";
+  return translate("documentScan.errors.unableToAccess");
 };
 
 const dataUrlToBlob = (dataUrl: string): Blob => {
@@ -287,12 +285,14 @@ const dataUrlToBlob = (dataUrl: string): Blob => {
 const DocumentScan = () => {
   const router = useRouter();
   useAuthRedirect({ redirectUnauthenticatedTo: "/login" });
+  const { t } = useTranslation();
 
   // References to DOM elements we manipulate directly.
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const isComponentActiveRef = useRef(true);
 
   // Stateful data that drives what the user sees.
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -309,83 +309,108 @@ const DocumentScan = () => {
   });
   const isUploading = ocrMutation.isPending;
 
-  useEffect(() => {
-    // Boot the camera stream when the component mounts.
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    let isSubscribed = true;
-    const hostname = window.location.hostname;
-    const isSecure =
-      window.isSecureContext || window.location.protocol === "https:";
-
-    const attachStreamToVideo = (stream: MediaStream) => {
+  const attachStreamToVideo = useCallback(
+    (stream: MediaStream) => {
       const videoElement = videoRef.current;
       if (!videoElement) {
         setIsCameraReady(true);
         return;
       }
 
-      videoElement.srcObject = stream;
+      if (videoElement.srcObject !== stream) {
+        videoElement.srcObject = stream;
+      }
+
       videoElement.setAttribute("playsinline", "true");
       videoElement
         .play()
         .then(() => setIsCameraReady(true))
         .catch(() => setIsCameraReady(true));
-    };
+    },
+    [setIsCameraReady]
+  );
 
-    const startCamera = async () => {
-      // Reset UI state before trying to acquire a new stream.
-      setIsCameraReady(false);
-      setCameraError(null);
+  const initCamera = useCallback(async () => {
+    if (typeof window === "undefined") {
+      return;
+    }
 
-      try {
-        let stream = await requestCameraStream(isSecure, hostname);
+    if (streamRef.current) {
+      stopMediaStream(streamRef.current);
+      streamRef.current = null;
+    }
 
-        if (!isSubscribed) {
-          stopMediaStream(stream);
-          return;
-        }
+    const hostname = window.location.hostname;
+    const isSecure =
+      window.isSecureContext || window.location.protocol === "https:";
 
-        const preferredStream = await ensurePreferredRearCamera(stream);
-        if (!isSubscribed) {
-          stopMediaStream(preferredStream);
-          if (preferredStream !== stream) {
-            stopMediaStream(stream);
-          }
-          return;
-        }
+    setIsCameraReady(false);
+    setCameraError(null);
 
+    try {
+      let stream = await requestCameraStream(isSecure, hostname);
+
+      if (!isComponentActiveRef.current) {
+        stopMediaStream(stream);
+        return;
+      }
+
+      const preferredStream = await ensurePreferredRearCamera(stream);
+      if (!isComponentActiveRef.current) {
+        stopMediaStream(preferredStream);
         if (preferredStream !== stream) {
           stopMediaStream(stream);
-          stream = preferredStream;
         }
-
-        streamRef.current = stream;
-        attachStreamToVideo(stream);
-        setCameraError(null);
-      } catch (cameraErr) {
-        if (!isSubscribed) {
-          return;
-        }
-        setCameraError(
-          normalizeCameraError(cameraErr, {
-            isSecure,
-            hostname,
-          })
-        );
+        return;
       }
-    };
 
-    startCamera();
+      if (preferredStream !== stream) {
+        stopMediaStream(stream);
+        stream = preferredStream;
+      }
+
+      streamRef.current = stream;
+      attachStreamToVideo(stream);
+      setCameraError(null);
+    } catch (cameraErr) {
+      if (!isComponentActiveRef.current) {
+        return;
+      }
+
+      setCameraError(
+        normalizeCameraError(cameraErr, {
+          isSecure,
+          hostname,
+        })
+      );
+    }
+  }, [attachStreamToVideo]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    isComponentActiveRef.current = true;
+    initCamera();
 
     return () => {
-      isSubscribed = false;
+      isComponentActiveRef.current = false;
       stopMediaStream(streamRef.current);
       streamRef.current = null;
     };
-  }, []);
+  }, [initCamera]);
+
+  useEffect(() => {
+    if (imagePreview) {
+      return;
+    }
+    const stream = streamRef.current;
+    if (!stream) {
+      return;
+    }
+    attachStreamToVideo(stream);
+  }, [attachStreamToVideo, imagePreview]);
 
   // Persist the preview so we can return to it after navigating away.
   const persistImageDataUrl = (dataUrl: string) => {
@@ -425,22 +450,6 @@ const DocumentScan = () => {
     input.click();
   };
 
-  const handleOpenUserCamera = () => {
-    const input = fileInputRef.current;
-    if (!input) {
-      return;
-    }
-
-    setImagePreview(null);
-    setError(null);
-    setCameraError(null);
-
-    input.value = "";
-    input.setAttribute("capture", "environment");
-    input.click();
-    input.removeAttribute("capture");
-  };
-
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { current } = fileInputRef;
     if (current) {
@@ -453,7 +462,7 @@ const DocumentScan = () => {
     }
 
     if (!file.type.startsWith("image/")) {
-      setError("Only image capture is supported in this build.");
+      setError(t("documentScan.errors.onlyImagesSupported"));
       return;
     }
 
@@ -465,7 +474,7 @@ const DocumentScan = () => {
       }
       persistImageDataUrl(result);
     };
-    reader.onerror = () => setError("Failed to read image. Please try again.");
+    reader.onerror = () => setError(t("documentScan.errors.readImageFailed"));
     reader.readAsDataURL(file);
   };
 
@@ -476,17 +485,18 @@ const DocumentScan = () => {
       fileInputRef.current.value = "";
       fileInputRef.current.removeAttribute("capture");
     }
+    initCamera();
   };
 
   const handleCapture = () => {
     const videoElement = videoRef.current;
     if (!videoElement) {
-      setError("Camera is not ready yet. Please try again.");
+      setError(t("documentScan.errors.cameraNotReady"));
       return;
     }
 
     if (videoElement.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-      setError("Camera is still initializing. Hold on a second and retry.");
+      setError(t("documentScan.errors.cameraInitializing"));
       return;
     }
 
@@ -497,7 +507,7 @@ const DocumentScan = () => {
 
     const canvasElement = canvasRef.current;
     if (!canvasElement) {
-      setError("Unable to capture image. Please try again.");
+      setError(t("documentScan.errors.captureFailed"));
       return;
     }
 
@@ -506,7 +516,7 @@ const DocumentScan = () => {
 
     const context = canvasElement.getContext("2d");
     if (!context) {
-      setError("Unable to capture image. Please try again.");
+      setError(t("documentScan.errors.captureFailed"));
       return;
     }
 
@@ -523,13 +533,13 @@ const DocumentScan = () => {
       persistImageDataUrl(dataUrl);
     } catch (captureError) {
       console.error(captureError);
-      setError("Failed to capture image from camera.");
+      setError(t("documentScan.errors.captureException"));
     }
   };
 
   const handleProcess = async () => {
     if (!imagePreview) {
-      setError("Capture or upload a document first.");
+      setError(t("documentScan.errors.noPreview"));
       return;
     }
 
@@ -570,7 +580,9 @@ const DocumentScan = () => {
           ? uploadError
           : new Error(String(uploadError));
       console.error(normalizedError);
-      setError(normalizedError.message || "Upload failed. Please try again.");
+      setError(
+        normalizedError.message || t("documentScan.errors.uploadFailed")
+      );
     }
   };
 
@@ -590,12 +602,12 @@ const DocumentScan = () => {
         variant="ghost"
         size="icon"
         className="rounded-full text-white/70 hover:bg-white/10 hover:text-white"
-        onClick={() => setError("Flash toggle is not available in this build.")}
+        onClick={() => setError(t("documentScan.errors.flashUnavailable"))}
       >
         <span className="material-symbols-outlined">flash_on</span>
       </Button>
       <h2 className="text-lg font-bold leading-tight tracking-[-0.015em]">
-        Scan Document
+        {t("documentScan.header.title")}
       </h2>
       <Button
         variant="ghost"
@@ -622,7 +634,7 @@ const DocumentScan = () => {
               {imagePreview ? (
                 <img
                   src={imagePreview}
-                  alt="Captured document"
+                  alt={t("documentScan.previewAlt")}
                   className="h-full w-full object-cover"
                 />
               ) : cameraError ? (
@@ -641,14 +653,14 @@ const DocumentScan = () => {
                   />
                   {!isCameraReady && (
                     <div className="absolute inset-0 flex items-center justify-center bg-[#0b1324]/60 text-sm text-white/80 backdrop-blur-sm">
-                      Initializing camera…
+                      {t("documentScan.status.initializingCamera")}
                     </div>
                   )}
                   <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center px-6 text-center text-sm text-white/80">
                     <p>
-                      Position document within the frame
+                      {t("documentScan.instructions.primary")}
                       <br />
-                      Then press the capture button
+                      {t("documentScan.instructions.secondary")}
                     </p>
                   </div>
                 </>
@@ -659,13 +671,11 @@ const DocumentScan = () => {
               <Button
                 variant="secondary"
                 size="icon"
-                className="pointer-events-auto absolute bottom-4 left-4 rounded-full bg-white/15 text-white hover:bg-white/25"
-                onClick={imagePreview ? handleRetake : handleOpenUserCamera}
-                disabled={isUploading}
+                className="pointer-events-auto absolute bottom-4 left-4 rounded-full bg-red-500 text-white hover:bg-red-500"
+                onClick={handleRetake}
+                disabled={!imagePreview || isUploading}
               >
-                <span className="material-symbols-outlined">
-                  {imagePreview ? "refresh" : "photo_camera"}
-                </span>
+                <span className="material-symbols-outlined">close</span>
               </Button>
 
               <Button
@@ -681,13 +691,12 @@ const DocumentScan = () => {
                 <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#0b1324]/80 px-6 text-center backdrop-blur-sm">
                   <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full border-4 border-white/20 border-t-[var(--primary-color)] animate-spin" />
                   <p className="text-lg font-semibold text-white">
-                    Processing the document,
+                    {t("documentScan.progress.primary")}
                     <br />
-                    Please wait!
+                    {t("documentScan.progress.secondary")}
                   </p>
                   <p className="mt-3 text-sm text-white/70">
-                    Do not close this tab. Upload &amp; OCR may take a few
-                    seconds.
+                    {t("documentScan.progress.note")}
                   </p>
                 </div>
               )}
@@ -697,6 +706,10 @@ const DocumentScan = () => {
           <div className="flex w-full max-w-xs items-center justify-between rounded-full bg-[#0b1324] p-1 text-sm font-medium">
             {(["single", "batch"] as const).map((mode) => {
               const isActive = captureMode === mode;
+              const labelKey =
+                mode === "single"
+                  ? "documentScan.captureMode.single"
+                  : "documentScan.captureMode.batch";
               return (
                 <Button
                   key={mode}
@@ -707,8 +720,9 @@ const DocumentScan = () => {
                       : "text-white/60 hover:bg-white/10"
                   }`}
                   onClick={() => setCaptureMode(mode)}
+                  disabled={isUploading}
                 >
-                  {mode === "single" ? "Single" : "Batch"}
+                  {t(labelKey)}
                 </Button>
               );
             })}

@@ -6,6 +6,7 @@ import AppLayout from '../components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
+import { useTranslation } from '@/lib/i18n';
 
 interface TemplateSummary {
   id: string;
@@ -16,36 +17,55 @@ interface TemplateSummary {
 
 const DefaultTemplates = () => {
   useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
+  const { t } = useTranslation();
   const templates = useMemo<TemplateSummary[]>(
     () => [
       {
         id: 'invoice-standard',
-        name: 'Invoice (Standard)',
-        description: 'Capture invoice number, date, totals, vendor, and payment terms.',
-        fields: ['Invoice Number', 'Invoice Date', 'Vendor', 'Subtotal', 'Tax', 'Total']
+        name: t('templates.defaults.invoiceStandard.name'),
+        description: t('templates.defaults.invoiceStandard.description'),
+        fields: [
+          t('templates.defaults.invoiceStandard.fields.invoiceNumber'),
+          t('templates.defaults.invoiceStandard.fields.invoiceDate'),
+          t('templates.defaults.invoiceStandard.fields.vendor'),
+          t('templates.defaults.invoiceStandard.fields.subtotal'),
+          t('templates.defaults.invoiceStandard.fields.tax'),
+          t('templates.defaults.invoiceStandard.fields.total'),
+          t('templates.defaults.invoiceStandard.fields.paymentTerms')
+        ]
       },
       {
         id: 'receipt-retail',
-        name: 'Retail Receipt',
-        description: 'Designed for point-of-sale receipts including merchant, total, and payment method.',
-        fields: ['Merchant', 'Purchase Date', 'Total', 'Payment Method']
+        name: t('templates.defaults.retailReceipt.name'),
+        description: t('templates.defaults.retailReceipt.description'),
+        fields: [
+          t('templates.defaults.retailReceipt.fields.merchant'),
+          t('templates.defaults.retailReceipt.fields.purchaseDate'),
+          t('templates.defaults.retailReceipt.fields.total'),
+          t('templates.defaults.retailReceipt.fields.paymentMethod'),
+          t('templates.defaults.retailReceipt.fields.cardLast4')
+        ]
       },
       {
         id: 'statement-bank',
-        name: 'Bank Statement',
-        description: 'Monthly statements with opening balance, closing balance, and transactions.',
-        fields: ['Account Name', 'Period', 'Opening Balance', 'Closing Balance']
+        name: t('templates.defaults.bankStatement.name'),
+        description: t('templates.defaults.bankStatement.description'),
+        fields: [
+          t('templates.defaults.bankStatement.fields.accountName'),
+          t('templates.defaults.bankStatement.fields.period'),
+          t('templates.defaults.bankStatement.fields.openingBalance'),
+          t('templates.defaults.bankStatement.fields.closingBalance'),
+          t('templates.defaults.bankStatement.fields.totalTransactions')
+        ]
       }
     ],
-    []
+    [t]
   );
 
   const header = (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight">Templates</h1>
-      <p className="mt-2 text-sm text-gray-400">
-        Start with a predefined extraction template or customize your own.
-      </p>
+      <h1 className="text-2xl font-bold tracking-tight">{t('templates.header.title')}</h1>
+      <p className="mt-2 text-sm text-gray-400">{t('templates.header.subtitle')}</p>
     </div>
   );
 

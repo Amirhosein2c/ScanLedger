@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
+import { useTranslation } from '@/lib/i18n';
 
 interface DocumentSummary {
   id?: string;
@@ -24,6 +25,7 @@ interface DocumentRowProps {
 }
 
 const DocumentRow: FC<DocumentRowProps> = ({ document }) => {
+  const { t } = useTranslation();
   const thumbnailStyle: CSSProperties = document.image
     ? { backgroundImage: `url('${document.image}')` }
     : { backgroundColor: '#1F2937' };
@@ -34,7 +36,7 @@ const DocumentRow: FC<DocumentRowProps> = ({ document }) => {
         <div className="size-14 rounded-lg bg-cover bg-center bg-no-repeat" style={thumbnailStyle} />
         <div className="flex-1">
           <p className="line-clamp-1 text-base font-medium text-white">
-            {document.type || 'Document'}
+          {document.type || t('documents.common.document')}
             {document.number ? ` #${document.number}` : ''}
           </p>
           <p className="line-clamp-2 text-sm text-[#D1D5DB]">{document.date || ''}</p>
@@ -56,6 +58,7 @@ const DocumentRow: FC<DocumentRowProps> = ({ document }) => {
 
 const DocumentManagementSearch = () => {
   useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
+  const { t } = useTranslation();
   const [query, setQuery] = useState<string>('');
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
 
@@ -111,14 +114,14 @@ const DocumentManagementSearch = () => {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="w-12" />
-        <h2 className="text-lg font-bold">Documents</h2>
+        <h2 className="text-lg font-bold">{t('documents.header.title')}</h2>
         <div className="flex w-12 items-center justify-end">
           <Button
             type="button"
             size="icon"
             variant="ghost"
             className="rounded-full hover:bg-white/10"
-            title="Add document"
+            title={t('documents.actions.add')}
           >
             <span className="material-symbols-outlined text-3xl">add</span>
           </Button>
@@ -130,13 +133,13 @@ const DocumentManagementSearch = () => {
         </span>
         <Input
           className="h-12 pl-11 pr-4 text-base"
-          placeholder="Search documents"
+          placeholder={t('documents.search.placeholder')}
           value={query}
           onChange={handleQueryChange}
         />
       </div>
       <div className="flex gap-2 overflow-x-auto">
-        {['Date', 'Category', 'Vendor'].map((filter) => (
+        {(['date', 'category', 'vendor'] as const).map((filter) => (
           <Button
             key={filter}
             type="button"
@@ -144,7 +147,7 @@ const DocumentManagementSearch = () => {
             size="sm"
             className="h-10 shrink-0 gap-x-2 rounded-full bg-[#1F2937] text-sm text-white hover:bg-white/10"
           >
-            <span>{filter}</span>
+            <span>{t(`documents.filters.${filter}`)}</span>
             <span className="material-symbols-outlined text-xl">keyboard_arrow_down</span>
           </Button>
         ))}
@@ -159,18 +162,18 @@ const DocumentManagementSearch = () => {
       contentClassName="flex flex-col gap-6"
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-white">Recent</h3>
+        <h3 className="text-lg font-bold text-white">{t('documents.sections.recent')}</h3>
         <Button
           type="button"
           variant="ghost"
           className="gap-1 text-[var(--primary-color)] hover:bg-white/5"
         >
-          <span>Sort</span>
+          <span>{t('documents.actions.sort')}</span>
           <span className="material-symbols-outlined text-xl">swap_vert</span>
         </Button>
       </div>
       <div className="space-y-2 pb-6">
-        {filteredDocuments.length === 0 && <p className="text-sm text-gray-400">No documents match your search.</p>}
+        {filteredDocuments.length === 0 && <p className="text-sm text-gray-400">{t('documents.search.empty')}</p>}
         {filteredDocuments.map((document, index) => (
           <DocumentRow key={`${document.id || document.number || index}`} document={document} />
         ))}

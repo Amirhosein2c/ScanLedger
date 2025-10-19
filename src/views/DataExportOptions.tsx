@@ -6,9 +6,11 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { generateCsvFromFields, type OcrField } from '../utils/ocr';
 import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
+import { useTranslation } from '@/lib/i18n';
 
 const DataExportOptions = () => {
   useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
+  const { t } = useTranslation();
   const [csvContent, setCsvContent] = useState<string>('');
   const [message, setMessage] = useState<string | null>(null);
 
@@ -39,7 +41,7 @@ const DataExportOptions = () => {
 
   const handleDownloadCsv = () => {
     if (!csvContent) {
-      setMessage('No CSV content available yet.');
+      setMessage(t('export.messages.noContent'));
       return;
     }
 
@@ -52,26 +54,26 @@ const DataExportOptions = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    setMessage('CSV export started.');
+    setMessage(t('export.messages.downloadStarted'));
     setTimeout(() => setMessage(null), 2500);
   };
 
   const handleCopyCsv = () => {
     if (!csvContent) {
-      setMessage('No CSV content to copy.');
+      setMessage(t('export.messages.noContentToCopy'));
       return;
     }
     if (!navigator.clipboard) {
-      setMessage('Clipboard access is not available.');
+      setMessage(t('export.messages.clipboardUnavailable'));
       return;
     }
     navigator.clipboard
       .writeText(csvContent)
       .then(() => {
-        setMessage('CSV copied to clipboard.');
+        setMessage(t('export.messages.copied'));
         setTimeout(() => setMessage(null), 2500);
       })
-      .catch(() => setMessage('Failed to copy CSV.'));
+      .catch(() => setMessage(t('export.messages.copyFailed')));
   };
 
   const handleClearExports = () => {
@@ -85,16 +87,14 @@ const DataExportOptions = () => {
     window.sessionStorage.removeItem('ocrResultData');
     window.sessionStorage.removeItem('ocrCsvContent');
     setCsvContent('');
-    setMessage('Export history cleared.');
+    setMessage(t('export.messages.historyCleared'));
     setTimeout(() => setMessage(null), 2500);
   };
 
   const header = (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight">Export Options</h1>
-      <p className="mt-2 text-sm text-gray-400">
-        Download your OCR results or share them with other systems.
-      </p>
+      <h1 className="text-2xl font-bold tracking-tight">{t('export.header.title')}</h1>
+      <p className="mt-2 text-sm text-gray-400">{t('export.header.subtitle')}</p>
     </div>
   );
 
@@ -106,40 +106,40 @@ const DataExportOptions = () => {
     >
       <Card className="bg-[#1F2937]">
         <CardHeader>
-          <CardTitle>CSV Export</CardTitle>
+          <CardTitle>{t('export.sections.csv.title')}</CardTitle>
           <p className="text-sm text-gray-400">
-            Export your recent OCR results as a CSV file for Excel, Google Sheets, or your accounting software.
+            {t('export.sections.csv.description')}
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
           <Button className="w-full" size="lg" onClick={handleDownloadCsv}>
-            Download CSV
+            {t('export.actions.downloadCsv')}
           </Button>
           <Button variant="secondary" className="w-full" size="lg" onClick={handleCopyCsv}>
-            Copy CSV to Clipboard
+            {t('export.actions.copyCsv')}
           </Button>
         </CardContent>
       </Card>
 
       <Card className="bg-[#1F2937]">
         <CardHeader>
-          <CardTitle>Integrations</CardTitle>
+          <CardTitle>{t('export.sections.integrations.title')}</CardTitle>
           <p className="text-sm text-gray-400">
-            Webhooks and direct integrations are handled by the ScanLedger automation workflows.
+            {t('export.sections.integrations.description')}
           </p>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-500">
-            Configure destinations in your n8n workflow to sync exports automatically.
+            {t('export.sections.integrations.note')}
           </p>
         </CardContent>
       </Card>
 
       <Card className="bg-[#1F2937]">
         <CardHeader>
-          <CardTitle>History</CardTitle>
+          <CardTitle>{t('export.sections.history.title')}</CardTitle>
           <p className="text-sm text-gray-400">
-            Manage stored documents on this device. Clearing history does not remove records from backend storage.
+            {t('export.sections.history.description')}
           </p>
         </CardHeader>
         <CardContent>
@@ -149,7 +149,7 @@ const DataExportOptions = () => {
             size="lg"
             onClick={handleClearExports}
           >
-            Clear Local Export History
+            {t('export.actions.clearHistory')}
           </Button>
         </CardContent>
       </Card>

@@ -7,52 +7,53 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
+import { useTranslation } from '@/lib/i18n';
 
-interface TemplateField {
-  label: string;
+interface TemplateFieldDefinition {
+  labelKey: string;
   required: boolean;
 }
 
 interface TemplateDefinition {
-  name: string;
-  description: string;
-  fields: TemplateField[];
+  nameKey: string;
+  descriptionKey: string;
+  fields: TemplateFieldDefinition[];
 }
 
 const templates: Record<string, TemplateDefinition> = {
   'invoice-standard': {
-    name: 'Invoice (Standard)',
-    description: 'Capture invoice number, date, totals, vendor, and payment terms.',
+    nameKey: 'templates.defaults.invoiceStandard.name',
+    descriptionKey: 'templates.defaults.invoiceStandard.description',
     fields: [
-      { label: 'Invoice Number', required: true },
-      { label: 'Invoice Date', required: true },
-      { label: 'Vendor', required: true },
-      { label: 'Subtotal', required: false },
-      { label: 'Tax', required: false },
-      { label: 'Total', required: true },
-      { label: 'Payment Terms', required: false }
+      { labelKey: 'templates.defaults.invoiceStandard.fields.invoiceNumber', required: true },
+      { labelKey: 'templates.defaults.invoiceStandard.fields.invoiceDate', required: true },
+      { labelKey: 'templates.defaults.invoiceStandard.fields.vendor', required: true },
+      { labelKey: 'templates.defaults.invoiceStandard.fields.subtotal', required: false },
+      { labelKey: 'templates.defaults.invoiceStandard.fields.tax', required: false },
+      { labelKey: 'templates.defaults.invoiceStandard.fields.total', required: true },
+      { labelKey: 'templates.defaults.invoiceStandard.fields.paymentTerms', required: false }
     ]
   },
   'receipt-retail': {
-    name: 'Retail Receipt',
-    description: 'Designed for point-of-sale receipts including merchant, total, and payment method.',
+    nameKey: 'templates.defaults.retailReceipt.name',
+    descriptionKey: 'templates.defaults.retailReceipt.description',
     fields: [
-      { label: 'Merchant', required: true },
-      { label: 'Purchase Date', required: true },
-      { label: 'Total', required: true },
-      { label: 'Payment Method', required: false },
-      { label: 'Card Last 4', required: false }
+      { labelKey: 'templates.defaults.retailReceipt.fields.merchant', required: true },
+      { labelKey: 'templates.defaults.retailReceipt.fields.purchaseDate', required: true },
+      { labelKey: 'templates.defaults.retailReceipt.fields.total', required: true },
+      { labelKey: 'templates.defaults.retailReceipt.fields.paymentMethod', required: false },
+      { labelKey: 'templates.defaults.retailReceipt.fields.cardLast4', required: false }
     ]
   },
   'statement-bank': {
-    name: 'Bank Statement',
-    description: 'Monthly statements with opening balance, closing balance, and transactions.',
+    nameKey: 'templates.defaults.bankStatement.name',
+    descriptionKey: 'templates.defaults.bankStatement.description',
     fields: [
-      { label: 'Account Name', required: true },
-      { label: 'Period', required: true },
-      { label: 'Opening Balance', required: true },
-      { label: 'Closing Balance', required: true },
-      { label: 'Total Transactions', required: false }
+      { labelKey: 'templates.defaults.bankStatement.fields.accountName', required: true },
+      { labelKey: 'templates.defaults.bankStatement.fields.period', required: true },
+      { labelKey: 'templates.defaults.bankStatement.fields.openingBalance', required: true },
+      { labelKey: 'templates.defaults.bankStatement.fields.closingBalance', required: true },
+      { labelKey: 'templates.defaults.bankStatement.fields.totalTransactions', required: false }
     ]
   }
 };
@@ -60,15 +61,30 @@ const templates: Record<string, TemplateDefinition> = {
 const TemplateDetail = () => {
   const router = useRouter();
   useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
+  const { t } = useTranslation();
   const params = useParams<{ templateId: string }>();
   const templateId = params?.templateId;
 
-  const template = useMemo<TemplateDefinition | null>(() => {
+  const templateDefinition = useMemo<TemplateDefinition | null>(() => {
     if (!templateId) {
       return null;
     }
     return templates[templateId] || null;
   }, [templateId]);
+
+  const template = useMemo(() => {
+    if (!templateDefinition) {
+      return null;
+    }
+    return {
+      name: t(templateDefinition.nameKey),
+      description: t(templateDefinition.descriptionKey),
+      fields: templateDefinition.fields.map((field) => ({
+        label: t(field.labelKey),
+        required: field.required
+      }))
+    };
+  }, [t, templateDefinition]);
 
   const header = (
     <div className="flex items-center">
@@ -76,7 +92,7 @@ const TemplateDetail = () => {
         <span className="material-symbols-outlined text-3xl">arrow_back_ios_new</span>
       </Button>
       <h1 className="flex-1 pr-8 text-center text-xl font-bold tracking-tight">
-        {template ? template.name : 'Templates'}
+        {template ? template.name : t('templates.header.title')}
       </h1>
     </div>
   );
@@ -86,12 +102,12 @@ const TemplateDetail = () => {
       <AppLayout header={header} className="bg-[#111827] text-white" contentClassName="flex items-center justify-center">
         <Card className="mx-auto max-w-sm bg-[#1F2937] text-center">
           <CardHeader>
-            <CardTitle>Template not found</CardTitle>
-            <p className="text-sm text-white/60">The requested template does not exist.</p>
+            <CardTitle>{t('templates.detail.notFound.title')}</CardTitle>
+            <p className="text-sm text-white/60">{t('templates.detail.notFound.description')}</p>
           </CardHeader>
           <CardContent>
             <Button className="mt-2" onClick={() => router.push('/templates')}>
-              Back to Templates
+              {t('templates.detail.notFound.back')}
             </Button>
           </CardContent>
         </Card>
@@ -107,14 +123,14 @@ const TemplateDetail = () => {
     >
       <Card className="bg-[#1F2937]">
         <CardHeader>
-          <CardTitle>Overview</CardTitle>
+          <CardTitle>{t('templates.detail.sections.overview')}</CardTitle>
           <p className="text-sm text-gray-400">{template.description}</p>
         </CardHeader>
       </Card>
 
       <Card className="bg-[#1F2937]">
         <CardHeader>
-          <CardTitle>Fields</CardTitle>
+          <CardTitle>{t('templates.detail.sections.fields')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {template.fields.map((field) => (
@@ -124,7 +140,7 @@ const TemplateDetail = () => {
             >
               <span>{field.label}</span>
               <Badge variant={field.required ? 'default' : 'secondary'}>
-                {field.required ? 'Required' : 'Optional'}
+                {field.required ? t('templates.detail.badges.required') : t('templates.detail.badges.optional')}
               </Badge>
             </div>
           ))}
@@ -133,11 +149,11 @@ const TemplateDetail = () => {
 
       <Card className="bg-[#1F2937]">
         <CardHeader>
-          <CardTitle>Automation</CardTitle>
+          <CardTitle>{t('templates.detail.sections.automation')}</CardTitle>
           <p className="text-sm text-gray-400">
-            Use this template in your n8n workflow by referencing the template ID{' '}
-            <code className="rounded bg-black/40 px-2 py-1 text-xs">{templateId}</code>. Fields will be mapped to the OCR
-            output automatically.
+            {t('templates.detail.automation.prefix')}{' '}
+            <code className="rounded bg-black/40 px-2 py-1 text-xs">{templateId}</code>
+            {t('templates.detail.automation.suffix')}
           </p>
         </CardHeader>
       </Card>

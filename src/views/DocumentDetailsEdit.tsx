@@ -7,6 +7,7 @@ import { ChangeEvent, useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/layout/AppLayout';
 import { extractOcrFields, generateCsvFromFields, inferSummaryFromFields, type OcrField } from '../utils/ocr';
 import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
+import { useTranslation } from '@/lib/i18n';
 
 type InputType = 'text' | 'date' | 'currency' | 'email' | 'tel';
 
@@ -82,6 +83,7 @@ const formatDateForInput = (value: string): string => {
 const DocumentDetailsEdit = () => {
   const router = useRouter();
   useAuthRedirect({ redirectUnauthenticatedTo: '/login' });
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const [imageSrc, setImageSrc] = useState<string>('');
   const [fields, setFields] = useState<OcrField[]>([]);
@@ -92,6 +94,29 @@ const DocumentDetailsEdit = () => {
     category: 'Food & Drink'
   });
   const [message, setMessage] = useState<string | null>(null);
+
+  const translateDocumentType = (value: string | undefined): string => {
+    if (!value) {
+      return t('documents.summary.fallback');
+    }
+    const key = value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    return t(`documents.summary.types.${key}`, { defaultValue: value });
+  };
+
+  const displayFieldLabel = (label: string): string => {
+    const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    return t(`documentDetails.fields.${key}`, { defaultValue: label });
+  };
+
+  const categoryOptions = useMemo(
+    () => [
+      { value: 'Groceries', label: t('documents.categories.groceries') },
+      { value: 'Transport', label: t('documents.categories.transport') },
+      { value: 'Entertainment', label: t('documents.categories.entertainment') },
+      { value: 'Food & Drink', label: t('documents.categories.foodDrink') }
+    ],
+    [t]
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -214,7 +239,7 @@ const DocumentDetailsEdit = () => {
 
   const handleSave = () => {
     if (fields.length === 0 && !defaultForm.date && !defaultForm.amount && !defaultForm.vendor) {
-      setMessage('Add at least one field or OCR result before saving.');
+      setMessage(t('documentDetails.messages.noFields'));
       return;
     }
 
@@ -237,11 +262,11 @@ const DocumentDetailsEdit = () => {
 
         window.localStorage.setItem('exportedDocuments', JSON.stringify(updated));
       }
-      setMessage('Document saved locally.');
+      setMessage(t('documentDetails.messages.saved'));
       setTimeout(() => setMessage(null), 2000);
     } catch (error) {
       console.error('Failed to persist document', error);
-      setMessage('Failed to save document.');
+      setMessage(t('documentDetails.messages.saveFailed'));
     }
   };
 
@@ -254,7 +279,7 @@ const DocumentDetailsEdit = () => {
       >
         <span className="material-symbols-outlined text-3xl">arrow_back</span>
       </button>
-      <h2 className="text-lg font-bold">Document Details</h2>
+      <h2 className="text-lg font-bold">{t('documentDetails.header.title')}</h2>
       <div className="flex h-12 w-12 items-center justify-center rounded-full text-[#96c5a9]">
         <span className="material-symbols-outlined text-3xl">edit</span>
       </div>
@@ -269,32 +294,40 @@ const DocumentDetailsEdit = () => {
     >
       {imageSrc && (
         <div className="overflow-hidden rounded-2xl border border-white/10">
-          <img src={imageSrc} alt="Scanned document" className="h-64 w-full object-cover" />
+          <img src={imageSrc} alt={t('documentDetails.previewAlt')} className="h-64 w-full object-cover" />
         </div>
       )}
 
       <section className="space-y-4 rounded-2xl bg-[#1F2937] p-6 shadow-lg">
-        <h3 className="text-lg font-semibold">Summary</h3>
+        <h3 className="text-lg font-semibold">{t('documentDetails.summary.title')}</h3>
         <div className="grid gap-3 text-sm text-gray-300">
           {(() => {
             const summary = inferSummaryFromFields(effectiveFields, imageSrc);
             return (
               <>
                 <div className="flex justify-between">
-                  <span>Type</span>
-                  <span className="font-medium text-white">{summary.type || 'Document'}</span>
+                  <span>{t('documentDetails.summary.labels.type')}</span>
+                  <span className="font-medium text-white">
+                    {translateDocumentType(summary.type)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Amount</span>
-                  <span className="font-medium text-white">{summary.amount || '—'}</span>
+                  <span>{t('documentDetails.summary.labels.amount')}</span>
+                  <span className="font-medium text-white">
+                    {summary.amount || t('documentDetails.summary.emptyValue')}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Vendor</span>
-                  <span className="font-medium text-white">{summary.vendor || '—'}</span>
+                  <span>{t('documentDetails.summary.labels.vendor')}</span>
+                  <span className="font-medium text-white">
+                    {summary.vendor || t('documentDetails.summary.emptyValue')}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Date</span>
-                  <span className="font-medium text-white">{summary.date || '—'}</span>
+                  <span>{t('documentDetails.summary.labels.date')}</span>
+                  <span className="font-medium text-white">
+                    {summary.date || t('documentDetails.summary.emptyValue')}
+                  </span>
                 </div>
               </>
             );
@@ -303,7 +336,7 @@ const DocumentDetailsEdit = () => {
       </section>
 
       <section className="space-y-4 rounded-2xl bg-[#1F2937] p-6 shadow-lg">
-        <h3 className="text-lg font-semibold">Extracted Fields</h3>
+        <h3 className="text-lg font-semibold">{t('documentDetails.sections.extractedFields')}</h3>
         {fields.length > 0 ? (
           <div className="space-y-4">
             {fields.map((field, index) => {
@@ -312,7 +345,7 @@ const DocumentDetailsEdit = () => {
               if (inputType === 'date') {
                 return (
                   <label key={`${field.label}-${index}`} className="block">
-                    <span className="text-sm font-medium text-[#C7D2FE]">{field.label}</span>
+                    <span className="text-sm font-medium text-[#C7D2FE]">{displayFieldLabel(field.label)}</span>
                     <input
                       type="date"
                       className="mt-1 block w-full rounded-xl border-transparent bg-[#1F2937] px-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
@@ -326,7 +359,7 @@ const DocumentDetailsEdit = () => {
               if (inputType === 'currency') {
                 return (
                   <label key={`${field.label}-${index}`} className="block">
-                    <span className="text-sm font-medium text-[#C7D2FE]">{field.label}</span>
+                    <span className="text-sm font-medium text-[#C7D2FE]">{displayFieldLabel(field.label)}</span>
                     <div className="relative mt-1">
                       <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-[#96c5a9]">
                         $
@@ -343,7 +376,7 @@ const DocumentDetailsEdit = () => {
 
               return (
                 <label key={`${field.label}-${index}`} className="block">
-                  <span className="text-sm font-medium text-[#C7D2FE]">{field.label}</span>
+                  <span className="text-sm font-medium text-[#C7D2FE]">{displayFieldLabel(field.label)}</span>
                   <input
                     type={inputType}
                     className="mt-1 block w-full rounded-xl border-transparent bg-[#1F2937] px-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
@@ -357,7 +390,7 @@ const DocumentDetailsEdit = () => {
         ) : (
           <div className="space-y-4">
             <label className="block">
-              <span className="text-sm font-medium text-[#C7D2FE]">Date</span>
+              <span className="text-sm font-medium text-[#C7D2FE]">{displayFieldLabel('Date')}</span>
               <input
                 type="date"
                 name="date"
@@ -367,7 +400,7 @@ const DocumentDetailsEdit = () => {
               />
             </label>
             <label className="block">
-              <span className="text-sm font-medium text-[#C7D2FE]">Amount</span>
+              <span className="text-sm font-medium text-[#C7D2FE]">{displayFieldLabel('Amount')}</span>
               <div className="relative mt-1">
                 <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-[#96c5a9]">
                   $
@@ -382,28 +415,29 @@ const DocumentDetailsEdit = () => {
               </div>
             </label>
             <label className="block">
-              <span className="text-sm font-medium text-[#C7D2FE]">Vendor</span>
+              <span className="text-sm font-medium text-[#C7D2FE]">{displayFieldLabel('Vendor')}</span>
               <input
                 type="text"
                 name="vendor"
                 className="mt-1 block w-full rounded-xl border-transparent bg-[#1F2937] px-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
-                placeholder="e.g. Starbucks"
+                placeholder={t('documentDetails.placeholders.vendorExample')}
                 value={defaultForm.vendor}
                 onChange={handleDefaultChange}
               />
             </label>
             <label className="block">
-              <span className="text-sm font-medium text-[#C7D2FE]">Category</span>
+              <span className="text-sm font-medium text-[#C7D2FE]">{displayFieldLabel('Category')}</span>
               <select
                 name="category"
                 className="mt-1 block w-full appearance-none rounded-xl border-transparent bg-[#1F2937] px-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
                 value={defaultForm.category}
                 onChange={handleDefaultChange}
               >
-                <option>Groceries</option>
-                <option>Transport</option>
-                <option>Entertainment</option>
-                <option>Food &amp; Drink</option>
+                {categoryOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </label>
           </div>
@@ -421,14 +455,14 @@ const DocumentDetailsEdit = () => {
             className="flex-1 rounded-full bg-[#1F2937] py-3 text-center text-base font-bold text-white"
             onClick={handleDiscard}
           >
-            Discard
+            {t('documentDetails.actions.discard')}
           </button>
           <button
             type="button"
             className="flex-1 rounded-full bg-[var(--primary-color)] py-3 text-center text-base font-bold text-[#111827]"
             onClick={handleSave}
           >
-            Save
+            {t('documentDetails.actions.save')}
           </button>
         </div>
       </section>

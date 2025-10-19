@@ -5,6 +5,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuthRedirect } from '../features/auth/hooks/useAuthRedirect';
+import { useTranslation } from '@/lib/i18n';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -14,8 +15,10 @@ interface BeforeInstallPromptEvent extends Event {
 const WelcomeOnboarding = () => {
   const router = useRouter();
   useAuthRedirect({ redirectAuthenticatedTo: '/dashboard' });
+  const { t } = useTranslation();
+  type InstallLabelKey = 'welcome.install.button.default' | 'welcome.install.button.fallback';
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [installLabel, setInstallLabel] = useState('Install App');
+  const [installLabelKey, setInstallLabelKey] = useState<InstallLabelKey>('welcome.install.button.default');
   const [installDisabled, setInstallDisabled] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
 
@@ -36,7 +39,7 @@ const WelcomeOnboarding = () => {
       event.preventDefault();
       const promptEvent = event as BeforeInstallPromptEvent;
       setDeferredPrompt(promptEvent);
-      setInstallLabel('Install App');
+      setInstallLabelKey('welcome.install.button.default');
       setInstallDisabled(false);
       setShowInstall(true);
       if (fallbackTimer) {
@@ -48,6 +51,7 @@ const WelcomeOnboarding = () => {
       setDeferredPrompt(null);
       setShowInstall(false);
       setInstallDisabled(false);
+      setInstallLabelKey('welcome.install.button.default');
     };
 
     globalWindow.addEventListener('beforeinstallprompt', beforeInstallHandler);
@@ -62,7 +66,7 @@ const WelcomeOnboarding = () => {
     if (!alreadyStandalone) {
       fallbackTimer = globalWindow.setTimeout(() => {
         setShowInstall(true);
-        setInstallLabel('Install via Browser Menu');
+        setInstallLabelKey('welcome.install.button.fallback');
         setInstallDisabled(true);
       }, 4000);
     }
@@ -88,6 +92,7 @@ const WelcomeOnboarding = () => {
     }
     setDeferredPrompt(null);
     setShowInstall(false);
+    setInstallLabelKey('welcome.install.button.default');
   };
 
   return (
@@ -95,7 +100,7 @@ const WelcomeOnboarding = () => {
       <div className="flex flex-col">
         <div className="relative h-80">
           <img
-            alt="Financial documents and a phone"
+            alt={t('welcome.heroAlt')}
             className="absolute inset-0 h-full w-full object-cover"
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQNf2prOH6SDbyyQvcqRCtCGJYxlBX2p7koeYY-tOsVDlogAK8MlE1Dj9k9CL5Pu1Vcq2-1zPIbLYPAmTicu8USSQjIlo2P4fm1b5Mb9vvSl6G8OAJerZ7QHW6OOzYa9JIgMEto0ewXgCRIA-QYZSOSC63WQntCFrk9ZguPWLtsaDz7DejxE-vN-A5a5GMjYJHrKboeOY1WlxdWGevQqr0_KvT2KCIKDc6JSsRG9_KoiunQ_Pk29KAU6CkDJf69AOreG4qebsFDTQ"
           />
@@ -114,10 +119,8 @@ const WelcomeOnboarding = () => {
               <path d="M28 38H34" stroke="white" strokeLinecap="round" strokeWidth="2" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome to ScanLedger</h1>
-          <p className="mt-2 max-w-sm text-base text-gray-300">
-            Scan, digitize, and organize your financial documents effortlessly.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('welcome.title')}</h1>
+          <p className="mt-2 max-w-sm text-base text-gray-300">{t('welcome.subtitle')}</p>
         </div>
         <div className="flex flex-col gap-4 px-6 pb-12">
           <button
@@ -125,14 +128,14 @@ const WelcomeOnboarding = () => {
             className="flex h-14 w-full items-center justify-center rounded-full bg-[var(--primary-color)] text-lg font-bold text-[#111827] transition-transform active:scale-95"
             onClick={() => router.push('/signup')}
           >
-            Get Started
+            {t('welcome.actions.getStarted')}
           </button>
           <button
             type="button"
             className="flex h-14 w-full items-center justify-center rounded-full bg-[#1F2937] text-lg font-bold text-white transition-transform active:scale-95"
             onClick={() => router.push('/login')}
           >
-            Log In
+            {t('welcome.actions.logIn')}
           </button>
           {showInstall && (
             <button
@@ -145,7 +148,7 @@ const WelcomeOnboarding = () => {
               onClick={handleInstallClick}
               disabled={installDisabled}
             >
-              {installLabel}
+              {t(installLabelKey)}
             </button>
           )}
         </div>

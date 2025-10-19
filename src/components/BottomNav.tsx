@@ -1,25 +1,27 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import type { FC } from 'react';
-import type { Route } from 'next';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import type { FC } from "react";
+import type { Route } from "next";
+import { useTranslation } from "@/lib/i18n";
 
 interface NavItem {
   to: Route;
   icon: string;
-  label: string;
+  labelKey: string;
 }
 
 const navItems: NavItem[] = [
-  { to: '/documents/scan', icon: 'camera_alt', label: 'Scan' },
-  { to: '/documents/search', icon: 'folder', label: 'Documents' },
-  { to: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
-  { to: '/profile', icon: 'settings', label: 'Settings' }
+  { to: "/documents/scan", icon: "camera_alt", labelKey: "navigation.scan" },
+  { to: "/documents/search", icon: "folder", labelKey: "navigation.documents" },
+  { to: "/dashboard", icon: "dashboard", labelKey: "navigation.dashboard" },
+  { to: "/profile", icon: "settings", labelKey: "navigation.settings" },
 ];
- 
+
 const BottomNav: FC = () => {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#1F2937]">
@@ -30,10 +32,12 @@ const BottomNav: FC = () => {
             <Link
               key={item.to}
               href={item.to}
-              className={`flex flex-col items-center justify-end gap-1 ${isActive ? 'text-white' : 'text-gray-400'}`}
+              className={`flex flex-col items-center justify-end gap-1 ${
+                isActive ? "text-white" : "text-gray-400"
+              }`}
             >
               <span className="material-symbols-outlined">{item.icon}</span>
-              <p className="text-xs font-medium">{item.label}</p>
+              <p className="text-xs font-medium">{t(item.labelKey)}</p>
             </Link>
           );
         })}

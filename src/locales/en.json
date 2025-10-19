@@ -1,0 +1,414 @@
+{
+  "common": {
+    "appName": "ScanLedger"
+  },
+  "errors": {
+    "networkRetry": "Network error. Please retry.",
+    "browserOnly": "Running outside the browser.",
+    "googleClientUnavailable": "Google OAuth client is unavailable.",
+    "googleNoAccessToken": "No access token received from Google.",
+    "requestCancelled": "Request was cancelled.",
+    "requestTimeout": "Request timeout - please check your connection.",
+    "requestFailed": "Request failed: {{status}} {{statusText}}",
+    "networkUnavailable": "Network error - unable to reach the server.",
+    "requestConfigMissingUrl": "Request configuration requires a URL.",
+    "googleBrowserOnly": "Google auth can only run in the browser.",
+    "googleScriptLoad": "Failed to load Google auth script.",
+    "googleClientInit": "Google auth client did not initialise.",
+    "googleProfileFetch": "Could not fetch Google profile."
+  },
+  "navigation": {
+    "scan": "Scan",
+    "documents": "Documents",
+    "dashboard": "Dashboard",
+    "settings": "Settings"
+  },
+  "welcome": {
+    "heroAlt": "Financial documents and a phone",
+    "title": "Welcome to ScanLedger",
+    "subtitle": "Scan, digitize, and organize your financial documents effortlessly.",
+    "actions": {
+      "getStarted": "Get Started",
+      "logIn": "Log In"
+    },
+    "install": {
+      "button": {
+        "default": "Install App",
+        "fallback": "Install via Browser Menu"
+      }
+    }
+  },
+  "auth": {
+    "shared": {
+      "orContinueWith": "Or continue with"
+    },
+    "login": {
+      "subtitle": "Securely access your account",
+      "fields": {
+        "emailOrUsername": {
+          "label": "Email or Username",
+          "placeholder": "Email or Username"
+        },
+        "password": {
+          "label": "Password",
+          "placeholder": "Password"
+        }
+      },
+      "actions": {
+        "forgotPassword": "Forgot your password?",
+        "signIn": "Sign In",
+        "signUpLink": "Sign Up",
+        "google": "Login with Google",
+        "facebook": "Login with Facebook",
+        "microsoft": "Login with Microsoft",
+        "apple": "Login with Apple"
+      },
+      "status": {
+        "signingIn": "Signing in...",
+        "connectingGoogle": "Connecting to Google..."
+      },
+      "errors": {
+        "missingCredentials": "Please fill in both Email/Username and Password.",
+        "googleClientIdMissing": "Google login is not configured. Missing client ID.",
+        "googleSignInFailed": "Google sign-in failed.",
+        "googleSignInStartFailed": "Google sign-in could not start. Please try again.",
+        "facebookUnavailable": "Facebook Sign-In is not configured yet. Please use email/password to sign in.",
+        "microsoftUnavailable": "Microsoft Sign-In is not configured yet. Please use email/password to sign in.",
+        "appleUnavailable": "Apple Sign-In is not configured yet. Please use email/password to sign in.",
+        "emailRequired": "Email is required"
+      },
+      "prompt": {
+        "noAccount": "Don't have an account?"
+      }
+    },
+    "signup": {
+      "title": "Create Account",
+      "subtitle": "Join ScanLedger to get started",
+      "fields": {
+        "name": {
+          "label": "Name",
+          "placeholder": "Name"
+        },
+        "surname": {
+          "label": "Surname",
+          "placeholder": "Surname"
+        },
+        "email": {
+          "label": "Email",
+          "placeholder": "Email"
+        },
+        "password": {
+          "label": "Password",
+          "placeholder": "Password"
+        },
+        "confirmPassword": {
+          "label": "Confirm Password",
+          "placeholder": "Confirm Password"
+        }
+      },
+      "actions": {
+        "signUp": "Sign Up",
+        "signIn": "Sign In",
+        "google": "Signup with Google",
+        "facebook": "Signup with Facebook",
+        "microsoft": "Signup with Microsoft",
+        "apple": "Signup with Apple"
+      },
+      "status": {
+        "submitting": "Submitting..."
+      },
+      "errors": {
+        "missingFields": "Please fill in all fields.",
+        "passwordMismatch": "Passwords do not match.",
+        "googleClientIdMissing": "Google signup is not configured. Missing client ID.",
+        "googleFailed": "Google signup failed.",
+        "googleStartFailed": "Google signup could not start. Please try again."
+      },
+      "notifications": {
+        "facebookComingSoon": "Facebook signup coming soon!",
+        "microsoftComingSoon": "Microsoft signup coming soon!",
+        "appleComingSoon": "Apple signup coming soon!"
+      },
+      "prompt": {
+        "haveAccount": "Already have an account?"
+      }
+    }
+  },
+  "dashboard": {
+    "defaultUserName": "User",
+    "header": {
+      "welcomeBack": "Welcome back,"
+    },
+    "stats": {
+      "totalDocs": "Total Docs",
+      "monthlyScans": "Monthly Scans"
+    },
+    "recentScans": {
+      "title": "Recent Scans",
+      "empty": "No recent scans yet."
+    },
+    "actions": {
+      "scanNewDocument": "Scan New Document"
+    }
+  },
+  "documents": {
+    "common": {
+      "document": "Document"
+    },
+    "header": {
+      "title": "Documents"
+    },
+    "actions": {
+      "add": "Add document",
+      "sort": "Sort"
+    },
+    "search": {
+      "placeholder": "Search documents",
+      "empty": "No documents match your search."
+    },
+    "sections": {
+      "recent": "Recent"
+    },
+    "filters": {
+      "date": "Date",
+      "category": "Category",
+      "vendor": "Vendor"
+    },
+    "categories": {
+      "groceries": "Groceries",
+      "transport": "Transport",
+      "entertainment": "Entertainment",
+      "foodDrink": "Food & Drink"
+    },
+    "summary": {
+      "fallback": "Document",
+      "types": {
+        "invoice": "Invoice",
+        "receipt": "Receipt",
+        "statement": "Statement",
+        "document": "Document"
+      }
+    }
+  },
+  "documentDetails": {
+    "header": {
+      "title": "Document Details"
+    },
+    "previewAlt": "Scanned document",
+    "summary": {
+      "title": "Summary",
+      "labels": {
+        "type": "Type",
+        "amount": "Amount",
+        "vendor": "Vendor",
+        "date": "Date"
+      },
+      "emptyValue": "—"
+    },
+    "sections": {
+      "extractedFields": "Extracted Fields"
+    },
+    "placeholders": {
+      "vendorExample": "e.g. Starbucks"
+    },
+    "actions": {
+      "discard": "Discard",
+      "save": "Save"
+    },
+    "messages": {
+      "noFields": "Add at least one field or OCR result before saving.",
+      "saved": "Document saved locally.",
+      "saveFailed": "Failed to save document."
+    },
+    "fields": {
+      "date": "Date",
+      "amount": "Amount",
+      "vendor": "Vendor",
+      "category": "Category"
+    }
+  },
+  "documentScan": {
+    "header": {
+      "title": "Scan Document"
+    },
+    "previewAlt": "Captured document",
+    "status": {
+      "initializingCamera": "Initializing camera..."
+    },
+    "instructions": {
+      "primary": "Position document within the frame",
+      "secondary": "Then press the capture button"
+    },
+    "progress": {
+      "primary": "Processing the document,",
+      "secondary": "Please wait!",
+      "note": "Do not close this tab. Upload & OCR may take a few seconds."
+    },
+    "captureMode": {
+      "single": "Single",
+      "batch": "Batch"
+    },
+    "errors": {
+      "secureContext": "Camera access requires HTTPS or running from localhost during development.",
+      "cameraUnsupported": "Camera access is not supported by this browser. Try updating it or using the native camera upload.",
+      "getUserMediaUnsupported": "getUserMedia is not supported in this browser.",
+      "permissionDenied": "Camera permission denied. Enable it in your browser or device settings.",
+      "noCameraFound": "No camera device detected. Connect a camera and try again.",
+      "unableToAccess": "Unable to access the camera. Please allow camera permissions or use a secure/trusted local connection.",
+      "onlyImagesSupported": "Only image capture is supported in this build.",
+      "readImageFailed": "Failed to read image. Please try again.",
+      "cameraNotReady": "Camera is not ready yet. Please try again.",
+      "cameraInitializing": "Camera is still initializing. Hold on a second and retry.",
+      "captureFailed": "Unable to capture image. Please try again.",
+      "captureException": "Failed to capture image from camera.",
+      "noPreview": "Capture or upload a document before processing.",
+      "uploadFailed": "Upload failed. Please try again.",
+      "flashUnavailable": "Flash toggle is not available in this build."
+    }
+  },
+  "export": {
+    "header": {
+      "title": "Export Options",
+      "subtitle": "Download your OCR results or share them with other systems."
+    },
+    "sections": {
+      "csv": {
+        "title": "CSV Export",
+        "description": "Export your recent OCR results as a CSV file for Excel, Google Sheets, or your accounting software."
+      },
+      "integrations": {
+        "title": "Integrations",
+        "description": "Webhooks and direct integrations are handled by the ScanLedger automation workflows.",
+        "note": "Configure destinations in your n8n workflow to sync exports automatically."
+      },
+      "history": {
+        "title": "History",
+        "description": "Manage stored documents on this device. Clearing history does not remove records from backend storage."
+      }
+    },
+    "actions": {
+      "downloadCsv": "Download CSV",
+      "copyCsv": "Copy CSV to Clipboard",
+      "clearHistory": "Clear Local Export History"
+    },
+    "messages": {
+      "noContent": "No CSV content available yet.",
+      "downloadStarted": "CSV export started.",
+      "noContentToCopy": "No CSV content to copy.",
+      "clipboardUnavailable": "Clipboard access is not available.",
+      "copied": "CSV copied to clipboard.",
+      "copyFailed": "Failed to copy CSV.",
+      "historyCleared": "Export history cleared."
+    }
+  },
+  "templates": {
+    "header": {
+      "title": "Templates",
+      "subtitle": "Start with a predefined extraction template or customize your own."
+    },
+    "defaults": {
+      "invoiceStandard": {
+        "name": "Invoice (Standard)",
+        "description": "Capture invoice number, date, totals, vendor, and payment terms.",
+        "fields": {
+          "invoiceNumber": "Invoice Number",
+          "invoiceDate": "Invoice Date",
+          "vendor": "Vendor",
+          "subtotal": "Subtotal",
+          "tax": "Tax",
+          "total": "Total",
+          "paymentTerms": "Payment Terms"
+        }
+      },
+      "retailReceipt": {
+        "name": "Retail Receipt",
+        "description": "Designed for point-of-sale receipts including merchant, total, and payment method.",
+        "fields": {
+          "merchant": "Merchant",
+          "purchaseDate": "Purchase Date",
+          "total": "Total",
+          "paymentMethod": "Payment Method",
+          "cardLast4": "Card Last 4"
+        }
+      },
+      "bankStatement": {
+        "name": "Bank Statement",
+        "description": "Monthly statements with opening balance, closing balance, and transactions.",
+        "fields": {
+          "accountName": "Account Name",
+          "period": "Period",
+          "openingBalance": "Opening Balance",
+          "closingBalance": "Closing Balance",
+          "totalTransactions": "Total Transactions"
+        }
+      }
+    },
+    "detail": {
+      "notFound": {
+        "title": "Template not found",
+        "description": "The requested template does not exist.",
+        "back": "Back to Templates"
+      },
+      "sections": {
+        "overview": "Overview",
+        "fields": "Fields",
+        "automation": "Automation"
+      },
+      "badges": {
+        "required": "Required",
+        "optional": "Optional"
+      },
+      "automation": {
+        "prefix": "Use this template in your n8n workflow by referencing the template ID",
+        "suffix": ". Fields will be mapped to the OCR output automatically."
+      }
+    }
+  },
+  "profile": {
+    "guestUser": "Guest User",
+    "messages": {
+      "comingSoon": "Coming soon."
+    },
+    "sections": {
+      "templates": {
+        "title": "Document Templates",
+        "items": {
+          "default": "Default Templates",
+          "add": "Add New Class/Template"
+        }
+      },
+      "export": {
+        "title": "Export Options",
+        "items": {
+          "destination": "Export Destination",
+          "format": "File Format"
+        }
+      },
+      "support": {
+        "title": "Support",
+        "items": {
+          "help": "Help Center",
+          "contact": "Contact Support"
+        }
+      }
+    },
+    "header": {
+      "title": "Settings"
+    },
+    "badge": {
+      "freeMember": "Free Member"
+    },
+    "logout": {
+      "title": "Logout",
+      "subtitle": "Sign out from this device"
+    }
+  },
+  "ocr": {
+    "csv": {
+      "headers": {
+        "field": "Field",
+        "value": "Value"
+      }
+    }
+  }
+}

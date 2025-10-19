@@ -8,10 +8,11 @@ import {
   persistUserProfile,
   type UserProfile,
 } from "../profile";
+import { translate } from "../../../lib/i18n";
 
 interface LoginCredentials {
   email: string;
-  password?: string;
+  password: string;
 }
 
 interface LoginSuccessPayload<TResponse> {
@@ -19,7 +20,6 @@ interface LoginSuccessPayload<TResponse> {
   response: TResponse;
   credentials: {
     email: string;
-    password?: string;
   };
 }
 
@@ -41,7 +41,10 @@ export const useLogin = <TResponse = unknown>({
   onSuccess,
   onError,
 }: UseLoginArgs<TResponse> = {}): UseLoginResult<TResponse> => {
-  const loginMutation = useApiMutation<TResponse, { email: string }>({
+  const loginMutation = useApiMutation<
+    TResponse,
+    { email: string; password: string }
+  >({
     path: "/user_login",
   });
 
@@ -49,12 +52,13 @@ export const useLogin = <TResponse = unknown>({
     async ({ email, password }: LoginCredentials) => {
       const trimmedEmail = email?.trim();
       if (!trimmedEmail) {
-        throw new Error("Email is required");
+        throw new Error(translate("auth.login.errors.emailRequired"));
       }
 
       try {
         const response = await loginMutation.mutateAsync({
           email: trimmedEmail,
+          password,
         });
 
         persistLoginPayload(response);
@@ -72,7 +76,7 @@ export const useLogin = <TResponse = unknown>({
         onSuccess?.({
           profile,
           response,
-          credentials: { email: trimmedEmail, password },
+          credentials: { email: trimmedEmail },
         });
 
         return { response, profile };
