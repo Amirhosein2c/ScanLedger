@@ -52,8 +52,8 @@ export const _GD = async (
     `Bearer ${request.cookies.get("AdminAuthToken")?.value ?? ""}`
   );
 
-  const apiBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-  // const apiBaseUrl = "https://api.perceptionist.top/webhook";
+  // const apiBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const apiBaseUrl = "https://api.perceptionist.top/webhook-test";
   if (!apiBaseUrl) {
     throw new Error("NEXT_PUBLIC_BASE_URL is not configured");
   }
