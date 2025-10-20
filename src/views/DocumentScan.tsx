@@ -288,7 +288,8 @@ const DocumentScan = () => {
   const { t } = useTranslation();
 
   // References to DOM elements we manipulate directly.
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const generalFileInputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -300,6 +301,9 @@ const DocumentScan = () => {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [captureMode, setCaptureMode] = useState<"single" | "batch">("single");
+  const [isFlashOn, setIsFlashOn] = useState(false);
+  const [isTorchAvailable, setIsTorchAvailable] = useState(false);
+  const [isTogglingFlash, setIsTogglingFlash] = useState(false);
 
   // API client used to submit the captured image for OCR.
   const ocrMutation = useApiMutation<string, FormData>({
@@ -308,6 +312,31 @@ const DocumentScan = () => {
     config: { responseType: "text" },
   });
   const isUploading = ocrMutation.isPending;
+  const updateTorchAvailability = useCallback((stream: MediaStream | null) => {
+    if (!stream) {
+      setIsTorchAvailable(false);
+      setIsFlashOn(false);
+      return;
+    }
+
+    const [track] = stream.getVideoTracks();
+    if (!track || typeof track.getCapabilities !== "function") {
+      setIsTorchAvailable(false);
+      setIsFlashOn(false);
+      return;
+    }
+
+    const capabilities = track.getCapabilities() as MediaTrackCapabilities & {
+      torch?: boolean;
+    };
+    const supportsTorch =
+      typeof capabilities.torch === "boolean" ? capabilities.torch : false;
+
+    setIsTorchAvailable(supportsTorch);
+    if (!supportsTorch) {
+      setIsFlashOn(false);
+    }
+  }, []);
 
   const attachStreamToVideo = useCallback(
     (stream: MediaStream) => {
@@ -339,6 +368,8 @@ const DocumentScan = () => {
       stopMediaStream(streamRef.current);
       streamRef.current = null;
     }
+
+    updateTorchAvailability(null);
 
     const hostname = window.location.hostname;
     const isSecure =
@@ -372,6 +403,7 @@ const DocumentScan = () => {
       streamRef.current = stream;
       attachStreamToVideo(stream);
       setCameraError(null);
+      updateTorchAvailability(stream);
     } catch (cameraErr) {
       if (!isComponentActiveRef.current) {
         return;
@@ -384,7 +416,7 @@ const DocumentScan = () => {
         })
       );
     }
-  }, [attachStreamToVideo]);
+  }, [attachStreamToVideo, updateTorchAvailability]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -439,8 +471,60 @@ const DocumentScan = () => {
     }
   };
 
+  const handleToggleFlash = async () => {
+    if (isTogglingFlash) {
+      return;
+    }
+
+    const stream = streamRef.current;
+    const [track] = stream?.getVideoTracks() ?? [];
+    if (!stream || !track) {
+      setError(t("documentScan.errors.flashUnavailable"));
+      return;
+    }
+
+    if (typeof track.getCapabilities !== "function") {
+      setError(t("documentScan.errors.flashUnsupported"));
+      setIsTorchAvailable(false);
+      setIsFlashOn(false);
+      return;
+    }
+
+    const capabilities = track.getCapabilities() as MediaTrackCapabilities & {
+      torch?: boolean;
+    };
+    const supportsTorch =
+      typeof capabilities.torch === "boolean" ? capabilities.torch : false;
+
+    if (!supportsTorch) {
+      setError(t("documentScan.errors.flashUnsupported"));
+      setIsTorchAvailable(false);
+      setIsFlashOn(false);
+      return;
+    }
+
+    const nextFlashState = !isFlashOn;
+
+    try {
+      setIsTogglingFlash(true);
+      await track.applyConstraints({
+        advanced: [{ torch: nextFlashState }],
+      } as MediaTrackConstraints & {
+        advanced?: Array<{ torch?: boolean }>;
+      });
+      setIsFlashOn(nextFlashState);
+      setIsTorchAvailable(true);
+    } catch (toggleError) {
+      console.warn("Unable to toggle camera flash", toggleError);
+      setError(t("documentScan.errors.flashToggleFailed"));
+      updateTorchAvailability(streamRef.current);
+    } finally {
+      setIsTogglingFlash(false);
+    }
+  };
+
   const handleSelectFile = () => {
-    const input = fileInputRef.current;
+    const input = galleryInputRef.current;
     if (!input) {
       return;
     }
@@ -450,17 +534,52 @@ const DocumentScan = () => {
     input.click();
   };
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { current } = fileInputRef;
-    if (current) {
-      current.removeAttribute("capture");
-    }
+  async function processImageDataUrl(dataUrl: string) {
+    ocrMutation.reset();
+    setError(null);
 
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
+    try {
+      const blob = dataUrlToBlob(dataUrl);
+      const formData = new FormData();
+      formData.append("file", blob, "scanned_image.png");
+      formData.append("source", "camera_capture");
+      formData.append("timestamp", new Date().toISOString());
 
+      const textBody = await ocrMutation.mutateAsync(formData);
+
+      let parsedResult: unknown = null;
+      try {
+        parsedResult =
+          typeof textBody === "string" ? JSON.parse(textBody) : textBody;
+      } catch (parseError) {
+        console.warn(
+          "Failed to parse OCR response as JSON, storing raw text",
+          parseError
+        );
+      }
+
+      const serialized = parsedResult
+        ? JSON.stringify(parsedResult)
+        : String(textBody ?? "");
+
+      persistOcrResult(serialized);
+      router.push("/documents/details");
+    } catch (uploadError) {
+      const normalizedError =
+        uploadError instanceof Error
+          ? uploadError
+          : new Error(String(uploadError));
+      console.error(normalizedError);
+      setError(
+        normalizedError.message || t("documentScan.errors.uploadFailed")
+      );
+    }
+  }
+
+  const readFileAsPreview = (
+    file: File,
+    { autoProcess = false }: { autoProcess?: boolean } = {}
+  ) => {
     if (!file.type.startsWith("image/")) {
       setError(t("documentScan.errors.onlyImagesSupported"));
       return;
@@ -472,18 +591,51 @@ const DocumentScan = () => {
       if (!result) {
         return;
       }
+
       persistImageDataUrl(result);
+      if (autoProcess) {
+        void processImageDataUrl(result);
+      }
     };
     reader.onerror = () => setError(t("documentScan.errors.readImageFailed"));
     reader.readAsDataURL(file);
   };
 
+  const handleGalleryFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { current } = galleryInputRef;
+    if (current) {
+      current.removeAttribute("capture");
+    }
+
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    readFileAsPreview(file);
+    event.target.value = "";
+  };
+
+  const handleGeneralFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    readFileAsPreview(file, { autoProcess: true });
+    event.target.value = "";
+  };
+
   const handleRetake = () => {
     setImagePreview(null);
     setError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-      fileInputRef.current.removeAttribute("capture");
+    updateTorchAvailability(null);
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = "";
+      galleryInputRef.current.removeAttribute("capture");
+    }
+    if (generalFileInputRef.current) {
+      generalFileInputRef.current.value = "";
     }
     initCamera();
   };
@@ -539,51 +691,18 @@ const DocumentScan = () => {
 
   const handleProcess = async () => {
     if (!imagePreview) {
-      setError(t("documentScan.errors.noPreview"));
+      const input = generalFileInputRef.current;
+      if (!input) {
+        setError(t("documentScan.errors.noPreview"));
+        return;
+      }
+
+      input.value = "";
+      input.click();
       return;
     }
 
-    ocrMutation.reset();
-    setError(null);
-
-    try {
-      // Build the form payload that the OCR endpoint expects.
-      const blob = dataUrlToBlob(imagePreview);
-      const formData = new FormData();
-      formData.append("file", blob, "scanned_image.png");
-      formData.append("source", "camera_capture");
-      formData.append("timestamp", new Date().toISOString());
-
-      const textBody = await ocrMutation.mutateAsync(formData);
-
-      let parsedResult: unknown = null;
-      try {
-        parsedResult =
-          typeof textBody === "string" ? JSON.parse(textBody) : textBody;
-      } catch (parseError) {
-        console.warn(
-          "Failed to parse OCR response as JSON, storing raw text",
-          parseError
-        );
-      }
-
-      const serialized = parsedResult
-        ? JSON.stringify(parsedResult)
-        : String(textBody ?? "");
-
-      // Store for the details page so it can preload the OCR output.
-      persistOcrResult(serialized);
-      router.push("/documents/details");
-    } catch (uploadError) {
-      const normalizedError =
-        uploadError instanceof Error
-          ? uploadError
-          : new Error(String(uploadError));
-      console.error(normalizedError);
-      setError(
-        normalizedError.message || t("documentScan.errors.uploadFailed")
-      );
-    }
+    await processImageDataUrl(imagePreview);
   };
 
   // Surface new error messages through a toast notification.
@@ -601,8 +720,17 @@ const DocumentScan = () => {
       <Button
         variant="ghost"
         size="icon"
-        className="rounded-full text-white/70 hover:bg-white/10 hover:text-white"
-        onClick={() => setError(t("documentScan.errors.flashUnavailable"))}
+        className={`rounded-full hover:bg-white/10 hover:text-white ${
+          isFlashOn ? "text-white" : "text-white/70"
+        } ${!isTorchAvailable ? "opacity-60" : ""}`}
+        onClick={handleToggleFlash}
+        aria-pressed={isFlashOn}
+        disabled={isTogglingFlash || isUploading}
+        title={
+          !isTorchAvailable && streamRef.current
+            ? t("documentScan.errors.flashUnsupported")
+            : undefined
+        }
       >
         <span className="material-symbols-outlined">flash_on</span>
       </Button>
@@ -673,7 +801,7 @@ const DocumentScan = () => {
                 size="icon"
                 className="pointer-events-auto absolute bottom-4 left-4 rounded-full bg-red-500 text-white hover:bg-red-500"
                 onClick={handleRetake}
-                disabled={!imagePreview || isUploading}
+                disabled={isUploading || !imagePreview}
               >
                 <span className="material-symbols-outlined">close</span>
               </Button>
@@ -682,7 +810,7 @@ const DocumentScan = () => {
                 size="icon"
                 className="pointer-events-auto absolute bottom-4 right-4 rounded-full bg-[var(--primary-color)] text-[#111827] hover:bg-[var(--primary-color)]/90"
                 onClick={handleProcess}
-                disabled={!imagePreview || isUploading}
+                disabled={isUploading || !imagePreview}
               >
                 <span className="material-symbols-outlined">check</span>
               </Button>
@@ -720,7 +848,7 @@ const DocumentScan = () => {
                       : "text-white/60 hover:bg-white/10"
                   }`}
                   onClick={() => setCaptureMode(mode)}
-                  disabled={isUploading}
+                  disabled={isUploading || mode === "batch"}
                 >
                   {t(labelKey)}
                 </Button>
@@ -754,18 +882,25 @@ const DocumentScan = () => {
             size="icon"
             className="h-12 w-12 rounded-full bg-[#1f2736] text-white hover:bg-[#253048]"
             onClick={handleProcess}
-            disabled={!imagePreview || isUploading}
+            disabled={isUploading}
           >
             <span className="material-symbols-outlined">description</span>
           </Button>
         </div>
 
         <input
-          ref={fileInputRef}
+          ref={galleryInputRef}
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={handleFileChange}
+          onChange={handleGalleryFileChange}
+        />
+        <input
+          ref={generalFileInputRef}
+          type="file"
+          accept="*/*"
+          className="hidden"
+          onChange={handleGeneralFileChange}
         />
       </div>
     </AppLayout>
