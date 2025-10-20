@@ -326,7 +326,9 @@ const DocumentScan = () => {
       return;
     }
 
-    const capabilities = track.getCapabilities() as MediaTrackCapabilities;
+    const capabilities = track.getCapabilities() as MediaTrackCapabilities & {
+      torch?: boolean;
+    };
     const supportsTorch =
       typeof capabilities.torch === "boolean" ? capabilities.torch : false;
 
@@ -488,7 +490,9 @@ const DocumentScan = () => {
       return;
     }
 
-    const capabilities = track.getCapabilities() as MediaTrackCapabilities;
+    const capabilities = track.getCapabilities() as MediaTrackCapabilities & {
+      torch?: boolean;
+    };
     const supportsTorch =
       typeof capabilities.torch === "boolean" ? capabilities.torch : false;
 
@@ -505,7 +509,9 @@ const DocumentScan = () => {
       setIsTogglingFlash(true);
       await track.applyConstraints({
         advanced: [{ torch: nextFlashState }],
-      } as MediaTrackConstraints);
+      } as MediaTrackConstraints & {
+        advanced?: Array<{ torch?: boolean }>;
+      });
       setIsFlashOn(nextFlashState);
       setIsTorchAvailable(true);
     } catch (toggleError) {
