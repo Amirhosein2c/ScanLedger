@@ -21,7 +21,7 @@ interface SignupForm {
   email: string;
   password: string;
   confirmPassword: string;
-  picture: string;
+  picture?: string;
 }
 
 const initialFormState: SignupForm = {
@@ -30,7 +30,6 @@ const initialFormState: SignupForm = {
   email: "",
   password: "",
   confirmPassword: "",
-  picture: "",
 };
 
 const NewUserSignup = () => {
