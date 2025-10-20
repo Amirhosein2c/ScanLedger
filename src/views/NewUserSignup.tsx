@@ -51,7 +51,9 @@ const NewUserSignup = () => {
   };
 
   const continueWithGoogle = async () => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    // const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const clientId =
+      "50199771016-rn343kmat6jib4f07dsfj3mh3iu12cfm.apps.googleusercontent.com";
     if (!clientId) {
       setMessage(t("auth.signup.errors.googleClientIdMissing"));
       return;
