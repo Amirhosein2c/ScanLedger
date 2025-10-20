@@ -67,8 +67,21 @@ export const _GD = async (request: NextRequest): Promise<Response> => {
     // اگر upstream خطای 4xx/5xx داد، پاس‌ترو ولی لاگ کن
     // (در صورت نیاز می‌تونی فقط 5xx رو ماسک کنی)
     return upstreamRes;
-  } catch (err: any) {
-    console.error("[GD] Fatal proxy error:", err?.message || err);
+  } catch (err: unknown) {
+    const msg =
+      err instanceof Error
+        ? err.message
+        : typeof err === "string"
+        ? err
+        : (() => {
+            try {
+              return JSON.stringify(err);
+            } catch {
+              return String(err);
+            }
+          })();
+
+    console.error("[GD] Fatal proxy error:", msg);
     return new Response("Internal Gateway Error", { status: 500 });
   }
 };
