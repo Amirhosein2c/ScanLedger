@@ -1,16 +1,14 @@
 import { translate } from "../lib/i18n";
 
-const GOOGLE_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
-const GOOGLE_USERINFO_URL =
-  "https://www.googleapis.com/oauth2/v3/userinfo?alt=json";
+const GOOGLE_SCRIPT_SRC = process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_SRC;
+const GOOGLE_USERINFO_URL = process.env.NEXT_PUBLIC_GOOGLE_USERINFO_URL;
 
 let scriptLoadingPromise: Promise<void> | null = null;
 
 const isBrowser = () =>
   typeof window !== "undefined" && typeof document !== "undefined";
 
-export const GOOGLE_SCOPE =
-  "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile";
+export const GOOGLE_SCOPE = process.env.NEXT_PUBLIC_GOOGLE_SCOPES;
 
 export interface GoogleProfile {
   email?: string;
