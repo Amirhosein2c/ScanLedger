@@ -1,111 +1,74 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-// const CSRF_COOKIE_NAME = "csrfToken";
-// const CSRF_HEADER_NAME = "x-csrf-token";
-// const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+export const _GD = async (request: NextRequest): Promise<Response> => {
+  try {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    if (!apiBaseUrl) {
+      console.error("[GD] env NEXT_PUBLIC_BASE_URL is missing at runtime");
+      return new NextResponse("Gateway misconfigured: BASE_URL missing", {
+        status: 500,
+      });
+    }
 
-export const _GD = async (
-  request: NextRequest,
-  context?: { params?: Record<string, unknown> }
-): Promise<Response> => {
-  void context;
-  //   if (!SAFE_METHODS.has(request.method.toUpperCase())) {
-  //     const csrfCookie = request.cookies.get(CSRF_COOKIE_NAME)?.value ?? "";
-  //     const csrfHeader = request.headers.get(CSRF_HEADER_NAME) ?? "";
+    // read body only for non-GET/HEAD
+    let body: ArrayBuffer | null = null;
+    if (!["GET", "HEAD"].includes(request.method.toUpperCase())) {
+      try {
+        body = await request.arrayBuffer();
+      } catch (e) {
+        console.error("[GD] Failed to read request body", e);
+      }
+    }
 
-  //     if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
-  //       return new Response("Invalid CSRF token", { status: 403 });
-  //     }
-  //   }
+    // build upstream url
+    const normalizedPath = request.nextUrl.pathname.replace(/^\/(api|gd)/, "");
+    console.log("normalizedPath", normalizedPath);
+    console.log("request", request);
+    console.log("request.nextUrl", request.nextUrl);
+    console.log("request.nextUrl.pathname", request.nextUrl.pathname);
 
-  // const host: string = `${request.nextUrl.protocol}//${request.headers.get("host")}`;
-  // const origin: string = request.headers.get("origin")?.toString() || "";
+    const targetPath = normalizedPath.startsWith("/")
+      ? normalizedPath
+      : `/${normalizedPath}`;
+    const upstreamUrl = `${apiBaseUrl.replace(/\/$/, "")}${targetPath}${
+      request.nextUrl.search
+    }`;
 
-  // if (host !== origin) {
-  //     return new NextResponse("Not Valid", { status: 419 });
-  // }
+    console.log("targetPath", targetPath);
+    console.log("upstreamUrl", upstreamUrl);
+    // build headers safely
+    const headers = new Headers();
+    const ct = request.headers.get("content-type");
+    if (ct) headers.set("content-type", ct);
+    headers.set("accept", "application/json");
 
-  console.log("in the GD");
+    const xff = request.ip || request.headers.get("x-forwarded-for");
+    if (xff) headers.set("x-forwarded-for", String(xff));
 
-  const arrBuffer = await request.arrayBuffer().catch((error) => {
-    console.error("Failed to read request body", error);
-    return undefined;
-  });
-  const data = arrBuffer ?? null;
+    // only set admin header if cookie exists
+    const adminToken = request.cookies.get("AdminAuthToken")?.value;
+    if (adminToken) {
+      headers.set("Admin-Authorization", `Bearer ${adminToken}`);
+    }
 
-  const headers = new Headers();
-  // const headers = request.headers;
-  // headers.delete("content-length");
-  // headers.delete("host");
-  headers.set("content-type", request.headers.get("content-type") || "");
-  headers.set("accept", "application/json");
-  headers.set(
-    "x-forwarded-for",
-    request.ip || request.headers.get("x-forwarded-for") || ""
-  );
-  // headers.set("serversecret", process.env.SERVER_SECRET || "");
-  // headers.set("tt", Date.now().toString());
+    console.log("[GD] →", request.method, upstreamUrl);
 
-  // set Authorization header if there is any
-  headers.set(
-    "Admin-Authorization",
-    `Bearer ${request.cookies.get("AdminAuthToken")?.value ?? ""}`
-  );
+    const upstreamRes = await fetch(upstreamUrl, {
+      method: request.method,
+      headers,
+      body: ["GET", "HEAD"].includes(request.method.toUpperCase())
+        ? null
+        : body,
+    });
 
-  // const apiBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-  const apiBaseUrl = "https://api.perceptionist.top/webhook-test";
-  if (!apiBaseUrl) {
-    throw new Error("NEXT_PUBLIC_BASE_URL is not configured");
+    // log status for debugging
+    console.log("[GD] ←", upstreamRes.status, upstreamRes.statusText);
+
+    // اگر upstream خطای 4xx/5xx داد، پاس‌ترو ولی لاگ کن
+    // (در صورت نیاز می‌تونی فقط 5xx رو ماسک کنی)
+    return upstreamRes;
+  } catch (err: any) {
+    console.error("[GD] Fatal proxy error:", err?.message || err);
+    return new Response("Internal Gateway Error", { status: 500 });
   }
-  console.log(request);
-  console.log(request.nextUrl);
-  console.log(request.nextUrl.pathname);
-
-  const normalizedPath = request.nextUrl.pathname.replace(/^\/(api|gd)/, "");
-  const targetPath = normalizedPath.startsWith("/")
-    ? normalizedPath
-    : `/${normalizedPath}`;
-  const url = `${apiBaseUrl.replace(/\/$/, "")}${targetPath}${
-    request.nextUrl.search
-  }`;
-  const response = await fetch(url, {
-    method: request.method,
-    body: request.method === "GET" ? null : data,
-    headers,
-  }).catch((error) => {
-    console.error({ error });
-    return new Response(String(error), {
-      status: 500,
-      statusText: "Internal Error",
-    });
-  });
-
-  if (response.status >= 500) {
-    console.error({
-      status: response.status,
-      statusText: response.statusText,
-      err: await response.text(),
-    });
-    return new Response(null, {
-      status: 500,
-      statusText: "Internal Server Error",
-    });
-  }
-
-  return response;
-};
-
-export const addServerHeaders = async (
-  requestInit: RequestInit
-): Promise<RequestInit> => {
-  const { cookies: Cookies } = await import("next/headers");
-  const authToken = Cookies().get("AdminAuthToken")?.value ?? "";
-
-  const headers: Record<string, string> = { Accept: "application/json" };
-  headers["Admin-Authorization"] = `Bearer ${authToken}`;
-  // headers["serversecret"] = process.env.SERVER_SECRET || "";
-  // headers["tt"] = Date.now().toString();
-
-  requestInit.headers = headers;
-  return requestInit;
 };
