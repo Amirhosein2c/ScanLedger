@@ -263,7 +263,9 @@
       "captureException": "Failed to capture image from camera.",
       "noPreview": "Capture or upload a document before processing.",
       "uploadFailed": "Upload failed. Please try again.",
-      "flashUnavailable": "Flash toggle is not available in this build."
+      "flashUnavailable": "Flash toggle is not available in this build.",
+      "flashUnsupported": "This camera does not support flash control.",
+      "flashToggleFailed": "Unable to toggle the flash. Please try again."
     }
   },
   "export": {

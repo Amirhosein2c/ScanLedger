@@ -22,10 +22,6 @@ export const _GD = async (request: NextRequest): Promise<Response> => {
 
     // build upstream url
     const normalizedPath = request.nextUrl.pathname.replace(/^\/(api|gd)/, "");
-    console.log("normalizedPath", normalizedPath);
-    console.log("request", request);
-    console.log("request.nextUrl", request.nextUrl);
-    console.log("request.nextUrl.pathname", request.nextUrl.pathname);
 
     const targetPath = normalizedPath.startsWith("/")
       ? normalizedPath
@@ -34,8 +30,6 @@ export const _GD = async (request: NextRequest): Promise<Response> => {
       request.nextUrl.search
     }`;
 
-    console.log("targetPath", targetPath);
-    console.log("upstreamUrl", upstreamUrl);
     // build headers safely
     const headers = new Headers();
     const ct = request.headers.get("content-type");
@@ -51,8 +45,6 @@ export const _GD = async (request: NextRequest): Promise<Response> => {
       headers.set("Admin-Authorization", `Bearer ${adminToken}`);
     }
 
-    console.log("[GD] →", request.method, upstreamUrl);
-
     const upstreamRes = await fetch(upstreamUrl, {
       method: request.method,
       headers,
@@ -61,11 +53,6 @@ export const _GD = async (request: NextRequest): Promise<Response> => {
         : body,
     });
 
-    // log status for debugging
-    console.log("[GD] ←", upstreamRes.status, upstreamRes.statusText);
-
-    // اگر upstream خطای 4xx/5xx داد، پاس‌ترو ولی لاگ کن
-    // (در صورت نیاز می‌تونی فقط 5xx رو ماسک کنی)
     return upstreamRes;
   } catch (err: unknown) {
     const msg =
