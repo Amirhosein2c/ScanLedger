@@ -269,6 +269,8 @@ const normalizeCameraError = (
   return translate("documentScan.errors.unableToAccess");
 };
 
+type DocumentUploadSource = "camera_capture" | "gallery_upload" | "file_upload";
+
 const dataUrlToBlob = (dataUrl: string): Blob => {
   const [meta, base64] = dataUrl.split(",");
   const mimeMatch = /data:(.*?);base64/.exec(meta);
@@ -281,6 +283,17 @@ const dataUrlToBlob = (dataUrl: string): Blob => {
   }
 
   return new Blob([buffer], { type: mime });
+};
+
+const clearPersistedImageData = () => {
+  try {
+    if (typeof window !== "undefined") {
+      window.sessionStorage?.removeItem("scannedImageDataUrl");
+      window.localStorage?.removeItem("scannedImageDataUrl");
+    }
+  } catch (storageError) {
+    console.warn("Unable to clear stored preview", storageError);
+  }
 };
 const DocumentScan = () => {
   const router = useRouter();
@@ -297,6 +310,8 @@ const DocumentScan = () => {
 
   // Stateful data that drives what the user sees.
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreviewSource, setImagePreviewSource] =
+    useState<DocumentUploadSource>("camera_capture");
   const [error, setError] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
@@ -304,6 +319,7 @@ const DocumentScan = () => {
   const [isFlashOn, setIsFlashOn] = useState(false);
   const [isTorchAvailable, setIsTorchAvailable] = useState(false);
   const [isTogglingFlash, setIsTogglingFlash] = useState(false);
+  const [pendingFileUpload, setPendingFileUpload] = useState<File | null>(null);
 
   // API client used to submit the captured image for OCR.
   const ocrMutation = useApiMutation<string, FormData>({
@@ -445,8 +461,13 @@ const DocumentScan = () => {
   }, [attachStreamToVideo, imagePreview]);
 
   // Persist the preview so we can return to it after navigating away.
-  const persistImageDataUrl = (dataUrl: string) => {
+  const persistImageDataUrl = (
+    dataUrl: string,
+    source: DocumentUploadSource = "camera_capture"
+  ) => {
     setImagePreview(dataUrl);
+    setImagePreviewSource(source);
+    setPendingFileUpload(null);
     setError(null);
     setCameraError(null);
     try {
@@ -468,6 +489,50 @@ const DocumentScan = () => {
       window.localStorage?.setItem("ocrResultData", payload);
     } catch (storageError) {
       console.warn("Unable to store OCR result locally", storageError);
+    }
+  };
+
+  const submitDocumentForOcr = async (
+    file: Blob | File,
+    { source, fileName }: { source: DocumentUploadSource; fileName: string }
+  ) => {
+    ocrMutation.reset();
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file, fileName);
+      formData.append("source", source);
+      formData.append("timestamp", new Date().toISOString());
+
+      const textBody = await ocrMutation.mutateAsync(formData);
+
+      let parsedResult: unknown = null;
+      try {
+        parsedResult =
+          typeof textBody === "string" ? JSON.parse(textBody) : textBody;
+      } catch (parseError) {
+        console.warn(
+          "Failed to parse OCR response as JSON, storing raw text",
+          parseError
+        );
+      }
+
+      const serialized = parsedResult
+        ? JSON.stringify(parsedResult)
+        : String(textBody ?? "");
+
+      persistOcrResult(serialized);
+      router.push("/documents/details");
+    } catch (uploadError) {
+      const normalizedError =
+        uploadError instanceof Error
+          ? uploadError
+          : new Error(String(uploadError));
+      console.error(normalizedError);
+      setError(
+        normalizedError.message || t("documentScan.errors.uploadFailed")
+      );
     }
   };
 
@@ -534,57 +599,40 @@ const DocumentScan = () => {
     input.click();
   };
 
-  async function processImageDataUrl(dataUrl: string) {
-    ocrMutation.reset();
-    setError(null);
-
-    try {
-      const blob = dataUrlToBlob(dataUrl);
-      const formData = new FormData();
-      formData.append("file", blob, "scanned_image.png");
-      formData.append("source", "camera_capture");
-      formData.append("timestamp", new Date().toISOString());
-
-      const textBody = await ocrMutation.mutateAsync(formData);
-
-      let parsedResult: unknown = null;
-      try {
-        parsedResult =
-          typeof textBody === "string" ? JSON.parse(textBody) : textBody;
-      } catch (parseError) {
-        console.warn(
-          "Failed to parse OCR response as JSON, storing raw text",
-          parseError
-        );
-      }
-
-      const serialized = parsedResult
-        ? JSON.stringify(parsedResult)
-        : String(textBody ?? "");
-
-      persistOcrResult(serialized);
-      router.push("/documents/details");
-    } catch (uploadError) {
-      const normalizedError =
-        uploadError instanceof Error
-          ? uploadError
-          : new Error(String(uploadError));
-      console.error(normalizedError);
-      setError(
-        normalizedError.message || t("documentScan.errors.uploadFailed")
-      );
-    }
+  async function processImageDataUrl(
+    dataUrl: string,
+    source: DocumentUploadSource = "camera_capture"
+  ) {
+    const blob = dataUrlToBlob(dataUrl);
+    const extension = blob.type.split("/")[1] || "png";
+    await submitDocumentForOcr(blob, {
+      source,
+      fileName:
+        source === "camera_capture"
+          ? `scanned_image.${extension}`
+          : `uploaded_image.${extension}`,
+    });
   }
 
   const readFileAsPreview = (
     file: File,
-    { autoProcess = false }: { autoProcess?: boolean } = {}
+    {
+      autoProcess = false,
+      source = "gallery_upload",
+    }: {
+      autoProcess?: boolean;
+      source?: Exclude<DocumentUploadSource, "camera_capture">;
+    } = {}
   ) => {
     if (!file.type.startsWith("image/")) {
-      setError(t("documentScan.errors.onlyImagesSupported"));
+      clearPersistedImageData();
+      setImagePreview(null);
+      setPendingFileUpload(file);
+      setError(null);
       return;
     }
 
+    setPendingFileUpload(null);
     const reader = new FileReader();
     reader.onload = () => {
       const result = typeof reader.result === "string" ? reader.result : null;
@@ -592,9 +640,9 @@ const DocumentScan = () => {
         return;
       }
 
-      persistImageDataUrl(result);
+      persistImageDataUrl(result, source);
       if (autoProcess) {
-        void processImageDataUrl(result);
+        void processImageDataUrl(result, source);
       }
     };
     reader.onerror = () => setError(t("documentScan.errors.readImageFailed"));
@@ -612,7 +660,7 @@ const DocumentScan = () => {
       return;
     }
 
-    readFileAsPreview(file);
+    readFileAsPreview(file, { source: "gallery_upload" });
     event.target.value = "";
   };
 
@@ -622,13 +670,16 @@ const DocumentScan = () => {
       return;
     }
 
-    readFileAsPreview(file, { autoProcess: true });
+    readFileAsPreview(file, { source: "file_upload" });
     event.target.value = "";
   };
 
   const handleRetake = () => {
     setImagePreview(null);
+    setImagePreviewSource("camera_capture");
     setError(null);
+    setPendingFileUpload(null);
+    clearPersistedImageData();
     updateTorchAvailability(null);
     if (galleryInputRef.current) {
       galleryInputRef.current.value = "";
@@ -690,6 +741,14 @@ const DocumentScan = () => {
   };
 
   const handleProcess = async () => {
+    if (pendingFileUpload) {
+      await submitDocumentForOcr(pendingFileUpload, {
+        source: "file_upload",
+        fileName: pendingFileUpload.name || "uploaded_document",
+      });
+      return;
+    }
+
     if (!imagePreview) {
       const input = generalFileInputRef.current;
       if (!input) {
@@ -702,7 +761,7 @@ const DocumentScan = () => {
       return;
     }
 
-    await processImageDataUrl(imagePreview);
+    await processImageDataUrl(imagePreview, imagePreviewSource);
   };
 
   // Surface new error messages through a toast notification.
@@ -763,8 +822,23 @@ const DocumentScan = () => {
                 <img
                   src={imagePreview}
                   alt={t("documentScan.previewAlt")}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                 />
+              ) : pendingFileUpload ? (
+                <div className="flex flex-col items-center justify-center gap-4 px-8 text-center text-sm text-white/80">
+                  <span className="material-symbols-outlined text-5xl text-white/70">
+                    description
+                  </span>
+                  <div className="space-y-1">
+                    <p className="text-base font-semibold text-white">
+                      {pendingFileUpload.name ||
+                        t("documentScan.filePreview.untitled")}
+                    </p>
+                    <p className="text-xs text-white/60">
+                      {t("documentScan.filePreview.prompt")}
+                    </p>
+                  </div>
+                </div>
               ) : cameraError ? (
                 <div className="flex flex-col items-center justify-center px-8 text-center text-sm text-white/80">
                   <p>{cameraError}</p>
@@ -776,7 +850,7 @@ const DocumentScan = () => {
                     autoPlay
                     playsInline
                     muted
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain"
                     onLoadedMetadata={() => setIsCameraReady(true)}
                   />
                   {!isCameraReady && (
@@ -801,7 +875,7 @@ const DocumentScan = () => {
                 size="icon"
                 className="pointer-events-auto absolute bottom-4 left-4 rounded-full bg-red-500 text-white hover:bg-red-500"
                 onClick={handleRetake}
-                disabled={isUploading || !imagePreview}
+                disabled={isUploading || (!imagePreview && !pendingFileUpload)}
               >
                 <span className="material-symbols-outlined">close</span>
               </Button>
@@ -810,7 +884,7 @@ const DocumentScan = () => {
                 size="icon"
                 className="pointer-events-auto absolute bottom-4 right-4 rounded-full bg-[var(--primary-color)] text-[#111827] hover:bg-[var(--primary-color)]/90"
                 onClick={handleProcess}
-                disabled={isUploading || !imagePreview}
+                disabled={isUploading || (!imagePreview && !pendingFileUpload)}
               >
                 <span className="material-symbols-outlined">check</span>
               </Button>
