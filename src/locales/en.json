@@ -248,6 +248,10 @@
       "single": "Single",
       "batch": "Batch"
     },
+    "filePreview": {
+      "untitled": "Unnamed document",
+      "prompt": "Press the process button to upload the selected file."
+    },
     "errors": {
       "secureContext": "Camera access requires HTTPS or running from localhost during development.",
       "cameraUnsupported": "Camera access is not supported by this browser. Try updating it or using the native camera upload.",

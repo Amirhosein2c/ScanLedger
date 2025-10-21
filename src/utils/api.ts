@@ -47,11 +47,11 @@ interface ApiError extends Error {
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: REQUEST_TIMEOUT,
   headers: {
     Accept: "application/json",
   },
   withCredentials: false,
+  timeout: REQUEST_TIMEOUT,
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -85,9 +85,7 @@ apiClient.interceptors.response.use(
       error.code === "ECONNABORTED" ||
       error.message?.toLowerCase().includes("timeout")
     ) {
-      return Promise.reject(
-        new Error(translate("errors.requestTimeout"))
-      );
+      return Promise.reject(new Error(translate("errors.requestTimeout")));
     }
 
     if (error.response) {
@@ -109,9 +107,7 @@ apiClient.interceptors.response.use(
     }
 
     if (error.request) {
-      return Promise.reject(
-        new Error(translate("errors.networkUnavailable"))
-      );
+      return Promise.reject(new Error(translate("errors.networkUnavailable")));
     }
 
     return Promise.reject(error);
