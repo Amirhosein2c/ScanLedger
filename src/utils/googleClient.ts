@@ -46,7 +46,7 @@ export const ensureGoogleOAuth = async (): Promise<void> => {
       }
 
       const script = document.createElement("script");
-      script.src = GOOGLE_SCRIPT_SRC;
+      script.src = `${GOOGLE_SCRIPT_SRC}`;
       script.async = true;
       script.defer = true;
       script.dataset.googleClient = "true";
@@ -70,7 +70,7 @@ export const ensureGoogleOAuth = async (): Promise<void> => {
 export const fetchGoogleProfile = async (
   accessToken: string
 ): Promise<GoogleProfile> => {
-  const response = await fetch(GOOGLE_USERINFO_URL, {
+  const response = await fetch(`${GOOGLE_USERINFO_URL}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/json",

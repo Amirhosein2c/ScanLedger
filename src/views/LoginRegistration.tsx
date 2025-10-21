@@ -93,7 +93,7 @@ const LoginRegistration = () => {
 
       const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: clientId,
-        scope: GOOGLE_SCOPE,
+        scope: `${GOOGLE_SCOPE}`,
         prompt: "select_account",
         callback: async (tokenResponse) => {
           try {
