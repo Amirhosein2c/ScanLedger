@@ -1,16 +1,14 @@
 import { translate } from "../lib/i18n";
 
-const GOOGLE_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
-const GOOGLE_USERINFO_URL =
-  "https://www.googleapis.com/oauth2/v3/userinfo?alt=json";
+const GOOGLE_SCRIPT_SRC = process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_SRC;
+const GOOGLE_USERINFO_URL = process.env.NEXT_PUBLIC_GOOGLE_USERINFO_URL;
 
 let scriptLoadingPromise: Promise<void> | null = null;
 
 const isBrowser = () =>
   typeof window !== "undefined" && typeof document !== "undefined";
 
-export const GOOGLE_SCOPE =
-  "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile";
+export const GOOGLE_SCOPE = process.env.NEXT_PUBLIC_GOOGLE_SCOPES;
 
 export interface GoogleProfile {
   email?: string;
@@ -48,7 +46,7 @@ export const ensureGoogleOAuth = async (): Promise<void> => {
       }
 
       const script = document.createElement("script");
-      script.src = GOOGLE_SCRIPT_SRC;
+      script.src = `${GOOGLE_SCRIPT_SRC}`;
       script.async = true;
       script.defer = true;
       script.dataset.googleClient = "true";
@@ -72,7 +70,7 @@ export const ensureGoogleOAuth = async (): Promise<void> => {
 export const fetchGoogleProfile = async (
   accessToken: string
 ): Promise<GoogleProfile> => {
-  const response = await fetch(GOOGLE_USERINFO_URL, {
+  const response = await fetch(`${GOOGLE_USERINFO_URL}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/json",
