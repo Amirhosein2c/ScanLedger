@@ -12,6 +12,7 @@ import { useApiMutation } from "../hooks/useApiMutation";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { toast } from "sonner";
 import { translate, useTranslation } from "@/src/lib/i18n";
+import { convertPdfToImage } from "../utils/pdf";
 
 type LegacyGetUserMedia = (
   constraints: MediaStreamConstraints,
@@ -484,6 +485,8 @@ const DocumentScan = () => {
     if (typeof window === "undefined") {
       return;
     }
+    console.log(payload);
+
     try {
       window.sessionStorage?.setItem("ocrResultData", payload);
       window.localStorage?.setItem("ocrResultData", payload);
@@ -506,6 +509,8 @@ const DocumentScan = () => {
       formData.append("timestamp", new Date().toISOString());
 
       const textBody = await ocrMutation.mutateAsync(formData);
+      console.log(textBody);
+      console.log(pendingFileUpload);
 
       let parsedResult: unknown = null;
       try {
@@ -614,7 +619,7 @@ const DocumentScan = () => {
     });
   }
 
-  const readFileAsPreview = (
+  const readFileAsPreview = async (
     file: File,
     {
       autoProcess = false,
@@ -624,6 +629,29 @@ const DocumentScan = () => {
       source?: Exclude<DocumentUploadSource, "camera_capture">;
     } = {}
   ) => {
+    if (file.type === "application/pdf") {
+      try {
+        console.log(file);
+
+        const { dataUrl } = await convertPdfToImage(file);
+        console.log(dataUrl);
+
+        setPendingFileUpload(null);
+        persistImageDataUrl(dataUrl, source);
+
+        if (autoProcess) {
+          await processImageDataUrl(dataUrl, source);
+        }
+      } catch (conversionError) {
+        console.error(conversionError);
+        clearPersistedImageData();
+        setImagePreview(null);
+        setPendingFileUpload(null);
+        setError(t("documentScan.errors.pdfConversionFailed"));
+      }
+      return;
+    }
+
     if (!file.type.startsWith("image/")) {
       clearPersistedImageData();
       setImagePreview(null);
@@ -633,20 +661,30 @@ const DocumentScan = () => {
     }
 
     setPendingFileUpload(null);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : null;
-      if (!result) {
-        return;
-      }
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === "string") {
+            resolve(reader.result);
+          } else {
+            reject(new Error("Unexpected file reader result."));
+          }
+        };
+        reader.onerror = () => {
+          reject(reader.error ?? new Error("Unable to read file."));
+        };
+        reader.readAsDataURL(file);
+      });
 
-      persistImageDataUrl(result, source);
+      persistImageDataUrl(dataUrl, source);
       if (autoProcess) {
-        void processImageDataUrl(result, source);
+        await processImageDataUrl(dataUrl, source);
       }
-    };
-    reader.onerror = () => setError(t("documentScan.errors.readImageFailed"));
-    reader.readAsDataURL(file);
+    } catch (readError) {
+      console.error(readError);
+      setError(t("documentScan.errors.readImageFailed"));
+    }
   };
 
   const handleGalleryFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -660,7 +698,7 @@ const DocumentScan = () => {
       return;
     }
 
-    readFileAsPreview(file, { source: "gallery_upload" });
+    void readFileAsPreview(file, { source: "gallery_upload" });
     event.target.value = "";
   };
 
@@ -670,7 +708,7 @@ const DocumentScan = () => {
       return;
     }
 
-    readFileAsPreview(file, { source: "file_upload" });
+    void readFileAsPreview(file, { source: "file_upload" });
     event.target.value = "";
   };
 
