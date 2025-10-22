@@ -326,7 +326,7 @@ const DocumentDetailsEdit = () => {
           <img
             src={imageSrc}
             alt={t("documentDetails.previewAlt")}
-            className="h-64 w-full object-cover"
+            className="h-64 w-full object-contain"
           />
         </div>
       )}
