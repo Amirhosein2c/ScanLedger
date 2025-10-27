@@ -1,302 +1,297 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-
-import { useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+
 import AppLayout from "../components/layout/AppLayout";
-import {
-  extractOcrFields,
-  generateCsvFromFields,
-  inferSummaryFromFields,
-  type OcrField,
-} from "../utils/ocr";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
+import { generateCsvFromFields, type OcrField } from "../utils/ocr";
+import {
+  clearPersistedImageData,
+  clearPersistedOcrResult,
+  getPersistedImageDataUrl,
+  getPersistedOcrResult,
+  persistOcrResult,
+} from "./document-scan/storage";
 
-type InputType = "text" | "date" | "currency" | "email" | "tel";
-
-interface DefaultFormState {
-  date: string;
-  amount: string;
-  vendor: string;
-  category: string;
-}
-
-const normalizeFields = (fields: unknown): OcrField[] => {
-  if (!Array.isArray(fields)) {
-    return [];
-  }
-  const seen = new Set<string>();
-  return fields
-    .map((field) => {
-      if (typeof field !== "object" || field === null) {
-        return { label: "", value: "" };
-      }
-      const record = field as Record<string, unknown>;
-      return {
-        label: (record.label ?? record.name ?? record.key ?? "").toString(),
-        value: record.value != null ? String(record.value) : "",
-      };
-    })
-    .filter((field) => {
-      const key = `${field.label}|${field.value}`;
-      if (!field.label) {
-        return false;
-      }
-      if (seen.has(key)) {
-        return false;
-      }
-      seen.add(key);
-      return true;
-    });
+type StoredDocumentPayload = {
+  documentClass: string;
+  result: Record<string, string>;
 };
 
-const detectInputType = (label: string, value: string): InputType => {
-  const lower = label.toLowerCase();
-  if (lower.includes("date") || lower.includes("due")) {
-    const parsed = Date.parse(value);
-    return Number.isNaN(parsed) ? "text" : "date";
-  }
-  if (
-    lower.includes("amount") ||
-    lower.includes("total") ||
-    lower.includes("price") ||
-    lower.includes("subtotal") ||
-    lower.includes("tax") ||
-    value.includes("$")
-  ) {
-    return "currency";
-  }
-  if (lower.includes("email")) {
-    return "email";
-  }
-  if (lower.includes("phone") || lower.includes("tel")) {
-    return "tel";
-  }
-  return "text";
+const emptyPayload: StoredDocumentPayload = {
+  documentClass: "",
+  result: {},
 };
 
-const formatDateForInput = (value: string): string => {
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) {
-    return "";
+const toRecord = (source: unknown): Record<string, string> => {
+  if (!source) {
+    return {};
   }
-  return new Date(parsed).toISOString().slice(0, 10);
+
+  if (typeof source === "string") {
+    try {
+      const parsed = JSON.parse(source);
+      return toRecord(parsed);
+    } catch {
+      return {};
+    }
+  }
+
+  if (Array.isArray(source)) {
+    return source.reduce<Record<string, string>>((acc, item) => {
+      if (!item || typeof item !== "object") {
+        return acc;
+      }
+      const entry = item as Record<string, unknown>;
+      const labelSource =
+        entry.label ?? entry.name ?? entry.key ?? entry.field ?? null;
+      const label =
+        typeof labelSource === "string"
+          ? labelSource.trim()
+          : labelSource != null
+          ? String(labelSource).trim()
+          : "";
+      if (!label) {
+        return acc;
+      }
+      const valueSource =
+        entry.value ?? entry.text ?? entry.raw ?? entry.content ?? "";
+      acc[label] =
+        typeof valueSource === "string"
+          ? valueSource
+          : valueSource != null
+          ? String(valueSource)
+          : "";
+      return acc;
+    }, {});
+  }
+
+  if (typeof source === "object") {
+    return Object.entries(source as Record<string, unknown>).reduce<
+      Record<string, string>
+    >((acc, [label, value]) => {
+      const normalizedLabel =
+        typeof label === "string" ? label.trim() : String(label);
+      if (!normalizedLabel) {
+        return acc;
+      }
+      acc[normalizedLabel] = value != null ? String(value) : "";
+      return acc;
+    }, {});
+  }
+
+  return {};
+};
+
+const parseStoredPayload = (raw: string | null): StoredDocumentPayload => {
+  if (!raw) {
+    return emptyPayload;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+
+    const normalize = (input: unknown): Record<string, unknown> | null => {
+      if (!input) {
+        return null;
+      }
+      if (Array.isArray(input)) {
+        const candidate = input.find(
+          (item): item is Record<string, unknown> =>
+            !!item && typeof item === "object" && !Array.isArray(item)
+        );
+        return candidate ?? null;
+      }
+      if (typeof input === "object") {
+        return input as Record<string, unknown>;
+      }
+      if (typeof input === "string") {
+        try {
+          const parsedString = JSON.parse(input);
+          return normalize(parsedString);
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    };
+
+    const record = normalize(parsed);
+    if (!record) {
+      return emptyPayload;
+    }
+
+    const documentClassSource =
+      record.documentClass ??
+      record.document_class ??
+      record.type ??
+      record.document_type ??
+      "";
+    const documentClass =
+      typeof documentClassSource === "string"
+        ? documentClassSource.trim()
+        : documentClassSource != null
+        ? String(documentClassSource).trim()
+        : "";
+
+    const resultSource =
+      record.result ??
+      record.fields ??
+      record.display_fields ??
+      record.data ??
+      record.raw ??
+      {};
+
+    return {
+      documentClass,
+      result: toRecord(resultSource),
+    };
+  } catch (error) {
+    console.warn("Unable to parse stored OCR payload", error);
+    return emptyPayload;
+  }
+};
+
+type FieldRow = {
+  label: string;
+  value: string;
+};
+
+const toFieldRows = (record: Record<string, string>): FieldRow[] =>
+  Object.entries(record).map(([label, value]) => ({
+    label,
+    value,
+  }));
+
+const reduceFieldsToRecord = (rows: FieldRow[]): Record<string, string> =>
+  rows.reduce<Record<string, string>>((acc, row) => {
+    acc[row.label] = row.value ?? "";
+    return acc;
+  }, {});
+
+const findValueByKeywords = (rows: FieldRow[], keywords: string[]): string => {
+  const lowered = keywords.map((keyword) => keyword.toLowerCase());
+  const hit = rows.find((row) =>
+    lowered.some((keyword) => row.label.toLowerCase().includes(keyword))
+  );
+  return hit?.value?.trim() || "";
 };
 
 const DocumentDetailsEdit = () => {
   const router = useRouter();
   useAuthRedirect({ redirectUnauthenticatedTo: "/login" });
   const { t } = useTranslation();
-  const searchParams = useSearchParams();
+
   const [imageSrc, setImageSrc] = useState<string>("");
-  const [fields, setFields] = useState<OcrField[]>([]);
-  const [defaultForm, setDefaultForm] = useState<DefaultFormState>({
-    date: "",
-    amount: "",
-    vendor: "",
-    category: "Food & Drink",
-  });
+  const [documentClass, setDocumentClass] = useState<string>("");
+  const [fields, setFields] = useState<FieldRow[]>([]);
   const [message, setMessage] = useState<string | null>(null);
 
-  const translateDocumentType = (value: string | undefined): string => {
-    if (!value) {
-      return t("documents.summary.fallback");
-    }
-    const key = value.toLowerCase().replace(/[^a-z0-9]+/g, "");
-    return t(`documents.summary.types.${key}`, { defaultValue: value });
-  };
-
-  const displayFieldLabel = (label: string): string => {
-    const key = label.toLowerCase().replace(/[^a-z0-9]+/g, "");
-    return t(`documentDetails.fields.${key}`, { defaultValue: label });
-  };
-
-  const categoryOptions = useMemo(
-    () => [
-      { value: "Groceries", label: t("documents.categories.groceries") },
-      { value: "Transport", label: t("documents.categories.transport") },
-      {
-        value: "Entertainment",
-        label: t("documents.categories.entertainment"),
-      },
-      { value: "Food & Drink", label: t("documents.categories.foodDrink") },
-    ],
-    [t]
-  );
-
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
+    setImageSrc(getPersistedImageDataUrl() || "");
 
-    const loadImage = () => {
-      try {
-        const cached =
-          window.sessionStorage.getItem("scannedImageDataUrl") ||
-          window.localStorage.getItem("scannedImageDataUrl");
-        if (cached) {
-          setImageSrc(cached);
-        }
-      } catch (error) {
-        console.warn("Failed to read scanned image", error);
-      }
-    };
+    const payload = parseStoredPayload(getPersistedOcrResult());
+    setDocumentClass(payload.documentClass);
 
-    const loadOcrData = async () => {
-      if (!searchParams) {
-        return;
-      }
-      try {
-        const ocrUrl = searchParams.get("ocr_url");
-        const ocrInline = searchParams.get("ocr");
-        let raw: string | null = null;
+    const rows = toFieldRows(payload.result);
+    setFields(rows.length > 0 ? rows : []);
+  }, []);
 
-        if (ocrUrl) {
-          try {
-            const res = await fetch(ocrUrl, { credentials: "omit" });
-            if (res.ok) {
-              raw = await res.text();
-            }
-          } catch (error) {
-            console.warn("Failed to load OCR data from URL", error);
-          }
-        } else if (ocrInline) {
-          try {
-            raw = decodeURIComponent(ocrInline);
-            if (raw.startsWith("data:")) {
-              const base64 = (raw.split(",")[1] || "").trim();
-              raw = atob(base64);
-            }
-          } catch (error) {
-            console.warn("Failed to parse inline OCR payload", error);
-          }
-        }
+  const summary = useMemo(() => {
+    const type = documentClass || t("documents.summary.fallback");
+    console.log("fields", fields);
 
-        if (!raw) {
-          raw =
-            window.sessionStorage.getItem("ocrResultData") ||
-            window.localStorage.getItem("ocrResultData");
-        }
+    const amount =
+      findValueByKeywords(fields, ["total", "amount"]) ||
+      t("documentDetails.summary.emptyValue");
+    const vendor =
+      findValueByKeywords(fields, ["vendor", "customer", "name"]) ||
+      t("documentDetails.summary.emptyValue");
+    const date =
+      findValueByKeywords(fields, ["date"]) ||
+      t("documentDetails.summary.emptyValue");
 
-        if (!raw) {
-          return;
-        }
-
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(raw);
-        } catch (error) {
-          console.warn(
-            "OCR data is not valid JSON, storing as raw text",
-            error
-          );
-          parsed = { rawText: raw };
-        }
-
-        const extractedFields = normalizeFields(extractOcrFields(parsed));
-        if (extractedFields.length > 0) {
-          setFields(extractedFields);
-          const summary = inferSummaryFromFields(extractedFields, imageSrc);
-          setDefaultForm((prev) => ({
-            ...prev,
-            date: summary.date ? formatDateForInput(summary.date) : prev.date,
-            amount: summary.amount || prev.amount,
-            vendor: summary.vendor || prev.vendor,
-          }));
-        }
-      } catch (error) {
-        console.warn("Unable to load OCR data", error);
-      }
-    };
-
-    loadImage();
-    loadOcrData();
-  }, [imageSrc, searchParams]);
+    return { type, amount, vendor, date };
+  }, [documentClass, fields, t]);
 
   const handleFieldChange = (index: number, value: string) => {
-    setFields((prev) =>
-      prev.map((field, idx) => (idx === index ? { ...field, value } : field))
-    );
-  };
-
-  const handleDefaultChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = event.target;
-    setDefaultForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const effectiveFields = useMemo<OcrField[]>(() => {
-    if (fields.length > 0) {
-      return fields;
-    }
-    return [
-      { label: "Date", value: defaultForm.date },
-      { label: "Amount", value: defaultForm.amount },
-      { label: "Vendor", value: defaultForm.vendor },
-      { label: "Category", value: defaultForm.category },
-    ];
-  }, [fields, defaultForm]);
-
-  const handleDiscard = () => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    try {
-      window.sessionStorage.removeItem("scannedImageDataUrl");
-      window.sessionStorage.removeItem("ocrResultData");
-      window.localStorage.removeItem("scannedImageDataUrl");
-      window.localStorage.removeItem("ocrResultData");
-    } catch (error) {
-      console.warn("Failed to clear cached scan", error);
-    }
-    router.push("/documents/scan");
+    setFields((current) => {
+      const next = [...current];
+      next[index] = { ...next[index], value };
+      return next;
+    });
   };
 
   const handleSave = () => {
-    if (
-      fields.length === 0 &&
-      !defaultForm.date &&
-      !defaultForm.amount &&
-      !defaultForm.vendor
-    ) {
+    if (fields.length === 0) {
       setMessage(t("documentDetails.messages.noFields"));
       return;
     }
 
-    try {
-      const csvContent = generateCsvFromFields(effectiveFields);
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("ocrCsvContent", csvContent);
-        window.sessionStorage.setItem("ocrCsvContent", csvContent);
+    const cleanedFields = fields.map((field) => ({
+      label: field.label,
+      value: field.value.trim(),
+    }));
 
-        const serialized = JSON.stringify(effectiveFields);
-        window.localStorage.setItem("ocrResultData", serialized);
-        window.sessionStorage.setItem("ocrResultData", serialized);
+    const payload: StoredDocumentPayload = {
+      documentClass: documentClass.trim(),
+      result: reduceFieldsToRecord(cleanedFields),
+    };
 
-        const previouslyExportedRaw =
-          window.localStorage.getItem("exportedDocuments");
-        const previouslyExported = previouslyExportedRaw
-          ? JSON.parse(previouslyExportedRaw)
-          : [];
-        const summary = inferSummaryFromFields(effectiveFields, imageSrc);
-        const updated = Array.isArray(previouslyExported)
-          ? [...previouslyExported, summary]
-          : [summary];
+    persistOcrResult(JSON.stringify(payload));
 
-        window.localStorage.setItem(
-          "exportedDocuments",
-          JSON.stringify(updated)
-        );
+    const csvContent = generateCsvFromFields(
+      cleanedFields.map<OcrField>((field) => ({
+        label: field.label,
+        value: field.value,
+      }))
+    );
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("ocrCsvContent", csvContent);
+      window.sessionStorage.setItem("ocrCsvContent", csvContent);
+
+      const existingRaw =
+        window.localStorage.getItem("exportedDocuments") || "[]";
+
+      let previous: unknown = [];
+      try {
+        previous = JSON.parse(existingRaw);
+      } catch (error) {
+        console.warn("Unable to read exported documents history", error);
       }
-      setMessage(t("documentDetails.messages.saved"));
-      setTimeout(() => setMessage(null), 2000);
-    } catch (error) {
-      console.error("Failed to persist document", error);
-      setMessage(t("documentDetails.messages.saveFailed"));
+
+      const history = Array.isArray(previous) ? previous : [];
+      const updated = [
+        ...history,
+        {
+          type: payload.documentClass || t("documents.summary.fallback"),
+          amount: summary.amount,
+          vendor: summary.vendor,
+          date: summary.date,
+          image: imageSrc,
+          ts: new Date().toISOString(),
+        },
+      ];
+
+      window.localStorage.setItem("exportedDocuments", JSON.stringify(updated));
     }
+
+    setMessage(t("documentDetails.messages.saved"));
+    setTimeout(() => setMessage(null), 2000);
+  };
+
+  const handleDiscard = () => {
+    clearPersistedImageData();
+    clearPersistedOcrResult();
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("ocrCsvContent");
+      window.sessionStorage.removeItem("ocrCsvContent");
+    }
+    router.push("/documents/scan");
   };
 
   const header = (
@@ -323,10 +318,13 @@ const DocumentDetailsEdit = () => {
     >
       {imageSrc && (
         <div className="overflow-hidden rounded-2xl border border-white/10">
-          <img
+          <Image
             src={imageSrc}
             alt={t("documentDetails.previewAlt")}
+            width={512}
+            height={256}
             className="h-64 w-full object-contain"
+            unoptimized
           />
         </div>
       )}
@@ -335,38 +333,31 @@ const DocumentDetailsEdit = () => {
         <h3 className="text-lg font-semibold">
           {t("documentDetails.summary.title")}
         </h3>
+        <label className="block text-sm text-gray-300">
+          <span className="mb-1 block font-medium text-[#C7D2FE]">
+            {t("documentDetails.summary.labels.type")}
+          </span>
+          <input
+            type="text"
+            className="block w-full rounded-xl border-transparent bg-[#1F2937] px-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
+            value={documentClass}
+            placeholder={t("documents.summary.fallback")}
+            onChange={(event) => setDocumentClass(event.target.value)}
+          />
+        </label>
         <div className="grid gap-3 text-sm text-gray-300">
-          {(() => {
-            const summary = inferSummaryFromFields(effectiveFields, imageSrc);
-            return (
-              <>
-                <div className="flex justify-between">
-                  <span>{t("documentDetails.summary.labels.type")}</span>
-                  <span className="font-medium text-white">
-                    {translateDocumentType(summary.type)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t("documentDetails.summary.labels.amount")}</span>
-                  <span className="font-medium text-white">
-                    {summary.amount || t("documentDetails.summary.emptyValue")}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t("documentDetails.summary.labels.vendor")}</span>
-                  <span className="font-medium text-white">
-                    {summary.vendor || t("documentDetails.summary.emptyValue")}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t("documentDetails.summary.labels.date")}</span>
-                  <span className="font-medium text-white">
-                    {summary.date || t("documentDetails.summary.emptyValue")}
-                  </span>
-                </div>
-              </>
-            );
-          })()}
+          <div className="flex justify-between">
+            <span>{t("documentDetails.summary.labels.amount")}</span>
+            <span className="font-medium text-white">{summary.amount}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>{t("documentDetails.summary.labels.vendor")}</span>
+            <span className="font-medium text-white">{summary.vendor}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>{t("documentDetails.summary.labels.date")}</span>
+            <span className="font-medium text-white">{summary.date}</span>
+          </div>
         </div>
       </section>
 
@@ -374,129 +365,27 @@ const DocumentDetailsEdit = () => {
         <h3 className="text-lg font-semibold">
           {t("documentDetails.sections.extractedFields")}
         </h3>
-        {fields.length > 0 ? (
-          <div className="space-y-4">
-            {fields.map((field, index) => {
-              const inputType = detectInputType(field.label, field.value);
-
-              if (inputType === "date") {
-                return (
-                  <label key={`${field.label}-${index}`} className="block">
-                    <span className="text-sm font-medium text-[#C7D2FE]">
-                      {displayFieldLabel(field.label)}
-                    </span>
-                    <input
-                      type="date"
-                      className="mt-1 block w-full rounded-xl border-transparent bg-[#1F2937] px-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
-                      value={formatDateForInput(field.value)}
-                      onChange={(event) =>
-                        handleFieldChange(index, event.target.value)
-                      }
-                    />
-                  </label>
-                );
-              }
-
-              if (inputType === "currency") {
-                return (
-                  <label key={`${field.label}-${index}`} className="block">
-                    <span className="text-sm font-medium text-[#C7D2FE]">
-                      {displayFieldLabel(field.label)}
-                    </span>
-                    <div className="relative mt-1">
-                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-[#96c5a9]">
-                        $
-                      </span>
-                      <input
-                        className="block w-full rounded-xl border-transparent bg-[#1F2937] pl-8 pr-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
-                        value={field.value.replace(/[^0-9.-]/g, "")}
-                        onChange={(event) =>
-                          handleFieldChange(index, event.target.value)
-                        }
-                      />
-                    </div>
-                  </label>
-                );
-              }
-
-              return (
-                <label key={`${field.label}-${index}`} className="block">
-                  <span className="text-sm font-medium text-[#C7D2FE]">
-                    {displayFieldLabel(field.label)}
-                  </span>
-                  <input
-                    type={inputType}
-                    className="mt-1 block w-full rounded-xl border-transparent bg-[#1F2937] px-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
-                    value={field.value}
-                    onChange={(event) =>
-                      handleFieldChange(index, event.target.value)
-                    }
-                  />
-                </label>
-              );
-            })}
-          </div>
+        {fields.length === 0 ? (
+          <p className="text-sm text-gray-400">
+            {t("documentDetails.messages.noFields")}
+          </p>
         ) : (
           <div className="space-y-4">
-            <label className="block">
-              <span className="text-sm font-medium text-[#C7D2FE]">
-                {displayFieldLabel("Date")}
-              </span>
-              <input
-                type="date"
-                name="date"
-                className="mt-1 block w-full rounded-xl border-transparent bg-[#1F2937] px-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
-                value={defaultForm.date}
-                onChange={handleDefaultChange}
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-[#C7D2FE]">
-                {displayFieldLabel("Amount")}
-              </span>
-              <div className="relative mt-1">
-                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-[#96c5a9]">
-                  $
+            {fields.map((field, index) => (
+              <label key={`${field.label}-${index}`} className="block">
+                <span className="text-sm font-medium text-[#C7D2FE]">
+                  {field.label}
                 </span>
                 <input
                   type="text"
-                  name="amount"
-                  className="block w-full rounded-xl border-transparent bg-[#1F2937] pl-8 pr-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
-                  value={defaultForm.amount}
-                  onChange={handleDefaultChange}
+                  className="mt-1 block w-full rounded-xl border-transparent bg-[#1F2937] px-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
+                  value={field.value}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    handleFieldChange(index, event.target.value)
+                  }
                 />
-              </div>
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-[#C7D2FE]">
-                {displayFieldLabel("Vendor")}
-              </span>
-              <input
-                type="text"
-                name="vendor"
-                className="mt-1 block w-full rounded-xl border-transparent bg-[#1F2937] px-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
-                placeholder={t("documentDetails.placeholders.vendorExample")}
-                value={defaultForm.vendor}
-                onChange={handleDefaultChange}
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-medium text-[#C7D2FE]">
-                {displayFieldLabel("Category")}
-              </span>
-              <select
-                name="category"
-                className="mt-1 block w-full appearance-none rounded-xl border-transparent bg-[#1F2937] px-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
-                value={defaultForm.category}
-                onChange={handleDefaultChange}
-              >
-                {categoryOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+              </label>
+            ))}
           </div>
         )}
 

@@ -13,6 +13,134 @@ import { generateCsvFromFields, type OcrField } from "../utils/ocr";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
 
+type FieldSource =
+  | Array<{ label?: unknown; value?: unknown }>
+  | Record<string, unknown>
+  | string
+  | null
+  | undefined;
+
+const coerceLabel = (value: unknown): string => {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  if (value != null) {
+    return String(value).trim();
+  }
+  return "";
+};
+
+const coerceValue = (value: unknown): string => {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value != null) {
+    return String(value);
+  }
+  return "";
+};
+
+const normalizeFieldSource = (source: FieldSource): OcrField[] => {
+  if (!source) {
+    return [];
+  }
+
+  if (typeof source === "string") {
+    try {
+      const parsed = JSON.parse(source) as FieldSource;
+      return normalizeFieldSource(parsed);
+    } catch {
+      return [];
+    }
+  }
+
+  if (Array.isArray(source)) {
+    return source
+      .map((item) => {
+        if (!item) {
+          return null;
+        }
+        const label = coerceLabel(item.label);
+        if (!label) {
+          return null;
+        }
+        return { label, value: coerceValue(item.value) };
+      })
+      .filter((item): item is OcrField => item !== null);
+  }
+
+  return Object.entries(source)
+    .map(([label, value]) => {
+      const normalizedLabel = coerceLabel(label);
+      if (!normalizedLabel) {
+        return null;
+      }
+      return {
+        label: normalizedLabel,
+        value: coerceValue(value),
+      };
+    })
+    .filter((item): item is OcrField => item !== null);
+};
+
+const normalizePayload = (
+  value: unknown
+): Record<string, unknown> | null => {
+  if (!value) {
+    return null;
+  }
+  if (Array.isArray(value)) {
+    const candidate = value.find(
+      (item): item is Record<string, unknown> =>
+        !!item && typeof item === "object" && !Array.isArray(item)
+    );
+    return candidate ?? null;
+  }
+  if (typeof value === "object") {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return normalizePayload(parsed);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+const extractFieldsForExport = (payload: Record<string, unknown>): OcrField[] => {
+  const sources: FieldSource[] = [
+    payload.result as FieldSource,
+    payload.fields as FieldSource,
+    payload.display_fields as FieldSource,
+    payload.data as FieldSource,
+    payload.raw as FieldSource,
+  ];
+
+  for (const source of sources) {
+    const normalized = normalizeFieldSource(source);
+    if (normalized.length > 0) {
+      return normalized;
+    }
+  }
+
+  const fallback: Record<string, unknown> = {};
+  Object.entries(payload).forEach(([key, value]) => {
+    if (
+      ["documentClass", "document_class", "document_type", "type", "raw"].includes(
+        key
+      )
+    ) {
+      return;
+    }
+    fallback[key] = value;
+  });
+
+  return normalizeFieldSource(fallback);
+};
+
 const DataExportOptions = () => {
   useAuthRedirect({ redirectUnauthenticatedTo: "/login" });
   const { t } = useTranslation();
@@ -37,11 +165,14 @@ const DataExportOptions = () => {
         window.localStorage.getItem("ocrResultData") ||
         window.sessionStorage.getItem("ocrResultData");
       if (raw) {
-        const parsed = JSON.parse(raw) as {
-          display_fields?: OcrField[] | unknown;
-        };
-        if (Array.isArray(parsed?.display_fields)) {
-          const generated = generateCsvFromFields(parsed.display_fields);
+        const parsed = JSON.parse(raw) as unknown;
+        const normalizedPayload = normalizePayload(parsed);
+        if (!normalizedPayload) {
+          return;
+        }
+        const normalized = extractFieldsForExport(normalizedPayload);
+        if (normalized.length > 0) {
+          const generated = generateCsvFromFields(normalized);
           setCsvContent(generated);
         }
       }

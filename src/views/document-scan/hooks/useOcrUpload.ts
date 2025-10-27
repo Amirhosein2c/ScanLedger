@@ -1,3 +1,5 @@
+"use client";
+
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 
@@ -15,6 +17,16 @@ type SubmitParams = {
   fileName: string;
 };
 
+type SimplifiedPayload = {
+  documentClass: string;
+  result: Record<string, string>;
+};
+
+const emptyPayload: SimplifiedPayload = {
+  documentClass: "",
+  result: {},
+};
+
 const dataUrlToBlob = (dataUrl: string): Blob => {
   const [meta, base64] = dataUrl.split(",");
   const mimeMatch = /data:(.*?);base64/.exec(meta);
@@ -29,10 +41,130 @@ const dataUrlToBlob = (dataUrl: string): Blob => {
   return new Blob([buffer], { type: mime });
 };
 
-export const useOcrUpload = ({
-  t,
-  onError,
-}: UseOcrUploadOptions) => {
+const toRecord = (source: unknown): Record<string, string> => {
+  if (!source) {
+    return {};
+  }
+
+  if (typeof source === "string") {
+    try {
+      const parsed = JSON.parse(source);
+      return toRecord(parsed);
+    } catch {
+      return {};
+    }
+  }
+
+  if (Array.isArray(source)) {
+    return source.reduce<Record<string, string>>((acc, item) => {
+      if (!item || typeof item !== "object") {
+        return acc;
+      }
+      const entry = item as Record<string, unknown>;
+      const labelRaw =
+        entry.label ??
+        entry.name ??
+        entry.key ??
+        entry.field ??
+        null;
+      const label =
+        typeof labelRaw === "string"
+          ? labelRaw.trim()
+          : labelRaw != null
+          ? String(labelRaw).trim()
+          : "";
+      if (!label) {
+        return acc;
+      }
+      const valueSource =
+        entry.value ?? entry.text ?? entry.raw ?? entry.content ?? "";
+      acc[label] =
+        typeof valueSource === "string"
+          ? valueSource
+          : valueSource != null
+          ? String(valueSource)
+          : "";
+      return acc;
+    }, {});
+  }
+
+  if (typeof source === "object") {
+    return Object.entries(source as Record<string, unknown>).reduce<
+      Record<string, string>
+    >((acc, [label, value]) => {
+      const normalizedLabel =
+        typeof label === "string" ? label.trim() : String(label).trim();
+      if (!normalizedLabel) {
+        return acc;
+      }
+      acc[normalizedLabel] = value != null ? String(value) : "";
+      return acc;
+    }, {});
+  }
+
+  return {};
+};
+
+const simplifyOcrResponse = (response: unknown): SimplifiedPayload => {
+  const normalize = (input: unknown): Record<string, unknown> | null => {
+    if (!input) {
+      return null;
+    }
+    if (typeof input === "string") {
+      try {
+        const parsed = JSON.parse(input);
+        return normalize(parsed);
+      } catch {
+        return null;
+      }
+    }
+    if (Array.isArray(input)) {
+      const candidate = input.find(
+        (item): item is Record<string, unknown> =>
+          !!item && typeof item === "object"
+      );
+      return candidate ? candidate : null;
+    }
+    if (typeof input === "object") {
+      return input as Record<string, unknown>;
+    }
+    return null;
+  };
+
+  const record = normalize(response);
+  if (!record) {
+    return emptyPayload;
+  }
+
+  const documentClassRaw =
+    record.documentClass ??
+    record.document_class ??
+    record.type ??
+    record.document_type ??
+    "";
+
+  const resultSource =
+    record.result ??
+    record.fields ??
+    record.display_fields ??
+    record.data ??
+    record.raw ??
+    {};
+
+  const documentClass =
+    typeof documentClassRaw === "string"
+      ? documentClassRaw.trim()
+      : documentClassRaw != null
+      ? String(documentClassRaw).trim()
+      : "";
+
+  return {
+    documentClass,
+    result: toRecord(resultSource),
+  };
+};
+
+export const useOcrUpload = ({ t, onError }: UseOcrUploadOptions) => {
   const router = useRouter();
   const ocrMutation = useApiMutation<string, FormData>({
     path: "/multi-agent-ocr",
@@ -53,22 +185,15 @@ export const useOcrUpload = ({
 
         const textBody = await ocrMutation.mutateAsync(formData);
 
-        let parsedResult: unknown = null;
+        let parsed: unknown = null;
         try {
-          parsedResult =
-            typeof textBody === "string" ? JSON.parse(textBody) : textBody;
+          parsed = typeof textBody === "string" ? JSON.parse(textBody) : textBody;
         } catch (parseError) {
-          console.warn(
-            "Failed to parse OCR response as JSON, storing raw text",
-            parseError
-          );
+          console.warn("Failed to parse OCR response", parseError);
         }
 
-        const serialized = parsedResult
-          ? JSON.stringify(parsedResult)
-          : String(textBody ?? "");
-
-        persistOcrResult(serialized);
+        const simplified = simplifyOcrResponse(parsed);
+        persistOcrResult(JSON.stringify(simplified));
         router.push("/documents/details");
       } catch (uploadError) {
         const normalizedError =
@@ -108,4 +233,3 @@ export const useOcrUpload = ({
     processImageDataUrl,
   };
 };
-
