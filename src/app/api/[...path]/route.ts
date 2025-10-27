@@ -4,8 +4,6 @@ import { _GD } from "../../../utils/server";
 export const dynamic = "force-dynamic";
 
 const handleRequest = async (request: NextRequest) => {
-  console.log("before GD");
-
   return _GD(request);
 };
 
