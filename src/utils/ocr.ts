@@ -1,4 +1,4 @@
-import { translate } from '../lib/i18n';
+import { translate } from "../lib/i18n";
 
 export interface OcrField {
   label: string;
@@ -16,17 +16,24 @@ export interface OcrSummary {
 }
 
 const sanitizeField = (label: unknown, value: unknown): OcrField => ({
-  label: String(label ?? '').trim(),
-  value: value != null ? String(value).trim() : ''
+  label: String(label ?? "").trim(),
+  value: value != null ? String(value).trim() : "",
 });
 
-const pushObjectEntries = (fields: OcrField[], obj: Record<string, unknown> | null | undefined): void => {
+const pushObjectEntries = (
+  fields: OcrField[],
+  obj: Record<string, unknown> | null | undefined
+): void => {
   if (!obj) {
     return;
   }
 
   Object.entries(obj).forEach(([key, value]) => {
-    if (['display_fields', 'fields', 'csv_content', 'timestamp', 'raw'].includes(key)) {
+    if (
+      ["display_fields", "fields", "csv_content", "timestamp", "raw"].includes(
+        key
+      )
+    ) {
       return;
     }
     const sanitized = sanitizeField(key, value);
@@ -42,14 +49,17 @@ const ingestArray = (fields: OcrField[], arr: unknown[]): void => {
       return;
     }
     if (Array.isArray((item as { display_fields?: unknown }).display_fields)) {
-      ingestArray(fields, ((item as { display_fields: unknown[] }).display_fields) ?? []);
+      ingestArray(
+        fields,
+        (item as { display_fields: unknown[] }).display_fields ?? []
+      );
       return;
     }
     if (Array.isArray((item as { fields?: unknown }).fields)) {
-      ingestArray(fields, ((item as { fields: unknown[] }).fields) ?? []);
+      ingestArray(fields, (item as { fields: unknown[] }).fields ?? []);
       return;
     }
-    if (typeof item === 'object' && !Array.isArray(item)) {
+    if (typeof item === "object" && !Array.isArray(item)) {
       const typedItem = item as Record<string, unknown> & {
         label?: unknown;
         name?: unknown;
@@ -61,7 +71,10 @@ const ingestArray = (fields: OcrField[], arr: unknown[]): void => {
 
       if (typedItem.label || typedItem.name || typedItem.key) {
         const label = typedItem.label ?? typedItem.name ?? typedItem.key;
-        const value = 'value' in typedItem ? typedItem.value : typedItem.data ?? typedItem.text;
+        const value =
+          "value" in typedItem
+            ? typedItem.value
+            : typedItem.data ?? typedItem.text;
         const sanitized = sanitizeField(label, value);
         if (sanitized.label) {
           fields.push(sanitized);
@@ -84,7 +97,10 @@ export const extractOcrFields = (data: unknown): OcrField[] => {
       return fields;
     }
 
-    const recordData = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : null;
+    const recordData =
+      typeof data === "object" && data !== null
+        ? (data as Record<string, unknown>)
+        : null;
 
     if (recordData?.display_fields) {
       const displayFields = Array.isArray(recordData.display_fields)
@@ -93,22 +109,30 @@ export const extractOcrFields = (data: unknown): OcrField[] => {
       ingestArray(fields, displayFields);
     }
     if (recordData?.fields) {
-      const fieldsArray = Array.isArray(recordData.fields) ? recordData.fields : [recordData.fields];
+      const fieldsArray = Array.isArray(recordData.fields)
+        ? recordData.fields
+        : [recordData.fields];
       ingestArray(fields, fieldsArray);
     }
     if (recordData?.raw) {
-      const rawArray = Array.isArray(recordData.raw) ? recordData.raw : [recordData.raw];
+      const rawArray = Array.isArray(recordData.raw)
+        ? recordData.raw
+        : [recordData.raw];
       ingestArray(fields, rawArray);
     }
     if (recordData?.data) {
-      const dataArray = Array.isArray(recordData.data) ? recordData.data : [recordData.data];
+      const dataArray = Array.isArray(recordData.data)
+        ? recordData.data
+        : [recordData.data];
       ingestArray(fields, dataArray);
     }
     if (recordData?.items && Array.isArray(recordData.items)) {
       const mapped = recordData.items.map((item) => {
-        if (typeof item === 'object' && item !== null) {
+        if (typeof item === "object" && item !== null) {
           const recordItem = item as Record<string, unknown>;
-          return (recordItem.json as Record<string, unknown> | undefined) ?? item;
+          return (
+            (recordItem.json as Record<string, unknown> | undefined) ?? item
+          );
         }
         return item;
       });
@@ -118,7 +142,7 @@ export const extractOcrFields = (data: unknown): OcrField[] => {
       pushObjectEntries(fields, recordData);
     }
   } catch (error) {
-    console.warn('Failed to extract OCR fields', error);
+    console.warn("Failed to extract OCR fields", error);
   }
 
   return fields;
@@ -126,30 +150,33 @@ export const extractOcrFields = (data: unknown): OcrField[] => {
 
 export const generateCsvFromFields = (fields: OcrField[]): string => {
   if (!Array.isArray(fields) || fields.length === 0) {
-    return '';
+    return "";
   }
 
   const header = [
-    translate('ocr.csv.headers.field'),
-    translate('ocr.csv.headers.value')
+    translate("ocr.csv.headers.field"),
+    translate("ocr.csv.headers.value"),
   ];
-  const lines = [header.join(',')];
+  const lines = [header.join(",")];
   fields.forEach((field) => {
     const row = [
-      `"${(field.label || '').replace(/"/g, '""')}"`,
-      `"${(field.value || '').replace(/"/g, '""')}"`
+      `"${(field.label || "").replace(/"/g, '""')}"`,
+      `"${(field.value || "").replace(/"/g, '""')}"`,
     ];
-    lines.push(row.join(','));
+    lines.push(row.join(","));
   });
-  return lines.join('\n');
+  return lines.join("\n");
 };
 
-export const inferSummaryFromFields = (fields: OcrField[], imageDataUrl?: string): OcrSummary => {
+export const inferSummaryFromFields = (
+  fields: OcrField[],
+  imageDataUrl?: string
+): OcrSummary => {
   const lookup = (keywords: string | string[]): string => {
     const keyList = Array.isArray(keywords) ? keywords : [keywords];
     const lowerCaseFields = fields.map((field) => ({
       ...field,
-      label: field.label.toLowerCase()
+      label: field.label.toLowerCase(),
     }));
 
     for (const keyword of keyList) {
@@ -159,20 +186,22 @@ export const inferSummaryFromFields = (fields: OcrField[], imageDataUrl?: string
         return hit.value;
       }
     }
-    return '';
+    return "";
   };
 
-  const amount = lookup(['amount', 'total', 'grand']);
-  const vendor = lookup(['vendor', 'issuer', 'merchant', 'company']);
-  const number = lookup(['number', 'invoice', 'receipt', '#']);
-  const dateValue = lookup(['date', 'due', 'issued']);
+  const amount = lookup(["amount", "total", "grand"]);
+  const vendor = lookup(["vendor", "issuer", "merchant", "company"]);
+  const number = lookup(["number", "invoice", "receipt", "#"]);
+  const dateValue = lookup(["date", "due", "issued"]);
 
   const docTypeGuess = (): string => {
-    const tokens = `${fields.map((f) => f.label).join(' ')} ${number}`.toLowerCase();
-    if (tokens.includes('invoice')) return 'Invoice';
-    if (tokens.includes('receipt')) return 'Receipt';
-    if (tokens.includes('statement')) return 'Statement';
-    return 'Document';
+    const tokens = `${fields
+      .map((f) => f.label)
+      .join(" ")} ${number}`.toLowerCase();
+    if (tokens.includes("invoice")) return "Invoice";
+    if (tokens.includes("receipt")) return "Receipt";
+    if (tokens.includes("statement")) return "Statement";
+    return "Document";
   };
 
   return {
@@ -183,11 +212,11 @@ export const inferSummaryFromFields = (fields: OcrField[], imageDataUrl?: string
     date:
       dateValue ||
       new Date().toLocaleDateString(undefined, {
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric'
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
       }),
-    image: imageDataUrl || '',
-    ts: new Date().toISOString()
+    image: imageDataUrl || "",
+    ts: new Date().toISOString(),
   };
 };

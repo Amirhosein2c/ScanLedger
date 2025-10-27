@@ -48,7 +48,11 @@ export const setPreferredCameraDeviceId = (deviceId: string) => {
   if (!hasWindow()) {
     return;
   }
-  writeStorageValue(window.localStorage, PREFERRED_CAMERA_STORAGE_KEY, deviceId);
+  writeStorageValue(
+    window.localStorage,
+    PREFERRED_CAMERA_STORAGE_KEY,
+    deviceId
+  );
 };
 
 export const persistImageDataUrl = (dataUrl: string) => {
@@ -78,7 +82,7 @@ export const clearPersistedImageData = () => {
   writeStorageValue(window.localStorage, IMAGE_DATA_STORAGE_KEY, null);
 };
 
-export const persistOcrResult = (payload: string) => {
+export const persistOcrResult = (payload: string | null) => {
   if (!hasWindow()) {
     return;
   }
@@ -86,3 +90,21 @@ export const persistOcrResult = (payload: string) => {
   writeStorageValue(window.localStorage, OCR_RESULT_STORAGE_KEY, payload);
 };
 
+export const getPersistedOcrResult = () => {
+  if (!hasWindow()) {
+    return null;
+  }
+  return (
+    readStorageValue(window.sessionStorage, OCR_RESULT_STORAGE_KEY) ??
+    readStorageValue(window.localStorage, OCR_RESULT_STORAGE_KEY) ??
+    null
+  );
+};
+
+export const clearPersistedOcrResult = () => {
+  if (!hasWindow()) {
+    return;
+  }
+  writeStorageValue(window.sessionStorage, OCR_RESULT_STORAGE_KEY, null);
+  writeStorageValue(window.localStorage, OCR_RESULT_STORAGE_KEY, null);
+};
