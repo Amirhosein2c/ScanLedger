@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 import AppLayout from "../components/layout/AppLayout";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
@@ -319,10 +318,13 @@ const DocumentDetailsEdit = () => {
     >
       {imageSrc && (
         <div className="overflow-hidden rounded-2xl border border-white/10">
-          <img
+          <Image
             src={imageSrc}
             alt={t("documentDetails.previewAlt")}
+            width={512}
+            height={256}
             className="h-64 w-full object-contain"
+            unoptimized
           />
         </div>
       )}
