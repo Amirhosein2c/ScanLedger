@@ -18,13 +18,25 @@ type SubmitParams = {
 };
 
 type SimplifiedPayload = {
+  docId: string;
   documentClass: string;
   result: Record<string, string>;
 };
 
 const emptyPayload: SimplifiedPayload = {
+  docId: "",
   documentClass: "",
   result: {},
+};
+
+const generateDocId = () => {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+  return `doc-${Date.now()}`;
 };
 
 const dataUrlToBlob = (dataUrl: string): Blob => {
@@ -62,11 +74,7 @@ const toRecord = (source: unknown): Record<string, string> => {
       }
       const entry = item as Record<string, unknown>;
       const labelRaw =
-        entry.label ??
-        entry.name ??
-        entry.key ??
-        entry.field ??
-        null;
+        entry.label ?? entry.name ?? entry.key ?? entry.field ?? null;
       const label =
         typeof labelRaw === "string"
           ? labelRaw.trim()
@@ -157,8 +165,21 @@ const simplifyOcrResponse = (response: unknown): SimplifiedPayload => {
       : documentClassRaw != null
       ? String(documentClassRaw).trim()
       : "";
+  const docIdRaw =
+    record.docId ??
+    record.doc_id ??
+    record.documentId ??
+    record.document_id ??
+    "";
+  const docId =
+    typeof docIdRaw === "string"
+      ? docIdRaw.trim()
+      : docIdRaw != null
+      ? String(docIdRaw).trim()
+      : "";
 
   return {
+    docId: docId || generateDocId(),
     documentClass,
     result: toRecord(resultSource),
   };
@@ -187,7 +208,8 @@ export const useOcrUpload = ({ t, onError }: UseOcrUploadOptions) => {
 
         let parsed: unknown = null;
         try {
-          parsed = typeof textBody === "string" ? JSON.parse(textBody) : textBody;
+          parsed =
+            typeof textBody === "string" ? JSON.parse(textBody) : textBody;
         } catch (parseError) {
           console.warn("Failed to parse OCR response", parseError);
         }

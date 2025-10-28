@@ -110,13 +110,23 @@ const normalizePayload = (
   return null;
 };
 
-const extractFieldsForExport = (payload: Record<string, unknown>): OcrField[] => {
+const extractFieldsForExport = (
+  payload: Record<string, unknown>
+): OcrField[] => {
+  const embedded =
+    "payload" in payload ? normalizePayload(payload.payload) : null;
+  const payloadObject =
+    typeof payload.payload === "object" && payload.payload !== null
+      ? (payload.payload as Record<string, unknown>)
+      : undefined;
+  const workingPayload = embedded ?? payloadObject ?? payload;
+
   const sources: FieldSource[] = [
-    payload.result as FieldSource,
-    payload.fields as FieldSource,
-    payload.display_fields as FieldSource,
-    payload.data as FieldSource,
-    payload.raw as FieldSource,
+    workingPayload.result as FieldSource,
+    workingPayload.fields as FieldSource,
+    workingPayload.display_fields as FieldSource,
+    workingPayload.data as FieldSource,
+    workingPayload.raw as FieldSource,
   ];
 
   for (const source of sources) {
@@ -127,9 +137,17 @@ const extractFieldsForExport = (payload: Record<string, unknown>): OcrField[] =>
   }
 
   const fallback: Record<string, unknown> = {};
-  Object.entries(payload).forEach(([key, value]) => {
+  Object.entries(workingPayload).forEach(([key, value]) => {
     if (
-      ["documentClass", "document_class", "document_type", "type", "raw"].includes(
+      [
+        "documentClass",
+        "document_class",
+        "document_type",
+        "type",
+        "raw",
+        "docId",
+        "doc_id",
+      ].includes(
         key
       )
     ) {

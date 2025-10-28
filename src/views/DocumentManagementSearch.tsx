@@ -1,7 +1,8 @@
 "use client";
 
-import type { ChangeEvent, CSSProperties, FC } from "react";
+import type { ChangeEvent, CSSProperties, FC, KeyboardEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import AppLayout from "../components/layout/AppLayout";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
@@ -11,6 +12,7 @@ import { useTranslation } from "@/src/lib/i18n";
 
 interface DocumentSummary {
   id?: string;
+  docId?: string;
   type?: string;
   number?: string;
   vendor?: string;
@@ -18,20 +20,37 @@ interface DocumentSummary {
   date?: string;
   status?: string;
   image?: string;
+  payload?: {
+    documentClass: string;
+    result: Record<string, string>;
+  };
+  ts?: string;
 }
 
 interface DocumentRowProps {
   document: DocumentSummary;
+  onSelect: () => void;
 }
 
-const DocumentRow: FC<DocumentRowProps> = ({ document }) => {
+const DocumentRow: FC<DocumentRowProps> = ({ document, onSelect }) => {
   const { t } = useTranslation();
   const thumbnailStyle: CSSProperties = document.image
     ? { backgroundImage: `url('${document.image}')` }
     : { backgroundColor: "#1F2937" };
 
   return (
-    <Card className="bg-[#1F2937]">
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
+      className="bg-[#1F2937] cursor-pointer transition hover:bg-[#273248] focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+    >
       <CardContent className="flex items-center gap-4 p-3">
         <div
           className="size-14 rounded-lg bg-cover bg-center bg-no-repeat"
@@ -64,6 +83,7 @@ const DocumentRow: FC<DocumentRowProps> = ({ document }) => {
 const DocumentManagementSearch = () => {
   useAuthRedirect({ redirectUnauthenticatedTo: "/login" });
   const { t } = useTranslation();
+  const router = useRouter();
   const [query, setQuery] = useState<string>("");
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
 
@@ -80,7 +100,13 @@ const DocumentManagementSearch = () => {
       }
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        setDocuments(parsed as DocumentSummary[]);
+        const normalized = (parsed as DocumentSummary[]).map(
+          (doc, index) => ({
+            ...doc,
+            docId: doc.docId || doc.id || doc.ts || `doc-${index}`,
+          })
+        );
+        setDocuments(normalized);
       } else {
         setDocuments([]);
       }
@@ -187,8 +213,15 @@ const DocumentManagementSearch = () => {
         )}
         {filteredDocuments.map((document, index) => (
           <DocumentRow
-            key={`${document.id || document.number || index}`}
+            key={`${document.docId || document.id || document.number || index}`}
             document={document}
+            onSelect={() => {
+              const identifier =
+                document.docId || document.id || document.ts || String(index);
+              router.push(
+                `/documents/details?id=${encodeURIComponent(identifier)}`
+              );
+            }}
           />
         ))}
       </div>
