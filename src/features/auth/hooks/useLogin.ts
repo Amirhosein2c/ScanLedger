@@ -59,6 +59,7 @@ export const useLogin = <TResponse = unknown>({
   onSuccess,
   onError,
 }: UseLoginArgs<TResponse> = {}): UseLoginResult<TResponse> => {
+  // loginMutation orchestrates the network call and exposes react-query state.
   const loginMutation = useApiMutation<
     TResponse,
     { email: string; password: string }
@@ -68,12 +69,14 @@ export const useLogin = <TResponse = unknown>({
 
   const login = useCallback(
     async ({ email, password }: LoginCredentials) => {
+      // trimmedEmail removes accidental whitespace while keeping the original value intact.
       const trimmedEmail = email?.trim();
       if (!trimmedEmail) {
         throw new Error(translate("auth.login.errors.emailRequired"));
       }
 
       try {
+        // response contains whatever the API returns after a successful login.
         const response = await loginMutation.mutateAsync({
           email: trimmedEmail,
           password,
@@ -82,8 +85,11 @@ export const useLogin = <TResponse = unknown>({
         persistLoginPayload(response);
         persistUserId(extractUserId(response));
 
+        // storedProfile reflects the last persisted profile values (if any).
         const storedProfile = getStoredProfile();
+        // extractedProfile is derived from the raw response payload.
         const extractedProfile = extractUserProfile(response);
+        // profile merges old and new data to ensure we keep the best available values.
         const profile = mergeProfile({
           extracted: extractedProfile,
           fallbackEmail: trimmedEmail,

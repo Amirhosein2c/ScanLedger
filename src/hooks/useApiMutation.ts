@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { apiRequest } from "../utils/api";
 
+// configFactory lets each caller describe how to build request overrides for its payload.
 type ConfigFactory<TPayload> =
   | ((payload: TPayload) => AxiosRequestConfig)
   | AxiosRequestConfig
@@ -59,22 +60,28 @@ export const useApiMutation = <
     throw new Error("useApiMutation requires either a path or a config factory");
   }
 
+  // mutationFn encapsulates the request-building logic so every hook reuses the same flow.
   const mutationFn = useCallback(
     async (payload: TPayload) => {
+      // overrides represent the optional Axios configuration supplied by the hook author.
       const overrides =
         typeof config === "function" ? config(payload) : config;
+      // normalizedPath guarantees relative paths become absolute when forwarding to Axios.
       const normalizedPath = path
         ? path.startsWith("/")
           ? path
           : `/${path}`
         : undefined;
+      // requestUrl is the final endpoint we pass to Axios (overrides.url wins over path).
       const requestUrl = overrides?.url ?? normalizedPath;
 
       if (!requestUrl) {
         throw new Error("useApiMutation requires a request url");
       }
 
+      // methodUpper is cached to avoid multiple string allocations in the ternary below.
       const methodUpper = method.toUpperCase();
+      // requestConfig is the complete Axios config ultimately handed to apiRequest.
       const requestConfig: AxiosRequestConfig = {
         url: requestUrl,
         method,
