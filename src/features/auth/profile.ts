@@ -47,6 +47,20 @@ export const getStoredProfile = (): UserProfile => {
   }
 };
 
+export const getStoredUserId = (): string | null => {
+  const storage = getSafeStorage();
+  if (!storage) {
+    return null;
+  }
+
+  try {
+    return storage.getItem('user_id');
+  } catch (error) {
+    console.warn('Failed to read user id from storage', error);
+    return null;
+  }
+};
+
 export const extractUserProfile = (payload: unknown): UserProfile => {
   const result = emptyProfile();
 
@@ -109,6 +123,57 @@ export const extractUserProfile = (payload: unknown): UserProfile => {
   return result;
 };
 
+const extractUserIdFromRecord = (record: Record<string, unknown>): string | null => {
+  if (Object.prototype.hasOwnProperty.call(record, 'User_ID')) {
+    const value = record['User_ID'];
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (value != null) {
+      return String(value);
+    }
+  }
+
+  for (const value of Object.values(record)) {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (isRecord(item)) {
+          const nested = extractUserIdFromRecord(item);
+          if (nested) {
+            return nested;
+          }
+        }
+      }
+      continue;
+    }
+
+    if (isRecord(value)) {
+      const nested = extractUserIdFromRecord(value);
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+
+  return null;
+};
+
+export const extractUserId = (payload: unknown): string | null => {
+  if (!isRecord(payload)) {
+    if (Array.isArray(payload)) {
+      for (const item of payload) {
+        const extracted = extractUserId(item);
+        if (extracted) {
+          return extracted;
+        }
+      }
+    }
+    return null;
+  }
+
+  return extractUserIdFromRecord(payload);
+};
+
 export const mergeProfile = ({ extracted, fallbackEmail, stored }: MergeProfileArgs): UserProfile => {
   const normalizedFallbackEmail = fallbackEmail ? fallbackEmail.toLowerCase() : null;
   const email =
@@ -139,6 +204,23 @@ export const persistUserProfile = (profile: UserProfile | null | undefined): voi
     }
   } catch (error) {
     console.warn('Failed to persist profile to storage', error);
+  }
+};
+
+export const persistUserId = (userId: string | null | undefined): void => {
+  const storage = getSafeStorage();
+  if (!storage) {
+    return;
+  }
+
+  try {
+    if (userId) {
+      storage.setItem('user_id', userId);
+    } else {
+      storage.removeItem('user_id');
+    }
+  } catch (error) {
+    console.warn('Failed to persist user id to storage', error);
   }
 };
 

@@ -1,10 +1,12 @@
 import { useCallback } from "react";
 import { useApiMutation } from "../../../hooks/useApiMutation";
 import {
+  extractUserId,
   extractUserProfile,
   getStoredProfile,
   mergeProfile,
   persistLoginPayload,
+  persistUserId,
   persistUserProfile,
   type UserProfile,
 } from "../profile";
@@ -62,6 +64,7 @@ export const useLogin = <TResponse = unknown>({
         });
 
         persistLoginPayload(response);
+        persistUserId(extractUserId(response));
 
         const storedProfile = getStoredProfile();
         const extractedProfile = extractUserProfile(response);

@@ -1,7 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  KeyboardEvent,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
 import AppLayout from "../components/layout/AppLayout";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -10,6 +16,7 @@ import { useTranslation } from "@/src/lib/i18n";
 
 interface DocumentSummary {
   id?: string;
+  docId?: string;
   type?: string;
   number?: string;
   vendor?: string;
@@ -17,13 +24,19 @@ interface DocumentSummary {
   date?: string;
   status?: string;
   image?: string;
+  payload?: {
+    documentClass: string;
+    result: Record<string, string>;
+  };
+  ts?: string;
 }
 
 interface RecentScanCardProps {
   document: DocumentSummary;
+  onSelect: () => void;
 }
 
-const RecentScanCard = ({ document }: RecentScanCardProps) => {
+const RecentScanCard = ({ document, onSelect }: RecentScanCardProps) => {
   const { t } = useTranslation();
   const thumbnailStyle = useMemo<CSSProperties>(() => {
     if (!document.image) {
@@ -35,7 +48,18 @@ const RecentScanCard = ({ document }: RecentScanCardProps) => {
   }, [document.image]);
 
   return (
-    <div className="flex items-center gap-4 rounded-2xl bg-[#1F2937] p-3">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
+      className="flex items-center gap-4 rounded-2xl bg-[#1F2937] p-3 cursor-pointer transition hover:bg-[#273248] focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+    >
       <div
         className="size-14 rounded-lg bg-cover bg-center bg-no-repeat"
         style={thumbnailStyle}
@@ -99,7 +123,13 @@ const DashboardOverview = () => {
       }
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        setRecentScans(parsed.slice(0, 5));
+        const normalized = (parsed as DocumentSummary[]).map(
+          (doc, index) => ({
+            ...doc,
+            docId: doc.docId || doc.id || doc.ts || `doc-${index}`,
+          })
+        );
+        setRecentScans(normalized.slice(0, 5));
       } else {
         setRecentScans([]);
       }
@@ -170,8 +200,15 @@ const DashboardOverview = () => {
           )}
           {recentScans.map((doc, index) => (
             <RecentScanCard
-              key={`${doc.id || doc.number || index}`}
+              key={`${doc.docId || doc.id || doc.number || index}`}
               document={doc}
+              onSelect={() => {
+                const identifier =
+                  doc.docId || doc.id || doc.ts || String(index);
+                router.push(
+                  `/documents/details?id=${encodeURIComponent(identifier)}`
+                );
+              }}
             />
           ))}
         </div>
