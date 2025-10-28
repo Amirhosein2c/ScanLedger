@@ -6,6 +6,7 @@ import axios, {
   type Method,
 } from "axios";
 import { API_TIMEOUT } from "../config";
+import { getStoredUserId } from "../features/auth/profile";
 import { translate } from "../lib/i18n";
 
 const isBrowser = typeof window !== "undefined";
@@ -31,12 +32,15 @@ const normalizeBaseUrl = (value: string | undefined | null): string => {
   return `/${withoutTrailing}`;
 };
 
-const PUBLIC_API_BASE_URL = normalizeBaseUrl(
-  process.env.NEXT_PUBLIC_API_BASE_URL
-);
+const PUBLIC_API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_PATH);
 const SERVER_API_BASE_URL = normalizeBaseUrl(
-  process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL
+  process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_PATH
 );
+// const PUBLIC_API_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL);
+// const SERVER_API_BASE_URL = normalizeBaseUrl(
+//   process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_BASE_URL
+// );
+
 const API_BASE_URL = isBrowser ? PUBLIC_API_BASE_URL : SERVER_API_BASE_URL;
 const REQUEST_TIMEOUT = Number.isFinite(API_TIMEOUT) ? API_TIMEOUT : 1200000;
 
@@ -119,6 +123,34 @@ export const apiRequest = async <T = unknown>(
 ): Promise<T> => {
   if (!config?.url) {
     throw new Error(translate("errors.requestConfigMissingUrl"));
+  }
+
+  const method = config.method?.toString().toUpperCase();
+  if (method === "POST") {
+    const storedUserId = getStoredUserId();
+    if (storedUserId) {
+      if (config.data instanceof FormData) {
+        if (!config.data.has("User_ID")) {
+          config.data.append("User_ID", storedUserId);
+        }
+      } else if (
+        config.data == null ||
+        (typeof config.data === "object" && !Array.isArray(config.data))
+      ) {
+        const existing =
+          typeof config.data === "object" && config.data != null
+            ? (config.data as Record<string, unknown>)
+            : {};
+        if (!Object.prototype.hasOwnProperty.call(existing, "User_ID")) {
+          config.data = {
+            ...existing,
+            User_ID: storedUserId,
+          };
+        } else {
+          config.data = existing;
+        }
+      }
+    }
   }
 
   const data = await apiClient.request<T>(config);

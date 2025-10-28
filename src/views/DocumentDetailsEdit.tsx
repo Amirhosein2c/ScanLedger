@@ -15,6 +15,7 @@ import {
   getPersistedOcrResult,
   persistOcrResult,
 } from "./document-scan/storage";
+import { useConfirmOcr } from "./document-scan/hooks/useConfirmOcr";
 
 type StoredDocumentPayload = {
   docId: string;
@@ -290,6 +291,17 @@ const DocumentDetailsEdit = () => {
   const [isExistingDocument, setIsExistingDocument] = useState<boolean>(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
+  const { saveOcr, discardOcr, isConfirming } = useConfirmOcr({
+    t,
+    onError: (errorMessage) => {
+      if (errorMessage) {
+        setMessage(errorMessage);
+        return;
+      }
+      setMessage(null);
+    },
+  });
+
   const savedDocumentId = searchParams.get("id");
 
   const navigateBack = () => {
@@ -382,7 +394,7 @@ const DocumentDetailsEdit = () => {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (fields.length === 0) {
       setMessage(t("documentDetails.messages.noFields"));
       return;
@@ -410,14 +422,28 @@ const DocumentDetailsEdit = () => {
       }))
     );
 
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("ocrCsvContent", csvContent);
-      window.sessionStorage.setItem("ocrCsvContent", csvContent);
+    if (
+      typeof window !== "undefined" &&
+      window.navigator.storage &&
+      window.navigator.storage.estimate
+    ) {
+      try {
+        const { quota, usage } = await window.navigator.storage.estimate();
+        if (quota && usage && usage / quota > 0.9) {
+          setMessage(t("documentDetails.messages.saveFailed"));
+          setTimeout(() => setMessage(null), 3000);
+          return;
+        }
+      } catch (estimateError) {
+        console.warn("Failed to estimate storage availability", estimateError);
+      }
+    }
 
-      const existingRecords = readSavedDocuments();
+    if (typeof window !== "undefined") {
+      let nextIndex = editingIndex;
+      let updatedRecords = readSavedDocuments();
       const documentId = normalizedPayload.docId;
       const timestamp = new Date().toISOString();
-      let nextIndex = editingIndex;
 
       const nextRecord: SavedDocumentRecord = {
         id: documentId,
@@ -431,32 +457,83 @@ const DocumentDetailsEdit = () => {
         payload: normalizedPayload,
       };
 
-      if (editingIndex != null && existingRecords[editingIndex]) {
-        const existing = existingRecords[editingIndex];
-        existingRecords[editingIndex] = {
+      if (editingIndex != null && updatedRecords[editingIndex]) {
+        const existing = updatedRecords[editingIndex];
+        updatedRecords[editingIndex] = {
           ...existing,
           ...nextRecord,
           ts: existing.ts ?? timestamp,
         };
       } else {
-        existingRecords.push(nextRecord);
-        nextIndex = existingRecords.length - 1;
+        updatedRecords.push(nextRecord);
+        nextIndex = updatedRecords.length - 1;
       }
 
-      window.localStorage.setItem(
-        "exportedDocuments",
-        JSON.stringify(existingRecords)
-      );
+      let recordsPersisted = false;
+      try {
+        window.localStorage.setItem("ocrCsvContent", csvContent);
+      } catch {
+        window.localStorage.removeItem("ocrCsvContent");
+      }
 
-      setIsExistingDocument(true);
-      setEditingIndex(nextIndex);
+      try {
+        window.sessionStorage.setItem("ocrCsvContent", csvContent);
+      } catch {
+        window.sessionStorage.removeItem("ocrCsvContent");
+      }
+
+      try {
+        window.localStorage.setItem(
+          "exportedDocuments",
+          JSON.stringify(updatedRecords)
+        );
+        recordsPersisted = true;
+      } catch (firstError) {
+        const isQuotaError =
+          firstError instanceof DOMException &&
+          (firstError.name === "QuotaExceededError" ||
+            firstError.code === 22 ||
+            firstError.code === 1014);
+
+        if (isQuotaError) {
+          try {
+            window.localStorage.removeItem("exportedDocuments");
+            window.localStorage.setItem(
+              "exportedDocuments",
+              JSON.stringify([nextRecord])
+            );
+            updatedRecords = [nextRecord];
+            nextIndex = 0;
+            recordsPersisted = true;
+          } catch {
+            window.localStorage.removeItem("exportedDocuments");
+          }
+        }
+      }
+
+      if (recordsPersisted) {
+        setIsExistingDocument(true);
+        setEditingIndex(nextIndex);
+      }
+    }
+
+    try {
+      await saveOcr();
+    } catch {
+      return;
     }
 
     setMessage(t("documentDetails.messages.saved"));
     setTimeout(() => setMessage(null), 2000);
   };
 
-  const handleDiscard = () => {
+  const handleDiscard = async () => {
+    try {
+      await discardOcr();
+    } catch {
+      return;
+    }
+
     if (isExistingDocument) {
       navigateBack();
       return;
@@ -465,8 +542,12 @@ const DocumentDetailsEdit = () => {
     clearPersistedImageData();
     clearPersistedOcrResult();
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem("ocrCsvContent");
-      window.sessionStorage.removeItem("ocrCsvContent");
+      try {
+        window.localStorage.removeItem("ocrCsvContent");
+        window.sessionStorage.removeItem("ocrCsvContent");
+      } catch (storageError) {
+        console.warn("Failed to clear OCR CSV content", storageError);
+      }
     }
     router.push("/documents/scan");
   };
@@ -582,14 +663,20 @@ const DocumentDetailsEdit = () => {
           <button
             type="button"
             className="flex-1 rounded-full bg-[#1F2937] py-3 text-center text-base font-bold text-white"
-            onClick={handleDiscard}
+            onClick={() => {
+              void handleDiscard();
+            }}
+            disabled={isConfirming}
           >
             {t("documentDetails.actions.discard")}
           </button>
           <button
             type="button"
             className="flex-1 rounded-full bg-[var(--primary-color)] py-3 text-center text-base font-bold text-[#111827]"
-            onClick={handleSave}
+            onClick={() => {
+              void handleSave();
+            }}
+            disabled={isConfirming}
           >
             {t("documentDetails.actions.save")}
           </button>
