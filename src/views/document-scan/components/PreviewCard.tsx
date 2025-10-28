@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+import Image from "next/image";
 
 type PreviewCardProps = {
   imagePreview: string | null;
@@ -15,11 +15,16 @@ export const PreviewCard = ({
 }: PreviewCardProps) => {
   if (imagePreview) {
     return (
-      <img
-        src={imagePreview}
-        alt={t("documentScan.previewAlt")}
-        className="h-full w-full object-contain"
-      />
+      <div className="relative h-full w-full">
+        <Image
+          src={imagePreview}
+          alt={t("documentScan.previewAlt")}
+          fill
+          className="object-contain"
+          unoptimized
+          sizes="(max-width: 640px) 100vw, 384px"
+        />
+      </div>
     );
   }
 
@@ -51,4 +56,3 @@ export const PreviewCard = ({
 
   return null;
 };
-

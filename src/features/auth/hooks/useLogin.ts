@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useApiMutation } from "../../../hooks/useApiMutation";
+import { LOGIN_MUTATION_MOCK_RESPONSE } from "../../../mocks/mutations";
 import {
   extractUserId,
   extractUserProfile,
@@ -65,6 +66,7 @@ export const useLogin = <TResponse = unknown>({
     { email: string; password: string }
   >({
     path: "/user_login",
+    mockResponse: LOGIN_MUTATION_MOCK_RESPONSE as TResponse,
   });
 
   const login = useCallback(

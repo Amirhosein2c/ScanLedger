@@ -6,6 +6,7 @@ import { useCallback } from "react";
 import { useApiMutation } from "../../../hooks/useApiMutation";
 import { persistOcrResult } from "../storage";
 import type { DocumentUploadSource } from "../types";
+import { OCR_UPLOAD_MUTATION_MOCK_RESPONSE } from "../../../mocks/mutations";
 
 // UseOcrUploadOptions describes the translation helper and optional error reporter.
 type UseOcrUploadOptions = {
@@ -232,6 +233,7 @@ export const useOcrUpload = ({ t, onError }: UseOcrUploadOptions) => {
     path: "/multi-agent-ocr",
     method: "POST",
     config: { responseType: "text" },
+    mockResponse: OCR_UPLOAD_MUTATION_MOCK_RESPONSE,
   });
 
   const submitDocumentForOcr = useCallback(

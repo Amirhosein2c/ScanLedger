@@ -23,6 +23,7 @@ interface UseApiMutationArgs<TResponse, TPayload, TContext>
   method?: Method;
   mutationKey?: MutationKey;
   config?: ConfigFactory<TPayload>;
+  mockResponse?: TResponse;
 }
 
 /**
@@ -53,6 +54,7 @@ export const useApiMutation = <
     method = "POST",
     mutationKey,
     config,
+    mockResponse,
     ...mutationOptions
   }: UseApiMutationArgs<TResponse, TPayload, TContext> = {}
 ): UseMutationResult<TResponse, Error, TPayload, TContext> => {
@@ -91,9 +93,19 @@ export const useApiMutation = <
         ...overrides,
       };
 
-      return apiRequest<TResponse>(requestConfig);
+      const response = await apiRequest<TResponse>(requestConfig);
+
+      const isEmptyResponse =
+        response == null ||
+        (typeof response === "string" && response.trim().length === 0);
+
+      if (isEmptyResponse && mockResponse !== undefined) {
+        return mockResponse;
+      }
+
+      return response;
     },
-    [config, method, path]
+    [config, method, mockResponse, path]
   );
 
   return useMutation({

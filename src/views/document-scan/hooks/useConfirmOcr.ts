@@ -3,6 +3,9 @@
 import { useCallback } from "react";
 
 import { useApiMutation } from "../../../hooks/useApiMutation";
+import { CONFIRM_OCR_MUTATION_MOCK_RESPONSE } from "../../../mocks/mutations";
+import { storage } from "@/src/features/auth/profile";
+import { OCR_RESULT_STORAGE_KEY } from "../storage";
 
 type ConfirmOcrAction = "accept" | "discard";
 
@@ -11,7 +14,16 @@ type UseConfirmOcrOptions = {
   onError?: (message: string | null) => void;
 };
 
-type ConfirmOcrPayload = { action: ConfirmOcrAction };
+type TOcrResult = {
+  docId: string;
+  documentClass: string;
+  result: { [key: string]: string };
+};
+
+type ConfirmOcrPayload = {
+  action: ConfirmOcrAction;
+  edited_result?: { [key: string]: string | null };
+};
 
 // normalizeMutationError makes sure downstream consumers always receive an Error instance.
 const normalizeMutationError = (value: unknown): Error => {
@@ -36,6 +48,7 @@ export const useConfirmOcr = ({ t, onError }: UseConfirmOcrOptions) => {
     path: "/multi-agent-ocr/confirm-ocr",
     method: "POST",
     config: { responseType: "text" },
+    mockResponse: CONFIRM_OCR_MUTATION_MOCK_RESPONSE,
   });
 
   const confirmOcr = useCallback(
@@ -46,7 +59,18 @@ export const useConfirmOcr = ({ t, onError }: UseConfirmOcrOptions) => {
 
       try {
         // result carries the raw API payload; the caller can react to it if needed.
-        return await confirmMutation.mutateAsync({ action });
+        if (storage) {
+          let _ocrresult: TOcrResult =
+            JSON.parse(storage.getItem(OCR_RESULT_STORAGE_KEY) || "") || {};
+          let edited_result: { [key: string]: string | null } | {} = {
+            ..._ocrresult["result"],
+          };
+          if (action === "accept") {
+            return await confirmMutation.mutateAsync({ action, edited_result });
+          } else {
+            return await confirmMutation.mutateAsync({ action });
+          }
+        }
       } catch (error) {
         const normalizedError = normalizeMutationError(error);
         console.error(normalizedError);
