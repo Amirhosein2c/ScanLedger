@@ -63,6 +63,8 @@ const UserProfileSettings = () => {
     window.localStorage.removeItem("user_email");
     window.localStorage.removeItem("auth_method");
     window.localStorage.removeItem("user_picture");
+    window.localStorage.removeItem("user_id");
+
     router.push("/login");
   };
 

@@ -23,6 +23,22 @@ type SimplifiedPayload = {
   result: Record<string, string>;
 };
 
+const buildUploadFormData = ({
+  file,
+  fileName,
+  source,
+}: {
+  file: Blob | File;
+  fileName: string;
+  source: DocumentUploadSource;
+}): FormData => {
+  const formData = new FormData();
+  formData.append("file", file, fileName);
+  formData.append("source", source);
+  formData.append("timestamp", new Date().toISOString());
+  return formData;
+};
+
 const emptyPayload: SimplifiedPayload = {
   docId: "",
   documentClass: "",
@@ -185,6 +201,26 @@ const simplifyOcrResponse = (response: unknown): SimplifiedPayload => {
   };
 };
 
+const parseMutationResponse = (raw: unknown): SimplifiedPayload => {
+  if (typeof raw === "string") {
+    try {
+      return simplifyOcrResponse(JSON.parse(raw));
+    } catch (parseError) {
+      console.warn("Failed to parse OCR response", parseError);
+      return emptyPayload;
+    }
+  }
+
+  return simplifyOcrResponse(raw);
+};
+
+/**
+ * Exposes the OCR upload workflow as a cohesive hook so view components
+ * only care about their UI logic. The hook returns:
+ *   - `submitDocumentForOcr`: use when you already have a `File` or `Blob`.
+ *   - `processImageDataUrl`: convenience helper for base64 screenshots.
+ *   - `isUploading`: a shared loading flag for disabling UI.
+ */
 export const useOcrUpload = ({ t, onError }: UseOcrUploadOptions) => {
   const router = useRouter();
   const ocrMutation = useApiMutation<string, FormData>({
@@ -199,22 +235,9 @@ export const useOcrUpload = ({ t, onError }: UseOcrUploadOptions) => {
       onError?.(null);
 
       try {
-        const formData = new FormData();
-        formData.append("file", file, fileName);
-        formData.append("source", source);
-        formData.append("timestamp", new Date().toISOString());
-
+        const formData = buildUploadFormData({ file, fileName, source });
         const textBody = await ocrMutation.mutateAsync(formData);
-
-        let parsed: unknown = null;
-        try {
-          parsed =
-            typeof textBody === "string" ? JSON.parse(textBody) : textBody;
-        } catch (parseError) {
-          console.warn("Failed to parse OCR response", parseError);
-        }
-
-        const simplified = simplifyOcrResponse(parsed);
+        const simplified = parseMutationResponse(textBody);
         persistOcrResult(JSON.stringify(simplified));
         router.push("/documents/details");
       } catch (uploadError) {

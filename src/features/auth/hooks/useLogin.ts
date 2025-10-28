@@ -39,6 +39,22 @@ interface UseLoginResult<TResponse> {
   error: Error | null;
 }
 
+const normalizeError = (value: unknown): Error =>
+  value instanceof Error ? value : new Error(String(value));
+
+/**
+ * Domain-specific wrapper over the shared mutation hook.
+ * Responsibilities:
+ *   - Trigger the login API.
+ *   - Persist the raw payload, derived profile, and extracted user id.
+ *   - Surface a typed `login` helper so components never interact with
+ *     `mutateAsync` directly.
+ *
+ * Adding a new authentication mutation should follow the same pattern:
+ *  1. Instantiate `useApiMutation` with the endpoint path.
+ *  2. Do domain-specific side-effects (storage, routing, etc.) in the try block.
+ *  3. Normalize errors before rethrowing so consumers can rely on `Error`.
+ */
 export const useLogin = <TResponse = unknown>({
   onSuccess,
   onError,
@@ -84,8 +100,7 @@ export const useLogin = <TResponse = unknown>({
 
         return { response, profile };
       } catch (error) {
-        const normalizedError =
-          error instanceof Error ? error : new Error(String(error));
+        const normalizedError = normalizeError(error);
         onError?.(normalizedError);
         throw normalizedError;
       }

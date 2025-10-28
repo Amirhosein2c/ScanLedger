@@ -3,7 +3,7 @@ const isBrowser = typeof window !== "undefined";
 // const isProd = process.env.NODE_ENV === "production";
 
 export const API_TIMEOUT = Number.parseInt(
-  env("NEXT_PUBLIC_API_TIMEOUT") ?? "30000",
+  env("NEXT_PUBLIC_API_TIMEOUT") ?? "3000000",
   10
 );
 

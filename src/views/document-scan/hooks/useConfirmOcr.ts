@@ -11,9 +11,27 @@ type UseConfirmOcrOptions = {
   onError?: (message: string | null) => void;
 };
 
+type ConfirmOcrPayload = { action: ConfirmOcrAction };
+
+const normalizeMutationError = (value: unknown): Error => {
+  if (value instanceof Error) {
+    return value;
+  }
+  return new Error(String(value));
+};
+
+/**
+ * Shared confirmation hook for OCR actions. Keeps mutation plumbing close to
+ * the view layer while the heavy lifting (URL building, request execution)
+ * remains inside `useApiMutation`.
+ *
+ * The intent is that future confirmation flows can follow the same pattern:
+ * create a domain hook that exposes small intent-driven helpers (`saveOcr`,
+ * `discardOcr`) instead of leaking `mutateAsync` through the entire app.
+ */
 export const useConfirmOcr = ({ t, onError }: UseConfirmOcrOptions) => {
-  const confirmMutation = useApiMutation<string, { action: ConfirmOcrAction }>({
-    path: "/confirm-ocr",
+  const confirmMutation = useApiMutation<string, ConfirmOcrPayload>({
+    path: "/multi-agent-ocr/confirm-ocr",
     method: "POST",
     config: { responseType: "text" },
   });
@@ -26,8 +44,7 @@ export const useConfirmOcr = ({ t, onError }: UseConfirmOcrOptions) => {
       try {
         return await confirmMutation.mutateAsync({ action });
       } catch (error) {
-        const normalizedError =
-          error instanceof Error ? error : new Error(String(error));
+        const normalizedError = normalizeMutationError(error);
         console.error(normalizedError);
         onError?.(
           normalizedError.message || t("documentDetails.messages.saveFailed")
