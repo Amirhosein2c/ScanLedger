@@ -14,7 +14,9 @@ import { Button } from "../components/ui/button";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
 import { AppIcon } from "@/src/components/AppIcon";
-import { getStoredUserData, storage } from "../features/auth/profile";
+import { getStoredUserData } from "../features/auth/profile";
+
+const DEFAULT_AVATAR = `https://www.gravatar.com/avatar/?d=mp&s=128`;
 
 interface DocumentSummary {
   id?: string;
@@ -98,31 +100,22 @@ const DashboardOverview = () => {
   );
   const [recentScans, setRecentScans] = useState<DocumentSummary[]>([]);
 
-  const [picture, setPicture] = useState<string>("");
+  const [picture, setPicture] = useState<string>(DEFAULT_AVATAR);
 
   useEffect(() => {
-    if (storage) {
-      const profile = storage.getItem("user_login_raw");
-      if (profile) {
-        let profArr = JSON.parse(profile);
-        const localStoragePicture =
-          profArr[0]?.User_Picture ||
-          `https://www.gravatar.com/avatar/?d=mp&s=128`;
-        setPicture(localStoragePicture);
-      }
+    const storedUser = getStoredUserData();
+    if (storedUser?.User_Picture) {
+      setPicture(storedUser.User_Picture);
+    } else {
+      setPicture(DEFAULT_AVATAR);
     }
-
-    // const localStoragePicture =
-    //   window.localStorage.getItem("user_picture") ||
-    //   `https://www.gravatar.com/avatar/?d=mp&s=128`;
-    // setPicture(localStoragePicture);
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
-    let profile = getStoredUserData();
+    const profile = getStoredUserData();
     // const firstName = window.localStorage.getItem("user_name") || "";
     // const surname = window.localStorage.getItem("user_surname") || "";
     const fullName = `${profile?.User_Name} ${profile?.User_Surname}`.trim();
