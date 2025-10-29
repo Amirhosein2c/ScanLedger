@@ -1,6 +1,6 @@
-const PREFERRED_CAMERA_STORAGE_KEY = "preferredRearCameraDeviceId";
-const IMAGE_DATA_STORAGE_KEY = "scannedImageDataUrl";
-const OCR_RESULT_STORAGE_KEY = "ocrResultData";
+const PREFERRED_CAMERA_STORAGE_KEY: string = "preferredRearCameraDeviceId";
+const IMAGE_DATA_STORAGE_KEY: string = "scannedImageDataUrl";
+export const OCR_RESULT_STORAGE_KEY: string = "ocrResultData";
 
 const hasWindow = () => typeof window !== "undefined";
 

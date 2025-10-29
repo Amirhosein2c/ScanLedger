@@ -1,11 +1,10 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-
 import { useRouter } from "next/navigation";
 import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
 import { useApiMutation } from "../hooks/useApiMutation";
+import { SIGNUP_MUTATION_MOCK_RESPONSE } from "../mocks/mutations";
 import {
   ensureGoogleOAuth,
   fetchGoogleProfile,
@@ -14,6 +13,10 @@ import {
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
 import { buildSocialAuthButtons } from "@/src/features/auth/constants/socialAuth";
+import {
+  setStoredUserData,
+  type StoredUserData,
+} from "../features/auth/profile";
 
 interface SignupForm {
   name: string;
@@ -39,8 +42,31 @@ const NewUserSignup = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { t } = useTranslation();
   useAuthRedirect({ redirectAuthenticatedTo: "/dashboard" });
-  const signupMutation = useApiMutation({
+
+  type SignupPayload = {
+    name: string;
+    surname: string;
+    email: string;
+    password: string;
+    picture?: string;
+    User_Picture?: string | null;
+    Latest_Documents?: Array<Record<string, string | null>> | null;
+  };
+
+  type SignupResponse = {
+    // user_id: string;
+    // Latest_Documents: ({ [key: string]: string } | {})[];
+    User_Email: string;
+    User_ID: string;
+    User_Name: string;
+    User_Surname: string;
+    User_Picture?: string | null;
+    Latest_Documents?: Array<Record<string, string | null>> | null;
+  };
+
+  const signupMutation = useApiMutation<SignupResponse[], SignupPayload>({
     path: "/user_auth",
+    mockResponse: SIGNUP_MUTATION_MOCK_RESPONSE as SignupResponse[],
   });
   const isSubmitting = signupMutation.isPending;
   const isLoading = signupMutation.isPending;
@@ -86,34 +112,29 @@ const NewUserSignup = () => {
 
             const profile = await fetchGoogleProfile(accessToken);
 
-            if (profile.email && typeof window !== "undefined") {
-              window.localStorage.setItem(
-                "user_email",
-                profile.email.toLowerCase()
-              );
-              if (profile.given_name) {
-                window.localStorage.setItem("user_name", profile.given_name);
-              }
-              if (profile.family_name) {
-                window.localStorage.setItem(
-                  "user_surname",
-                  profile.family_name
-                );
-              }
-              if (profile.picture) {
-                window.localStorage.setItem("user_picture", profile.picture);
-              }
-            }
-
-            const payload = {
-              email: profile.email,
-              password: profile.sub,
-              name: profile.given_name,
-              surname: profile.family_name,
-              picture: profile.picture,
+            const payload: SignupPayload = {
+              email: `${profile.email}`,
+              password: `${profile.sub}`,
+              name: `${profile.given_name}`,
+              surname: `${profile.family_name}`,
+              picture: `${profile.picture}`,
             };
-            await signupMutation.mutateAsync(payload);
-            handleSuccess();
+            await signupMutation.mutateAsync(payload).then((res) => {
+              const [created] = res;
+              if (created) {
+                const userData: StoredUserData = {
+                  User_Email: created.User_Email,
+                  User_ID: created.User_ID,
+                  User_Name: created.User_Name,
+                  User_Surname: created.User_Surname,
+                  User_Picture: created.User_Picture ?? null,
+                  Latest_Documents: created.Latest_Documents ?? null,
+                };
+                setStoredUserData(userData);
+              }
+
+              handleSuccess();
+            });
           } catch (callbackError) {
             console.error("Google signup callback failed", callbackError);
             setMessage(
@@ -160,21 +181,28 @@ const NewUserSignup = () => {
     }
 
     try {
-      const payload = {
+      const payload: SignupPayload = {
         email: form.email.trim(),
         password: form.password,
         name: form.name.trim(),
         surname: form.surname.trim(),
         picture: form.picture || "",
       };
-      await signupMutation.mutateAsync(payload);
 
-      if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem("user_name", payload.name);
-        window.localStorage.setItem("user_surname", payload.surname);
-        window.localStorage.setItem("user_email", payload.email.toLowerCase());
-        window.localStorage.setItem("user_picture", payload.picture);
-      }
+      await signupMutation.mutateAsync(payload).then((res) => {
+        const [created] = res;
+        if (created) {
+          const userData: StoredUserData = {
+            User_Email: created.User_Email,
+            User_ID: created.User_ID,
+            User_Name: created.User_Name,
+            User_Surname: created.User_Surname,
+            User_Picture: created.User_Picture ?? null,
+            Latest_Documents: created.Latest_Documents ?? null,
+          };
+          setStoredUserData(userData);
+        }
+      });
 
       handleSuccess();
     } catch (error) {
@@ -241,7 +269,7 @@ const NewUserSignup = () => {
                 {t("auth.signup.fields.surname.label")}
               </label>
               <input
-                id="signup_surname"
+                id="signup_surnamSignupResponsee"
                 name="surname"
                 type="text"
                 autoComplete="family-name"

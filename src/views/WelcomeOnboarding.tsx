@@ -1,9 +1,8 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
 
@@ -109,10 +108,13 @@ const WelcomeOnboarding = () => {
     <main className="relative flex min-h-screen flex-col justify-between overflow-hidden bg-[#111827] text-white">
       <div className="flex flex-col">
         <div className="relative h-80">
-          <img
+          <Image
             alt={t("welcome.heroAlt")}
-            className="absolute inset-0 h-full w-full object-cover"
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQNf2prOH6SDbyyQvcqRCtCGJYxlBX2p7koeYY-tOsVDlogAK8MlE1Dj9k9CL5Pu1Vcq2-1zPIbLYPAmTicu8USSQjIlo2P4fm1b5Mb9vvSl6G8OAJerZ7QHW6OOzYa9JIgMEto0ewXgCRIA-QYZSOSC63WQntCFrk9ZguPWLtsaDz7DejxE-vN-A5a5GMjYJHrKboeOY1WlxdWGevQqr0_KvT2KCIKDc6JSsRG9_KoiunQ_Pk29KAU6CkDJf69AOreG4qebsFDTQ"
+            fill
+            className="object-cover"
+            priority
+            unoptimized
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#111827] to-transparent" />
         </div>

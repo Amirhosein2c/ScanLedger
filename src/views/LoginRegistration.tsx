@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -13,6 +12,7 @@ import {
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
 import { buildSocialAuthButtons } from "@/src/features/auth/constants/socialAuth";
+import { getStoredUserData, setStoredUserData } from "../features/auth/profile";
 
 const LoginRegistration = () => {
   const router = useRouter();
@@ -25,12 +25,9 @@ const LoginRegistration = () => {
   useAuthRedirect({ redirectAuthenticatedTo: "/dashboard" });
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const storedEmail = window.localStorage?.getItem("user_email");
-    if (storedEmail) {
-      setEmail(storedEmail);
+    const storedUser = getStoredUserData();
+    if (storedUser?.User_Email) {
+      setEmail(storedUser.User_Email);
     }
   }, []);
 
@@ -106,23 +103,16 @@ const LoginRegistration = () => {
 
             const profile = await fetchGoogleProfile(accessToken);
 
-            if (profile.email && typeof window !== "undefined") {
-              window.localStorage.setItem(
-                "user_email",
-                profile.email.toLowerCase()
-              );
-              if (profile.given_name) {
-                window.localStorage.setItem("user_name", profile.given_name);
-              }
-              if (profile.family_name) {
-                window.localStorage.setItem(
-                  "user_surname",
-                  profile.family_name
-                );
-              }
-              if (profile.picture) {
-                window.localStorage.setItem("user_picture", profile.picture);
-              }
+            if (profile.email) {
+              setStoredUserData({
+                User_Email: profile.email.toLowerCase(),
+                User_ID: "",
+                User_Name: profile.given_name || "",
+                User_Surname: profile.family_name || "",
+                User_Picture: profile.picture || null,
+                Latest_Documents: null,
+              });
+              setEmail(profile.email.toLowerCase());
             }
 
             const payload: { [key: string]: string } = {

@@ -6,21 +6,41 @@ import { useCallback } from "react";
 import { useApiMutation } from "../../../hooks/useApiMutation";
 import { persistOcrResult } from "../storage";
 import type { DocumentUploadSource } from "../types";
+import { OCR_UPLOAD_MUTATION_MOCK_RESPONSE } from "../../../mocks/mutations";
 
+// UseOcrUploadOptions describes the translation helper and optional error reporter.
 type UseOcrUploadOptions = {
   t: (key: string) => string;
   onError?: (message: string | null) => void;
 };
 
+// SubmitParams captures the minimal metadata needed to label the upload request.
 type SubmitParams = {
   source: DocumentUploadSource;
   fileName: string;
 };
 
+// SimplifiedPayload holds the normalized OCR response used inside the app.
 type SimplifiedPayload = {
   docId: string;
   documentClass: string;
   result: Record<string, string>;
+};
+
+const buildUploadFormData = ({
+  file,
+  fileName,
+  source,
+}: {
+  file: Blob | File;
+  fileName: string;
+  source: DocumentUploadSource;
+}): FormData => {
+  const formData = new FormData();
+  formData.append("file", file, fileName);
+  formData.append("source", source);
+  formData.append("timestamp", new Date().toISOString());
+  return formData;
 };
 
 const emptyPayload: SimplifiedPayload = {
@@ -185,39 +205,54 @@ const simplifyOcrResponse = (response: unknown): SimplifiedPayload => {
   };
 };
 
+const parseMutationResponse = (raw: unknown): SimplifiedPayload => {
+  if (typeof raw === "string") {
+    try {
+      return simplifyOcrResponse(JSON.parse(raw));
+    } catch (parseError) {
+      console.warn("Failed to parse OCR response", parseError);
+      return emptyPayload;
+    }
+  }
+
+  return simplifyOcrResponse(raw);
+};
+
+/**
+ * Exposes the OCR upload workflow as a cohesive hook so view components
+ * only care about their UI logic. The hook returns:
+ *   - `submitDocumentForOcr`: use when you already have a `File` or `Blob`.
+ *   - `processImageDataUrl`: convenience helper for base64 screenshots.
+ *   - `isUploading`: a shared loading flag for disabling UI.
+ */
 export const useOcrUpload = ({ t, onError }: UseOcrUploadOptions) => {
+  // router drives the navigation flow after a successful OCR response.
   const router = useRouter();
+  // ocrMutation encapsulates the POST call to the multi-agent OCR endpoint.
   const ocrMutation = useApiMutation<string, FormData>({
     path: "/multi-agent-ocr",
     method: "POST",
     config: { responseType: "text" },
+    mockResponse: OCR_UPLOAD_MUTATION_MOCK_RESPONSE,
   });
 
   const submitDocumentForOcr = useCallback(
     async (file: Blob | File, { source, fileName }: SubmitParams) => {
+      // Reset clears previous mutation state to avoid leaking errors or spinners.
       ocrMutation.reset();
       onError?.(null);
 
       try {
-        const formData = new FormData();
-        formData.append("file", file, fileName);
-        formData.append("source", source);
-        formData.append("timestamp", new Date().toISOString());
-
+        // formData is the multi-part payload expected by the OCR backend.
+        const formData = buildUploadFormData({ file, fileName, source });
+        // textBody is the raw server response (string because of responseType=text).
         const textBody = await ocrMutation.mutateAsync(formData);
-
-        let parsed: unknown = null;
-        try {
-          parsed =
-            typeof textBody === "string" ? JSON.parse(textBody) : textBody;
-        } catch (parseError) {
-          console.warn("Failed to parse OCR response", parseError);
-        }
-
-        const simplified = simplifyOcrResponse(parsed);
+        // simplified is the normalized structure stored for later editing.
+        const simplified = parseMutationResponse(textBody);
         persistOcrResult(JSON.stringify(simplified));
         router.push("/documents/details");
       } catch (uploadError) {
+        // normalizedError enforces a consistent Error instance across catch branches.
         const normalizedError =
           uploadError instanceof Error
             ? uploadError
@@ -236,7 +271,9 @@ export const useOcrUpload = ({ t, onError }: UseOcrUploadOptions) => {
       dataUrl: string,
       source: DocumentUploadSource = "camera_capture"
     ) => {
+      // blob represents the decoded image derived from the in-memory dataUrl.
       const blob = dataUrlToBlob(dataUrl);
+      // extension helps align the generated filename with the MIME type.
       const extension = blob.type.split("/")[1] || "png";
       await submitDocumentForOcr(blob, {
         source,

@@ -5,10 +5,14 @@ import { usePathname } from "next/navigation";
 import type { FC } from "react";
 import type { Route } from "next";
 import { useTranslation } from "@/src/lib/i18n";
+import {
+  AppIcon,
+  type AppIconName,
+} from "@/src/components/AppIcon";
 
 interface NavItem {
   to: Route;
-  icon: string;
+  icon: AppIconName;
   labelKey: string;
 }
 
@@ -36,7 +40,10 @@ const BottomNav: FC = () => {
                 isActive ? "text-white" : "text-gray-400"
               }`}
             >
-              <span className="material-symbols-outlined">{item.icon}</span>
+              <AppIcon
+                name={item.icon}
+                className="h-6 w-6"
+              />
               <p className="text-xs font-medium">{t(item.labelKey)}</p>
             </Link>
           );

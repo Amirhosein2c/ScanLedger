@@ -12,6 +12,7 @@ import {
 import { Button } from "../components/ui/button";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
+import { AppIcon } from "@/src/components/AppIcon";
 
 interface TemplateSummary {
   id: string;
@@ -100,9 +101,10 @@ const DefaultTemplates = () => {
               className="rounded-full bg-white/5 hover:bg-white/10"
             >
               <Link href={`/templates/${template.id}`}>
-                <span className="material-symbols-outlined text-3xl text-[var(--primary-color)]">
-                  chevron_right
-                </span>
+                <AppIcon
+                  name="chevron_right"
+                  className="h-7 w-7 text-[var(--primary-color)]"
+                />
               </Link>
             </Button>
           </CardHeader>

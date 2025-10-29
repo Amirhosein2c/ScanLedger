@@ -15,6 +15,11 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
+import {
+  clearStoredUserData,
+  getStoredUserData,
+} from "../features/auth/profile";
+import { AppIcon } from "@/src/components/AppIcon";
 
 interface ProfileState {
   name: string;
@@ -32,18 +37,24 @@ const UserProfileSettings = () => {
     email: "",
   });
   const [message, setMessage] = useState<string | null>(null);
+  const [picture, setPicture] = useState<string>(
+    `https://www.gravatar.com/avatar/?d=mp&s=128`
+  );
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    const stored = getStoredUserData();
+    if (!stored) {
+      setPicture(`https://www.gravatar.com/avatar/?d=mp&s=128`);
       return;
     }
-
-    const stored: ProfileState = {
-      name: window.localStorage.getItem("user_name") || "",
-      surname: window.localStorage.getItem("user_surname") || "",
-      email: window.localStorage.getItem("user_email") || "",
-    };
-    setProfile(stored);
+    setProfile({
+      name: stored.User_Name || "",
+      surname: stored.User_Surname || "",
+      email: stored.User_Email || "",
+    });
+    setPicture(
+      stored.User_Picture || `https://www.gravatar.com/avatar/?d=mp&s=128`
+    );
   }, []);
 
   const fullName = useMemo(() => {
@@ -58,11 +69,8 @@ const UserProfileSettings = () => {
     if (typeof window === "undefined") {
       return;
     }
-    window.localStorage.removeItem("user_name");
-    window.localStorage.removeItem("user_surname");
-    window.localStorage.removeItem("user_email");
-    window.localStorage.removeItem("auth_method");
-    window.localStorage.removeItem("user_picture");
+    clearStoredUserData();
+
     router.push("/login");
   };
 
@@ -129,23 +137,13 @@ const UserProfileSettings = () => {
         className="-ml-1 rounded-full bg-white/5 hover:bg-white/10"
         onClick={() => router.back()}
       >
-        <span className="material-symbols-outlined text-2xl">
-          arrow_back_ios_new
-        </span>
+        <AppIcon name="arrow_back_ios_new" className="h-6 w-6" />
       </Button>
       <h1 className="flex-1 pr-12 text-center text-xl font-semibold tracking-tight">
         {t("profile.header.title")}
       </h1>
     </div>
   );
-  const [picture, setPicture] = useState<string>("");
-
-  useEffect(() => {
-    const localStoragePicture =
-      window.localStorage.getItem("user_picture") ||
-      `https://www.gravatar.com/avatar/?d=mp&s=128`;
-    setPicture(localStoragePicture);
-  }, []);
 
   return (
     <AppLayout
@@ -194,9 +192,10 @@ const UserProfileSettings = () => {
                       onClick={item.action}
                     >
                       <span>{item.label}</span>
-                      <span className="material-symbols-outlined text-lg text-white/40">
-                        chevron_right
-                      </span>
+                      <AppIcon
+                        name="chevron_right"
+                        className="h-5 w-5 text-white/40"
+                      />
                     </Button>
                     {index !== section.items.length - 1 && (
                       <Separator className="bg-white/5" />
@@ -224,7 +223,7 @@ const UserProfileSettings = () => {
             className="border-red-400/40 text-red-300 hover:bg-red-500/10"
             onClick={handleLogout}
           >
-            <span className="material-symbols-outlined text-lg">logout</span>
+            <AppIcon name="logout" className="h-5 w-5" />
           </Button>
         </CardContent>
       </Card>

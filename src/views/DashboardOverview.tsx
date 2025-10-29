@@ -13,6 +13,10 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
+import { AppIcon } from "@/src/components/AppIcon";
+import { getStoredUserData } from "../features/auth/profile";
+
+const DEFAULT_AVATAR = `https://www.gravatar.com/avatar/?d=mp&s=128`;
 
 interface DocumentSummary {
   id?: string;
@@ -96,23 +100,25 @@ const DashboardOverview = () => {
   );
   const [recentScans, setRecentScans] = useState<DocumentSummary[]>([]);
 
-  const [picture, setPicture] = useState<string>("");
+  const [picture, setPicture] = useState<string>(DEFAULT_AVATAR);
 
   useEffect(() => {
-    const localStoragePicture =
-      window.localStorage.getItem("user_picture") ||
-      `https://www.gravatar.com/avatar/?d=mp&s=128`;
-    setPicture(localStoragePicture);
+    const storedUser = getStoredUserData();
+    if (storedUser?.User_Picture) {
+      setPicture(storedUser.User_Picture);
+    } else {
+      setPicture(DEFAULT_AVATAR);
+    }
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
-
-    const firstName = window.localStorage.getItem("user_name") || "";
-    const surname = window.localStorage.getItem("user_surname") || "";
-    const fullName = `${firstName} ${surname}`.trim();
+    const profile = getStoredUserData();
+    // const firstName = window.localStorage.getItem("user_name") || "";
+    // const surname = window.localStorage.getItem("user_surname") || "";
+    const fullName = `${profile?.User_Name} ${profile?.User_Surname}`.trim();
     setUserName(fullName || t("dashboard.defaultUserName"));
 
     try {
@@ -123,12 +129,10 @@ const DashboardOverview = () => {
       }
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        const normalized = (parsed as DocumentSummary[]).map(
-          (doc, index) => ({
-            ...doc,
-            docId: doc.docId || doc.id || doc.ts || `doc-${index}`,
-          })
-        );
+        const normalized = (parsed as DocumentSummary[]).map((doc, index) => ({
+          ...doc,
+          docId: doc.docId || doc.id || doc.ts || `doc-${index}`,
+        }));
         setRecentScans(normalized.slice(0, 5));
       } else {
         setRecentScans([]);
@@ -220,7 +224,7 @@ const DashboardOverview = () => {
           className="h-14 w-full max-w-xs text-base font-semibold"
           onClick={() => router.push("/documents/scan")}
         >
-          <span className="material-symbols-outlined">qr_code_scanner</span>
+          <AppIcon name="qr_code_scanner" className="h-5 w-5" />
           <span className="ml-2">{t("dashboard.actions.scanNewDocument")}</span>
         </Button>
       </div>
