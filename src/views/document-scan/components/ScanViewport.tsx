@@ -2,6 +2,7 @@ import type { RefObject } from "react";
 
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
+import { AppIcon } from "@/src/components/AppIcon";
 
 import { PreviewCard } from "./PreviewCard";
 
@@ -75,7 +76,7 @@ export const ScanViewport = ({
         onClick={onRetake}
         disabled={disableActions}
       >
-        <span className="material-symbols-outlined">close</span>
+        <AppIcon name="close" className="h-6 w-6" />
       </Button>
 
       <Button
@@ -84,7 +85,7 @@ export const ScanViewport = ({
         onClick={onProcess}
         disabled={disableActions}
       >
-        <span className="material-symbols-outlined">check</span>
+        <AppIcon name="check" className="h-6 w-6" />
       </Button>
 
       {isUploading && (

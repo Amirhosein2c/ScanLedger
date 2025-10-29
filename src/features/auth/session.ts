@@ -1,4 +1,8 @@
-import { getStoredProfile, type UserProfile } from "./profile";
+import {
+  clearStoredUserData,
+  getStoredProfile,
+  type UserProfile,
+} from "./profile";
 
 export interface AuthSnapshot {
   profile: UserProfile;
@@ -22,13 +26,7 @@ export const clearStoredAuthSnapshot = (): void => {
   }
 
   try {
-    window.localStorage.removeItem("user_email");
-    window.localStorage.removeItem("user_name");
-    window.localStorage.removeItem("user_surname");
-    window.localStorage.removeItem("user_login_raw");
-    window.localStorage.removeItem("auth_method");
-    window.localStorage.removeItem("user_picture");
-    window.localStorage.removeItem("user_id");
+    clearStoredUserData();
   } catch (error) {
     console.warn("Failed to clear stored auth snapshot", error);
   }

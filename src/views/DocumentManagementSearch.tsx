@@ -9,6 +9,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
+import { AppIcon } from "@/src/components/AppIcon";
 
 interface DocumentSummary {
   id?: string;
@@ -154,14 +155,15 @@ const DocumentManagementSearch = () => {
             className="rounded-full hover:bg-white/10"
             title={t("documents.actions.add")}
           >
-            <span className="material-symbols-outlined text-3xl">add</span>
+            <AppIcon name="add" className="h-7 w-7" />
           </Button>
         </div>
       </div>
       <div className="relative">
-        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#96c5a9]">
-          search
-        </span>
+        <AppIcon
+          name="search"
+          className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#96c5a9]"
+        />
         <Input
           className="h-12 pl-11 pr-4 text-base"
           placeholder={t("documents.search.placeholder")}
@@ -179,9 +181,7 @@ const DocumentManagementSearch = () => {
             className="h-10 shrink-0 gap-x-2 rounded-full bg-[#1F2937] text-sm text-white hover:bg-white/10"
           >
             <span>{t(`documents.filters.${filter}`)}</span>
-            <span className="material-symbols-outlined text-xl">
-              keyboard_arrow_down
-            </span>
+            <AppIcon name="keyboard_arrow_down" className="h-5 w-5" />
           </Button>
         ))}
       </div>
@@ -204,7 +204,7 @@ const DocumentManagementSearch = () => {
           className="gap-1 text-[var(--primary-color)] hover:bg-white/5"
         >
           <span>{t("documents.actions.sort")}</span>
-          <span className="material-symbols-outlined text-xl">swap_vert</span>
+          <AppIcon name="swap_vert" className="h-5 w-5" />
         </Button>
       </div>
       <div className="space-y-2 pb-6">

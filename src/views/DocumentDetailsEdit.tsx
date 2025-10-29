@@ -7,6 +7,7 @@ import Image from "next/image";
 import AppLayout from "../components/layout/AppLayout";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
+import { AppIcon } from "@/src/components/AppIcon";
 import { generateCsvFromFields, type OcrField } from "../utils/ocr";
 import {
   clearPersistedImageData,
@@ -565,11 +566,11 @@ const DocumentDetailsEdit = () => {
           }
         }}
       >
-        <span className="material-symbols-outlined text-3xl">arrow_back</span>
+        <AppIcon name="arrow_back" className="h-7 w-7" />
       </button>
       <h2 className="text-lg font-bold">{t("documentDetails.header.title")}</h2>
       <div className="flex h-12 w-12 items-center justify-center rounded-full text-[#96c5a9]">
-        <span className="material-symbols-outlined text-3xl">edit</span>
+        <AppIcon name="edit" className="h-7 w-7" />
       </div>
     </div>
   );

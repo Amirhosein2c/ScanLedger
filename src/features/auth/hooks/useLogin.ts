@@ -2,13 +2,9 @@ import { useCallback } from "react";
 import { useApiMutation } from "../../../hooks/useApiMutation";
 import { LOGIN_MUTATION_MOCK_RESPONSE } from "../../../mocks/mutations";
 import {
-  extractUserId,
-  extractUserProfile,
-  getStoredProfile,
-  mergeProfile,
-  persistLoginPayload,
-  persistUserId,
-  persistUserProfile,
+  mapUserToProfile,
+  setStoredUserData,
+  type StoredUserData,
   type UserProfile,
 } from "../profile";
 import { translate } from "../../../lib/i18n";
@@ -43,18 +39,65 @@ interface UseLoginResult<TResponse> {
 const normalizeError = (value: unknown): Error =>
   value instanceof Error ? value : new Error(String(value));
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const fallbackUserData = (email: string): StoredUserData => ({
+  User_Email: email,
+  User_ID: "",
+  User_Name: "",
+  User_Surname: "",
+  User_Picture: null,
+  Latest_Documents: null,
+});
+
+const toStoredUserData = (
+  payload: unknown,
+  fallbackEmail: string
+): StoredUserData => {
+  const fromRecord = (record: Record<string, unknown>): StoredUserData => ({
+    User_Email:
+      typeof record.User_Email === "string" && record.User_Email
+        ? record.User_Email
+        : fallbackEmail,
+    User_ID:
+      typeof record.User_ID === "string" ? record.User_ID : "",
+    User_Name:
+      typeof record.User_Name === "string" ? record.User_Name : "",
+    User_Surname:
+      typeof record.User_Surname === "string" ? record.User_Surname : "",
+    User_Picture:
+      typeof record.User_Picture === "string" ? record.User_Picture : null,
+    Latest_Documents: Array.isArray(record.Latest_Documents)
+      ? (record.Latest_Documents as Array<Record<string, string | null>>)
+      : null,
+  });
+
+  if (Array.isArray(payload)) {
+    for (const item of payload) {
+      if (isRecord(item)) {
+        const candidate = fromRecord(item);
+        if (candidate.User_Email) {
+          return candidate;
+        }
+      }
+    }
+  }
+
+  if (isRecord(payload)) {
+    return fromRecord(payload);
+  }
+
+  return fallbackUserData(fallbackEmail);
+};
+
 /**
  * Domain-specific wrapper over the shared mutation hook.
  * Responsibilities:
  *   - Trigger the login API.
- *   - Persist the raw payload, derived profile, and extracted user id.
+ *   - Persist the simplified user payload inside localStorage.
  *   - Surface a typed `login` helper so components never interact with
  *     `mutateAsync` directly.
- *
- * Adding a new authentication mutation should follow the same pattern:
- *  1. Instantiate `useApiMutation` with the endpoint path.
- *  2. Do domain-specific side-effects (storage, routing, etc.) in the try block.
- *  3. Normalize errors before rethrowing so consumers can rely on `Error`.
  */
 export const useLogin = <TResponse = unknown>({
   onSuccess,
@@ -84,21 +127,9 @@ export const useLogin = <TResponse = unknown>({
           password,
         });
 
-        persistLoginPayload(response);
-        persistUserId(extractUserId(response));
-
-        // storedProfile reflects the last persisted profile values (if any).
-        const storedProfile = getStoredProfile();
-        // extractedProfile is derived from the raw response payload.
-        const extractedProfile = extractUserProfile(response);
-        // profile merges old and new data to ensure we keep the best available values.
-        const profile = mergeProfile({
-          extracted: extractedProfile,
-          fallbackEmail: trimmedEmail,
-          stored: storedProfile,
-        });
-
-        persistUserProfile(profile);
+        const userData = toStoredUserData(response, trimmedEmail);
+        setStoredUserData(userData);
+        const profile = mapUserToProfile(userData);
 
         onSuccess?.({
           profile,

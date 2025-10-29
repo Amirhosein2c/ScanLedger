@@ -59,18 +59,34 @@ export const useConfirmOcr = ({ t, onError }: UseConfirmOcrOptions) => {
 
       try {
         // result carries the raw API payload; the caller can react to it if needed.
-        if (storage) {
-          let _ocrresult: TOcrResult =
-            JSON.parse(storage.getItem(OCR_RESULT_STORAGE_KEY) || "") || {};
-          let edited_result: { [key: string]: string | null } | {} = {
-            ..._ocrresult["result"],
-          };
-          if (action === "accept") {
-            return await confirmMutation.mutateAsync({ action, edited_result });
-          } else {
-            return await confirmMutation.mutateAsync({ action });
-          }
+        if (!storage) {
+          return;
         }
+
+        const rawResult = storage.getItem(OCR_RESULT_STORAGE_KEY);
+        if (!rawResult) {
+          throw new Error("Missing OCR result in storage.");
+        }
+
+        let parsedResult: TOcrResult;
+        try {
+          parsedResult = JSON.parse(rawResult) as TOcrResult;
+        } catch {
+          throw new Error("Failed to parse OCR result from storage.");
+        }
+
+        const editedResult: Record<string, string | null> = {
+          ...(parsedResult.result ?? {}),
+        };
+
+        if (action === "accept") {
+          return await confirmMutation.mutateAsync({
+            action,
+            edited_result: editedResult,
+          });
+        }
+
+        return await confirmMutation.mutateAsync({ action });
       } catch (error) {
         const normalizedError = normalizeMutationError(error);
         console.error(normalizedError);

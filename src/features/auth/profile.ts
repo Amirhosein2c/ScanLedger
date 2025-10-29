@@ -1,262 +1,140 @@
+type LatestDocuments = Array<Record<string, string | null>> | null;
+
+export interface StoredUserData {
+  User_Email: string;
+  User_ID: string;
+  User_Name: string;
+  User_Surname: string;
+  User_Picture: string | null;
+  Latest_Documents: LatestDocuments;
+}
+
 export interface UserProfile {
   email: string | null;
   name: string | null;
   surname: string | null;
+  id: string | null;
+  picture: string | null;
+  latestDocuments: LatestDocuments;
 }
 
-interface MergeProfileArgs {
-  extracted: UserProfile;
-  fallbackEmail?: string | null;
-  stored?: UserProfile | null;
-}
+const STORAGE_KEY = "user_login_raw";
 
 const getRuntime = () =>
   typeof globalThis !== "undefined" ? globalThis : undefined;
 
 const getSafeStorage = (): Storage | null => {
-  const runtime = getRuntime();
-  if (!runtime?.localStorage) {
+  try {
+    const runtime = getRuntime();
+    if (!runtime?.localStorage) {
+      return null;
+    }
+    return runtime.localStorage;
+  } catch {
     return null;
   }
-  return runtime.localStorage;
 };
 
-const emptyProfile = (): UserProfile => ({
-  email: null,
-  name: null,
-  surname: null,
-});
+export const storage = getSafeStorage();
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-export const storage = getSafeStorage();
-export const getStoredProfile = (): UserProfile => {
-  if (!storage) {
-    return emptyProfile();
+const sanitizeDocuments = (value: unknown): LatestDocuments => {
+  if (!Array.isArray(value)) {
+    return null;
   }
-
-  try {
-    return {
-      email: storage.getItem("user_email"),
-      name: storage.getItem("user_name"),
-      surname: storage.getItem("user_surname"),
-    };
-  } catch (error) {
-    console.warn("Failed to read profile from storage", error);
-    return emptyProfile();
-  }
+  return value as LatestDocuments;
 };
 
-export const getStoredUserId = (): string | null => {
-  const storage = getSafeStorage();
-  if (!storage) {
+const sanitizeUserData = (user: Partial<StoredUserData>): StoredUserData => ({
+  User_Email: typeof user.User_Email === "string" ? user.User_Email : "",
+  User_ID: typeof user.User_ID === "string" ? user.User_ID : "",
+  User_Name: typeof user.User_Name === "string" ? user.User_Name : "",
+  User_Surname:
+    typeof user.User_Surname === "string" ? user.User_Surname : "",
+  User_Picture:
+    typeof user.User_Picture === "string" ? user.User_Picture : null,
+  Latest_Documents: sanitizeDocuments(user.Latest_Documents),
+});
+
+const parseStoredUser = (raw: string | null): StoredUserData | null => {
+  if (!raw) {
     return null;
   }
 
   try {
-    return storage.getItem("user_id");
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed)) {
+      return null;
+    }
+    return sanitizeUserData(parsed as Partial<StoredUserData>);
   } catch (error) {
-    console.warn("Failed to read user id from storage", error);
+    console.warn("Failed to parse stored user", error);
     return null;
   }
 };
 
-export const extractUserProfile = (payload: unknown): UserProfile => {
-  const result = emptyProfile();
+export const getStoredUserData = (): StoredUserData | null => {
+  if (!storage) {
+    return null;
+  }
+  const raw = storage.getItem(STORAGE_KEY);
+  return parseStoredUser(raw);
+};
 
-  if (!isRecord(payload)) {
-    return result;
+export const setStoredUserData = (user: StoredUserData | null): void => {
+  if (!storage) {
+    return;
   }
 
-  const queue: Array<Record<string, unknown>> = [payload];
-
-  const enqueue = (value: unknown) => {
-    if (Array.isArray(value)) {
-      value.forEach(enqueue);
+  try {
+    if (!user) {
+      storage.removeItem(STORAGE_KEY);
       return;
     }
 
-    if (isRecord(value)) {
-      queue.push(value);
-    }
-  };
-
-  while (queue.length && (!result.name || !result.surname || !result.email)) {
-    const current = queue.shift();
-    if (!current) {
-      continue;
-    }
-
-    const potentialNested = ["json", "data", "user"] as const;
-    potentialNested.forEach((key) => {
-      if (isRecord(current[key])) {
-        enqueue(current[key]);
-      }
-    });
-
-    Object.entries(current).forEach(([key, value]) => {
-      if (typeof value === "object") {
-        enqueue(value);
-      }
-      const normalized = key.toLowerCase();
-
-      if (
-        !result.name &&
-        ["name", "firstname", "first_name", "first"].includes(normalized) &&
-        typeof value === "string"
-      ) {
-        result.name = value;
-      }
-      if (
-        !result.surname &&
-        [
-          "surname",
-          "lastname",
-          "last_name",
-          "last",
-          "family",
-          "familyname",
-        ].includes(normalized) &&
-        typeof value === "string"
-      ) {
-        result.surname = value;
-      }
-      if (
-        !result.email &&
-        normalized === "email" &&
-        typeof value === "string"
-      ) {
-        result.email = value;
-      }
-    });
+    const serialized = JSON.stringify(sanitizeUserData(user));
+    storage.setItem(STORAGE_KEY, serialized);
+  } catch (error) {
+    console.warn("Failed to persist user data", error);
   }
-
-  return result;
 };
 
-const extractUserIdFromRecord = (
-  record: Record<string, unknown>
-): string | null => {
-  if (Object.prototype.hasOwnProperty.call(record, "User_ID")) {
-    const value = record["User_ID"];
-    if (typeof value === "string") {
-      return value;
-    }
-    if (value != null) {
-      return String(value);
-    }
-  }
-
-  for (const value of Object.values(record)) {
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        if (isRecord(item)) {
-          const nested = extractUserIdFromRecord(item);
-          if (nested) {
-            return nested;
-          }
-        }
-      }
-      continue;
-    }
-
-    if (isRecord(value)) {
-      const nested = extractUserIdFromRecord(value);
-      if (nested) {
-        return nested;
-      }
-    }
-  }
-
-  return null;
+export const clearStoredUserData = (): void => {
+  setStoredUserData(null);
 };
 
-export const extractUserId = (payload: unknown): string | null => {
-  if (!isRecord(payload)) {
-    if (Array.isArray(payload)) {
-      for (const item of payload) {
-        const extracted = extractUserId(item);
-        if (extracted) {
-          return extracted;
-        }
-      }
-    }
-    return null;
+export const mapUserToProfile = (user: StoredUserData | null): UserProfile => {
+  if (!user) {
+    return {
+      email: null,
+      name: null,
+      surname: null,
+      id: null,
+      picture: null,
+      latestDocuments: null,
+    };
   }
 
-  return extractUserIdFromRecord(payload);
-};
-
-export const mergeProfile = ({
-  extracted,
-  fallbackEmail,
-  stored,
-}: MergeProfileArgs): UserProfile => {
-  const normalizedFallbackEmail = fallbackEmail
-    ? fallbackEmail.toLowerCase()
-    : null;
-  const email =
-    extracted.email?.toLowerCase() ||
-    stored?.email?.toLowerCase() ||
-    normalizedFallbackEmail;
+  const sanitized = sanitizeUserData(user);
 
   return {
-    email,
-    name: extracted.name || stored?.name || null,
-    surname: extracted.surname || stored?.surname || null,
+    email: sanitized.User_Email || null,
+    name: sanitized.User_Name || null,
+    surname: sanitized.User_Surname || null,
+    id: sanitized.User_ID || null,
+    picture: sanitized.User_Picture,
+    latestDocuments: sanitized.Latest_Documents,
   };
 };
 
-export const persistUserProfile = (
-  profile: UserProfile | null | undefined
-): void => {
-  const storage = getSafeStorage();
-  if (!storage || !profile) {
-    return;
-  }
-
-  try {
-    if (profile.email) {
-      storage.setItem("user_email", profile.email.toLowerCase());
-    }
-    if (profile.name) {
-      storage.setItem("user_name", profile.name);
-    }
-    if (profile.surname) {
-      storage.setItem("user_surname", profile.surname);
-    }
-  } catch (error) {
-    console.warn("Failed to persist profile to storage", error);
-  }
+export const getStoredProfile = (): UserProfile => {
+  const user = getStoredUserData();
+  return mapUserToProfile(user);
 };
 
-export const persistUserId = (userId: string | null | undefined): void => {
-  const storage = getSafeStorage();
-  if (!storage) {
-    return;
-  }
-
-  try {
-    if (userId) {
-      storage.setItem("user_id", userId);
-    } else {
-      storage.removeItem("user_id");
-    }
-  } catch (error) {
-    console.warn("Failed to persist user id to storage", error);
-  }
-};
-
-export const persistLoginPayload = (payload: unknown): void => {
-  const storage = getSafeStorage();
-  if (!storage) {
-    return;
-  }
-
-  try {
-    storage.setItem("user_login_raw", JSON.stringify(payload));
-  } catch (error) {
-    console.warn("Failed to persist login payload", error);
-  }
+export const getStoredUserId = (): string | null => {
+  const user = getStoredUserData();
+  return user?.User_ID || null;
 };

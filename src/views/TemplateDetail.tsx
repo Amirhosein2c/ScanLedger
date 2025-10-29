@@ -13,6 +13,7 @@ import {
 import { Badge } from "../components/ui/badge";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
+import { AppIcon } from "@/src/components/AppIcon";
 
 interface TemplateFieldDefinition {
   labelKey: string;
@@ -150,9 +151,7 @@ const TemplateDetail = () => {
         className="-ml-2 rounded-full"
         onClick={() => router.push("/templates")}
       >
-        <span className="material-symbols-outlined text-3xl">
-          arrow_back_ios_new
-        </span>
+        <AppIcon name="arrow_back_ios_new" className="h-7 w-7" />
       </Button>
       <h1 className="flex-1 pr-8 text-center text-xl font-bold tracking-tight">
         {template ? template.name : t("templates.header.title")}

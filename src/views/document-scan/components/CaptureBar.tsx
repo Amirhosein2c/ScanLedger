@@ -1,4 +1,5 @@
 import { Button } from "@/src/components/ui/button";
+import { AppIcon } from "@/src/components/AppIcon";
 
 type CaptureBarProps = {
   onSelectFile: () => void;
@@ -23,7 +24,7 @@ export const CaptureBar = ({
       onClick={onSelectFile}
       disabled={isUploading}
     >
-      <span className="material-symbols-outlined">photo_library</span>
+      <AppIcon name="photo_library" className="h-6 w-6" />
     </Button>
     <Button
       size="icon"
@@ -31,9 +32,10 @@ export const CaptureBar = ({
       onClick={onCapture}
       disabled={isUploading || !isCameraReady}
     >
-      <span className="material-symbols-outlined text-3xl text-[#0f172a]">
-        camera
-      </span>
+      <AppIcon
+        name="camera"
+        className="h-10 w-10 text-[#0f172a]"
+      />
     </Button>
     <Button
       variant="ghost"
@@ -42,8 +44,7 @@ export const CaptureBar = ({
       onClick={onProcess}
       disabled={isUploading}
     >
-      <span className="material-symbols-outlined">description</span>
+      <AppIcon name="description" className="h-6 w-6" />
     </Button>
   </div>
 );
-

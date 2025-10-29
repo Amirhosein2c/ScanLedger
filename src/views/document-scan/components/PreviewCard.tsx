@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { AppIcon } from "@/src/components/AppIcon";
 
 type PreviewCardProps = {
   imagePreview: string | null;
@@ -31,9 +32,10 @@ export const PreviewCard = ({
   if (pendingFileUpload) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 px-8 text-center text-sm text-white/80">
-        <span className="material-symbols-outlined text-5xl text-white/70">
-          description
-        </span>
+        <AppIcon
+          name="description"
+          className="h-12 w-12 text-white/70"
+        />
         <div className="space-y-1">
           <p className="text-base font-semibold text-white">
             {pendingFileUpload.name || t("documentScan.filePreview.untitled")}

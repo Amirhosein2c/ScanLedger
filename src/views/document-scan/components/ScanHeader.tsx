@@ -1,4 +1,5 @@
 import { Button } from "@/src/components/ui/button";
+import { AppIcon } from "@/src/components/AppIcon";
 
 type ScanHeaderProps = {
   title: string;
@@ -33,7 +34,7 @@ export const ScanHeader = ({
       disabled={isTogglingFlash || isUploading}
       title={!isTorchAvailable ? flashUnsupportedMessage : undefined}
     >
-      <span className="material-symbols-outlined">flash_on</span>
+      <AppIcon name="flash_on" className="h-6 w-6" />
     </Button>
     <h2 className="text-lg font-bold leading-tight tracking-[-0.015em]">
       {title}
@@ -44,8 +45,7 @@ export const ScanHeader = ({
       className="rounded-full text-white/70 hover:bg-white/10 hover:text-white"
       onClick={onClose}
     >
-      <span className="material-symbols-outlined">close</span>
+      <AppIcon name="close" className="h-6 w-6" />
     </Button>
   </div>
 );
-

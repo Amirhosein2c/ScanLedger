@@ -13,7 +13,10 @@ import {
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
 import { buildSocialAuthButtons } from "@/src/features/auth/constants/socialAuth";
-import { persistLoginPayload, storage } from "../features/auth/profile";
+import {
+  setStoredUserData,
+  type StoredUserData,
+} from "../features/auth/profile";
 
 interface SignupForm {
   name: string;
@@ -46,15 +49,19 @@ const NewUserSignup = () => {
     email: string;
     password: string;
     picture?: string;
+    User_Picture?: string | null;
+    Latest_Documents?: Array<Record<string, string | null>> | null;
   };
 
   type SignupResponse = {
-    user_id: string;
+    // user_id: string;
     // Latest_Documents: ({ [key: string]: string } | {})[];
     User_Email: string;
     User_ID: string;
     User_Name: string;
     User_Surname: string;
+    User_Picture?: string | null;
+    Latest_Documents?: Array<Record<string, string | null>> | null;
   };
 
   const signupMutation = useApiMutation<SignupResponse[], SignupPayload>({
@@ -105,25 +112,6 @@ const NewUserSignup = () => {
 
             const profile = await fetchGoogleProfile(accessToken);
 
-            if (profile.email && typeof window !== "undefined") {
-              window.localStorage.setItem(
-                "user_email",
-                profile.email.toLowerCase()
-              );
-              if (profile.given_name) {
-                window.localStorage.setItem("user_name", profile.given_name);
-              }
-              if (profile.family_name) {
-                window.localStorage.setItem(
-                  "user_surname",
-                  profile.family_name
-                );
-              }
-              if (profile.picture) {
-                window.localStorage.setItem("user_picture", profile.picture);
-              }
-            }
-
             const payload: SignupPayload = {
               email: `${profile.email}`,
               password: `${profile.sub}`,
@@ -132,15 +120,17 @@ const NewUserSignup = () => {
               picture: `${profile.picture}`,
             };
             await signupMutation.mutateAsync(payload).then((res) => {
-              if (storage) {
-                let { User_Email, User_ID, User_Name, User_Surname } = res[0];
-                let _userData = {
-                  User_Email,
-                  User_ID,
-                  User_Name,
-                  User_Surname,
+              const [created] = res;
+              if (created) {
+                const userData: StoredUserData = {
+                  User_Email: created.User_Email,
+                  User_ID: created.User_ID,
+                  User_Name: created.User_Name,
+                  User_Surname: created.User_Surname,
+                  User_Picture: created.User_Picture ?? null,
+                  Latest_Documents: created.Latest_Documents ?? null,
                 };
-                persistLoginPayload(_userData);
+                setStoredUserData(userData);
               }
 
               handleSuccess();
@@ -200,15 +190,17 @@ const NewUserSignup = () => {
       };
 
       await signupMutation.mutateAsync(payload).then((res) => {
-        if (storage) {
-          let { User_Email, User_ID, User_Name, User_Surname } = res[0];
-          let _userData = {
-            User_Email,
-            User_ID,
-            User_Name,
-            User_Surname,
+        const [created] = res;
+        if (created) {
+          const userData: StoredUserData = {
+            User_Email: created.User_Email,
+            User_ID: created.User_ID,
+            User_Name: created.User_Name,
+            User_Surname: created.User_Surname,
+            User_Picture: created.User_Picture ?? null,
+            Latest_Documents: created.Latest_Documents ?? null,
           };
-          persistLoginPayload(_userData);
+          setStoredUserData(userData);
         }
       });
 
