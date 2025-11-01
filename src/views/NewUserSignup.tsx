@@ -49,19 +49,19 @@ const NewUserSignup = () => {
     email: string;
     password: string;
     picture?: string;
-    User_Picture?: string | null;
+    User_picture?: string | null;
     Latest_Documents?: Array<Record<string, string | null>> | null;
   };
 
   type SignupResponse = {
     // user_id: string;
     // Latest_Documents: ({ [key: string]: string } | {})[];
-    User_Email: string;
+    User_email: string;
     User_ID: string;
-    User_Name: string;
-    User_Surname: string;
-    User_Picture?: string | null;
-    Latest_Documents?: Array<Record<string, string | null>> | null;
+    User_name: string;
+    User_surname: string;
+    User_picture?: string | null;
+    documents?: Array<Record<string, string | null>> | null;
   };
 
   const signupMutation = useApiMutation<SignupResponse[], SignupPayload>({
@@ -123,12 +123,12 @@ const NewUserSignup = () => {
               const [created] = res;
               if (created) {
                 const userData: StoredUserData = {
-                  User_Email: created.User_Email,
+                  User_email: created.User_email,
                   User_ID: created.User_ID,
-                  User_Name: created.User_Name,
-                  User_Surname: created.User_Surname,
-                  User_Picture: created.User_Picture ?? null,
-                  Latest_Documents: created.Latest_Documents ?? null,
+                  User_name: created.User_name,
+                  User_surname: created.User_surname,
+                  User_picture: created.User_picture ?? null,
+                  documents: created.documents ?? null,
                 };
                 setStoredUserData(userData);
               }
@@ -193,12 +193,12 @@ const NewUserSignup = () => {
         const [created] = res;
         if (created) {
           const userData: StoredUserData = {
-            User_Email: created.User_Email,
+            User_email: created.User_email,
             User_ID: created.User_ID,
-            User_Name: created.User_Name,
-            User_Surname: created.User_Surname,
-            User_Picture: created.User_Picture ?? null,
-            Latest_Documents: created.Latest_Documents ?? null,
+            User_name: created.User_name,
+            User_surname: created.User_surname,
+            User_picture: created.User_picture ?? null,
+            documents: created.documents ?? null,
           };
           setStoredUserData(userData);
         }
@@ -299,7 +299,7 @@ const NewUserSignup = () => {
               />
             </div>
             <div>
-              <label className="sr-only" htmlFor="signup_password">
+              <label className="sr-only" htmlFor="signup_passwordUser_">
                 {t("auth.signup.fields.password.label")}
               </label>
               <input

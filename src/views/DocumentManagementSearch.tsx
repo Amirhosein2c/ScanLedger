@@ -10,34 +10,33 @@ import { Card, CardContent } from "../components/ui/card";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
 import { AppIcon } from "@/src/components/AppIcon";
+import { getStoredUserData } from "../features/auth/profile";
 
-interface DocumentSummary {
-  id?: string;
-  docId?: string;
-  type?: string;
-  number?: string;
-  vendor?: string;
-  amount?: string;
-  date?: string;
-  status?: string;
-  image?: string;
-  payload?: {
-    documentClass: string;
-    result: Record<string, string>;
-  };
-  ts?: string;
+interface BackendDocument {
+  Document_id: string;
+  OCR_DateTime?: string | null;
+  Status?: string | null;
+  scan_thumbnail?: string | null;
+  [key: string]: unknown;
 }
 
 interface DocumentRowProps {
-  document: DocumentSummary;
+  document: BackendDocument;
   onSelect: () => void;
 }
 
 const DocumentRow: FC<DocumentRowProps> = ({ document, onSelect }) => {
   const { t } = useTranslation();
-  const thumbnailStyle: CSSProperties = document.image
-    ? { backgroundImage: `url('${document.image}')` }
-    : { backgroundColor: "#1F2937" };
+  const thumbnailStyle: CSSProperties = useMemo(() => {
+    const thumbnail = document.scan_thumbnail;
+    if (typeof thumbnail !== "string" || !thumbnail.trim()) {
+      return { backgroundColor: "#1F2937" };
+    }
+    const dataUri = thumbnail.startsWith("data:")
+      ? thumbnail
+      : `data:image/png;base64,${thumbnail}`;
+    return { backgroundImage: `url('${dataUri}')` };
+  }, [document.scan_thumbnail]);
 
   return (
     <Card
@@ -59,22 +58,18 @@ const DocumentRow: FC<DocumentRowProps> = ({ document, onSelect }) => {
         />
         <div className="flex-1">
           <p className="line-clamp-1 text-base font-medium text-white">
-            {document.type || t("documents.common.document")}
-            {document.number ? ` #${document.number}` : ""}
+            {document.Document_id || t("documents.common.document")}
           </p>
           <p className="line-clamp-2 text-sm text-[#D1D5DB]">
-            {document.date || ""}
+            {document.OCR_DateTime
+              ? new Date(document.OCR_DateTime).toLocaleString()
+              : ""}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-base font-bold text-white">
-            {document.amount
-              ? document.amount.startsWith("$")
-                ? document.amount
-                : `$${document.amount}`
-              : ""}
+          <p className="text-sm text-[#D1D5DB]">
+            {typeof document.Status === "string" ? document.Status : ""}
           </p>
-          <p className="text-sm text-[#D1D5DB]">{document.vendor || ""}</p>
         </div>
       </CardContent>
     </Card>
@@ -86,35 +81,17 @@ const DocumentManagementSearch = () => {
   const { t } = useTranslation();
   const router = useRouter();
   const [query, setQuery] = useState<string>("");
-  const [documents, setDocuments] = useState<DocumentSummary[]>([]);
+  const [documents, setDocuments] = useState<BackendDocument[]>([]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    try {
-      const raw = window.localStorage.getItem("exportedDocuments");
-      if (!raw) {
-        setDocuments([]);
-        return;
-      }
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        const normalized = (parsed as DocumentSummary[]).map(
-          (doc, index) => ({
-            ...doc,
-            docId: doc.docId || doc.id || doc.ts || `doc-${index}`,
-          })
-        );
-        setDocuments(normalized);
-      } else {
-        setDocuments([]);
-      }
-    } catch (error) {
-      console.warn("Failed to parse document list", error);
-      setDocuments([]);
-    }
+    const profile = getStoredUserData();
+    const storedDocs = Array.isArray(profile?.documents)
+      ? (profile?.documents as BackendDocument[])
+      : [];
+    const normalized = storedDocs.filter((doc) =>
+      typeof doc.Document_id === "string"
+    );
+    setDocuments(normalized);
   }, []);
 
   const filteredDocuments = useMemo(() => {
@@ -124,12 +101,9 @@ const DocumentManagementSearch = () => {
     const normalized = query.trim().toLowerCase();
     return documents.filter((doc) => {
       const haystack = [
-        doc.type,
-        doc.number,
-        doc.vendor,
-        doc.amount,
-        doc.date,
-        doc.status,
+        doc.Document_id,
+        doc.OCR_DateTime,
+        typeof doc.Status === "string" ? doc.Status : "",
       ]
         .filter(Boolean)
         .join(" ")
@@ -211,15 +185,13 @@ const DocumentManagementSearch = () => {
         {filteredDocuments.length === 0 && (
           <p className="text-sm text-gray-400">{t("documents.search.empty")}</p>
         )}
-        {filteredDocuments.map((document, index) => (
+        {filteredDocuments.map((document) => (
           <DocumentRow
-            key={`${document.docId || document.id || document.number || index}`}
+            key={document.Document_id}
             document={document}
             onSelect={() => {
-              const identifier =
-                document.docId || document.id || document.ts || String(index);
               router.push(
-                `/documents/details?id=${encodeURIComponent(identifier)}`
+                `/documents/details?id=${encodeURIComponent(document.Document_id)}`
               );
             }}
           />

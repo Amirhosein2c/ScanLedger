@@ -26,8 +26,8 @@ const LoginRegistration = () => {
 
   useEffect(() => {
     const storedUser = getStoredUserData();
-    if (storedUser?.User_Email) {
-      setEmail(storedUser.User_Email);
+    if (storedUser?.User_email) {
+      setEmail(storedUser.User_email);
     }
   }, []);
 
@@ -105,12 +105,12 @@ const LoginRegistration = () => {
 
             if (profile.email) {
               setStoredUserData({
-                User_Email: profile.email.toLowerCase(),
+                User_email: profile.email.toLowerCase(),
                 User_ID: "",
-                User_Name: profile.given_name || "",
-                User_Surname: profile.family_name || "",
-                User_Picture: profile.picture || null,
-                Latest_Documents: null,
+                User_name: profile.given_name || "",
+                User_surname: profile.family_name || "",
+                User_picture: profile.picture || null,
+                documents: null,
               });
               setEmail(profile.email.toLowerCase());
             }

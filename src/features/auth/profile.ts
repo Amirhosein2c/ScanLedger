@@ -1,12 +1,12 @@
-type LatestDocuments = Array<Record<string, string | null>> | null;
+type LatestDocuments = Array<Record<string, unknown>> | null;
 
 export interface StoredUserData {
-  User_Email: string;
+  User_email: string;
   User_ID: string;
-  User_Name: string;
-  User_Surname: string;
-  User_Picture: string | null;
-  Latest_Documents: LatestDocuments;
+  User_name: string;
+  User_surname: string;
+  User_picture: string | null;
+  documents: LatestDocuments;
 }
 
 export interface UserProfile {
@@ -15,7 +15,7 @@ export interface UserProfile {
   surname: string | null;
   id: string | null;
   picture: string | null;
-  latestDocuments: LatestDocuments;
+  documents: LatestDocuments;
 }
 
 const STORAGE_KEY = "user_login_raw";
@@ -48,14 +48,13 @@ const sanitizeDocuments = (value: unknown): LatestDocuments => {
 };
 
 const sanitizeUserData = (user: Partial<StoredUserData>): StoredUserData => ({
-  User_Email: typeof user.User_Email === "string" ? user.User_Email : "",
+  User_email: typeof user.User_email === "string" ? user.User_email : "",
   User_ID: typeof user.User_ID === "string" ? user.User_ID : "",
-  User_Name: typeof user.User_Name === "string" ? user.User_Name : "",
-  User_Surname:
-    typeof user.User_Surname === "string" ? user.User_Surname : "",
-  User_Picture:
-    typeof user.User_Picture === "string" ? user.User_Picture : null,
-  Latest_Documents: sanitizeDocuments(user.Latest_Documents),
+  User_name: typeof user.User_name === "string" ? user.User_name : "",
+  User_surname: typeof user.User_surname === "string" ? user.User_surname : "",
+  User_picture:
+    typeof user.User_picture === "string" ? user.User_picture : null,
+  documents: sanitizeDocuments(user.documents),
 });
 
 const parseStoredUser = (raw: string | null): StoredUserData | null => {
@@ -113,19 +112,19 @@ export const mapUserToProfile = (user: StoredUserData | null): UserProfile => {
       surname: null,
       id: null,
       picture: null,
-      latestDocuments: null,
+      documents: null,
     };
   }
 
   const sanitized = sanitizeUserData(user);
 
   return {
-    email: sanitized.User_Email || null,
-    name: sanitized.User_Name || null,
-    surname: sanitized.User_Surname || null,
+    email: sanitized.User_email || null,
+    name: sanitized.User_name || null,
+    surname: sanitized.User_surname || null,
     id: sanitized.User_ID || null,
-    picture: sanitized.User_Picture,
-    latestDocuments: sanitized.Latest_Documents,
+    picture: sanitized.User_picture,
+    documents: sanitized.documents,
   };
 };
 

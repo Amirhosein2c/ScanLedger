@@ -18,38 +18,33 @@ import { getStoredUserData } from "../features/auth/profile";
 
 const DEFAULT_AVATAR = `https://www.gravatar.com/avatar/?d=mp&s=128`;
 
-interface DocumentSummary {
-  id?: string;
-  docId?: string;
-  type?: string;
-  number?: string;
-  vendor?: string;
-  amount?: string;
-  date?: string;
-  status?: string;
-  image?: string;
-  payload?: {
-    documentClass: string;
-    result: Record<string, string>;
-  };
-  ts?: string;
+interface BackendDocument {
+  Document_id: string;
+  OCR_DateTime?: string | null;
+  Status?: string | null;
+  scan_thumbnail?: string | null;
+  [key: string]: unknown;
 }
 
 interface RecentScanCardProps {
-  document: DocumentSummary;
+  document: BackendDocument;
   onSelect: () => void;
 }
 
 const RecentScanCard = ({ document, onSelect }: RecentScanCardProps) => {
   const { t } = useTranslation();
   const thumbnailStyle = useMemo<CSSProperties>(() => {
-    if (!document.image) {
-      return {};
+    const thumbnail = document.scan_thumbnail;
+    if (typeof thumbnail !== "string" || !thumbnail.trim()) {
+      return { backgroundColor: "#1F2937" };
     }
+    const dataUri = thumbnail.startsWith("data:")
+      ? thumbnail
+      : `data:image/png;base64,${thumbnail}`;
     return {
-      backgroundImage: `url('${document.image}')`,
+      backgroundImage: `url('${dataUri}')`,
     };
-  }, [document.image]);
+  }, [document.scan_thumbnail]);
 
   return (
     <div
@@ -70,22 +65,18 @@ const RecentScanCard = ({ document, onSelect }: RecentScanCardProps) => {
       />
       <div className="flex-1">
         <p className="line-clamp-1 text-base font-medium text-white">
-          {document.type || t("documents.common.document")}
-          {document.number ? ` #${document.number}` : ""}
+          {document.Document_id || t("documents.common.document")}
         </p>
         <p className="line-clamp-2 text-sm text-[#D1D5DB]">
-          {document.date || ""}
+          {document.OCR_DateTime
+            ? new Date(document.OCR_DateTime).toLocaleString()
+            : ""}
         </p>
       </div>
       <div className="text-right">
-        <p className="text-base font-bold text-white">
-          {document.amount
-            ? document.amount.startsWith("$")
-              ? document.amount
-              : `$${document.amount}`
-            : ""}
+        <p className="text-sm text-[#D1D5DB]">
+          {typeof document.Status === "string" ? document.Status : ""}
         </p>
-        <p className="text-sm text-[#D1D5DB]">{document.vendor || ""}</p>
       </div>
     </div>
   );
@@ -98,49 +89,34 @@ const DashboardOverview = () => {
   const [userName, setUserName] = useState<string>(() =>
     t("dashboard.defaultUserName")
   );
-  const [recentScans, setRecentScans] = useState<DocumentSummary[]>([]);
+  const [recentScans, setRecentScans] = useState<BackendDocument[]>([]);
 
   const [picture, setPicture] = useState<string>(DEFAULT_AVATAR);
 
   useEffect(() => {
     const storedUser = getStoredUserData();
-    if (storedUser?.User_Picture) {
-      setPicture(storedUser.User_Picture);
+    if (storedUser?.User_picture) {
+      setPicture(storedUser.User_picture);
     } else {
       setPicture(DEFAULT_AVATAR);
     }
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
     const profile = getStoredUserData();
-    // const firstName = window.localStorage.getItem("user_name") || "";
-    // const surname = window.localStorage.getItem("user_surname") || "";
-    const fullName = `${profile?.User_Name} ${profile?.User_Surname}`.trim();
+
+    const fullName = `${profile?.User_name ?? ""} ${
+      profile?.User_surname ?? ""
+    }`.trim();
     setUserName(fullName || t("dashboard.defaultUserName"));
 
-    try {
-      const raw = window.localStorage.getItem("exportedDocuments");
-      if (!raw) {
-        setRecentScans([]);
-        return;
-      }
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        const normalized = (parsed as DocumentSummary[]).map((doc, index) => ({
-          ...doc,
-          docId: doc.docId || doc.id || doc.ts || `doc-${index}`,
-        }));
-        setRecentScans(normalized.slice(0, 5));
-      } else {
-        setRecentScans([]);
-      }
-    } catch (error) {
-      console.warn("Failed to parse recent scans", error);
-      setRecentScans([]);
-    }
+    const storedDocs = Array.isArray(profile?.documents)
+      ? (profile?.documents as BackendDocument[])
+      : [];
+    const normalized = storedDocs.filter((doc) =>
+      typeof doc.Document_id === "string"
+    );
+    setRecentScans(normalized.slice(0, 5));
   }, [t]);
 
   const header = (
@@ -202,15 +178,13 @@ const DashboardOverview = () => {
               {t("dashboard.recentScans.empty")}
             </p>
           )}
-          {recentScans.map((doc, index) => (
+          {recentScans.map((doc) => (
             <RecentScanCard
-              key={`${doc.docId || doc.id || doc.number || index}`}
+              key={doc.Document_id}
               document={doc}
               onSelect={() => {
-                const identifier =
-                  doc.docId || doc.id || doc.ts || String(index);
                 router.push(
-                  `/documents/details?id=${encodeURIComponent(identifier)}`
+                  `/documents/details?id=${encodeURIComponent(doc.Document_id)}`
                 );
               }}
             />
