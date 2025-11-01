@@ -231,7 +231,6 @@ const NewUserSignup = () => {
                 strokeLinejoin="round"
                 strokeWidth="2"
               />
-              User_
             </svg>
             <h1 className="text-4xl font-bold tracking-tighter">
               {t("auth.signup.title")}
@@ -257,7 +256,6 @@ const NewUserSignup = () => {
                 name="name"
                 type="text"
                 autoComplete="given-name"
-                User_
                 required
                 placeholder={t("auth.signup.fields.name.placeholder")}
                 className="block w-full appearance-none rounded-md border-0 bg-[var(--field-background)] px-4 py-3 text-[var(--text-color)] placeholder-[var(--placeholder-color)] focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-1 focus:ring-offset-[var(--background-color)] sm:text-sm"

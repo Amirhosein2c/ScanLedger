@@ -112,7 +112,7 @@ export const mapUserToProfile = (user: StoredUserData | null): UserProfile => {
       surname: null,
       id: null,
       picture: null,
-      latestDocuments: null,
+      documents: null,
     };
   }
 
