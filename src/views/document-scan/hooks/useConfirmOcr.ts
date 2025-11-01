@@ -22,6 +22,7 @@ type TOcrResult = {
 
 type ConfirmOcrPayload = {
   action: ConfirmOcrAction;
+  document_ID?: string;
   edited_result?: { [key: string]: string | null };
 };
 
@@ -82,6 +83,7 @@ export const useConfirmOcr = ({ t, onError }: UseConfirmOcrOptions) => {
         if (action === "accept") {
           return await confirmMutation.mutateAsync({
             action,
+            document_ID: parsedResult.docId,
             edited_result: editedResult,
           });
         }

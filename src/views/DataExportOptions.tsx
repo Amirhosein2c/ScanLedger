@@ -12,6 +12,7 @@ import {
 import { generateCsvFromFields, type OcrField } from "../utils/ocr";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
+import { storage } from "../features/auth/profile";
 
 type FieldSource =
   | Array<{ label?: unknown; value?: unknown }>
@@ -83,9 +84,7 @@ const normalizeFieldSource = (source: FieldSource): OcrField[] => {
     .filter((item): item is OcrField => item !== null);
 };
 
-const normalizePayload = (
-  value: unknown
-): Record<string, unknown> | null => {
+const normalizePayload = (value: unknown): Record<string, unknown> | null => {
   if (!value) {
     return null;
   }
@@ -147,9 +146,7 @@ const extractFieldsForExport = (
         "raw",
         "docId",
         "doc_id",
-      ].includes(
-        key
-      )
+      ].includes(key)
     ) {
       return;
     }
@@ -179,19 +176,20 @@ const DataExportOptions = () => {
         return;
       }
 
-      const raw =
-        window.localStorage.getItem("ocrResultData") ||
-        window.sessionStorage.getItem("ocrResultData");
-      if (raw) {
-        const parsed = JSON.parse(raw) as unknown;
-        const normalizedPayload = normalizePayload(parsed);
-        if (!normalizedPayload) {
-          return;
-        }
-        const normalized = extractFieldsForExport(normalizedPayload);
-        if (normalized.length > 0) {
-          const generated = generateCsvFromFields(normalized);
-          setCsvContent(generated);
+      if (storage) {
+        const raw =
+          storage.getItem("ocrResultData") || storage.getItem("ocrResultData");
+        if (raw) {
+          const parsed = JSON.parse(raw) as unknown;
+          const normalizedPayload = normalizePayload(parsed);
+          if (!normalizedPayload) {
+            return;
+          }
+          const normalized = extractFieldsForExport(normalizedPayload);
+          if (normalized.length > 0) {
+            const generated = generateCsvFromFields(normalized);
+            setCsvContent(generated);
+          }
         }
       }
     } catch (error) {
