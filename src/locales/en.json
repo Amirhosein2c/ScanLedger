@@ -215,11 +215,14 @@
       "discard": "Discard",
       "save": "Save"
     },
-    "messages": {
-      "noFields": "Add at least one field or OCR result before saving.",
-      "saved": "Document saved locally.",
-      "saveFailed": "Failed to save document."
-    },
+  "messages": {
+    "noFields": "Add at least one field or OCR result before saving.",
+    "saved": "Document saved locally.",
+    "saveFailed": "Failed to save document.",
+    "loading": "Loading document details...",
+    "missingDocument": "Unable to load document details.",
+    "missingDocumentId": "Document ID is missing. Please rescan the document."
+  },
     "fields": {
       "date": "Date",
       "amount": "Amount",
@@ -266,9 +269,10 @@
       "cameraInitializing": "Camera is still initializing. Hold on a second and retry.",
       "captureFailed": "Unable to capture image. Please try again.",
       "captureException": "Failed to capture image from camera.",
-      "noPreview": "Capture or upload a document before processing.",
-      "uploadFailed": "Upload failed. Please try again.",
-      "flashUnavailable": "Flash toggle is not available in this build.",
+    "noPreview": "Capture or upload a document before processing.",
+    "uploadFailed": "Upload failed. Please try again.",
+    "missingDocumentId": "The OCR service did not return a document ID. Please try again.",
+    "flashUnavailable": "Flash toggle is not available in this build.",
       "flashUnsupported": "This camera does not support flash control.",
       "flashToggleFailed": "Unable to toggle the flash. Please try again."
     }

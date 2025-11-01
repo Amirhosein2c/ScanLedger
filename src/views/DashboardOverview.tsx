@@ -104,8 +104,8 @@ const DashboardOverview = () => {
 
   useEffect(() => {
     const storedUser = getStoredUserData();
-    if (storedUser?.User_Picture) {
-      setPicture(storedUser.User_Picture);
+    if (storedUser?.User_picture) {
+      setPicture(storedUser.User_picture);
     } else {
       setPicture(DEFAULT_AVATAR);
     }
@@ -116,9 +116,10 @@ const DashboardOverview = () => {
       return;
     }
     const profile = getStoredUserData();
+
     // const firstName = window.localStorage.getItem("user_name") || "";
     // const surname = window.localStorage.getItem("user_surname") || "";
-    const fullName = `${profile?.User_Name} ${profile?.User_Surname}`.trim();
+    const fullName = `${profile?.User_name} ${profile?.User_surname}`.trim();
     setUserName(fullName || t("dashboard.defaultUserName"));
 
     try {

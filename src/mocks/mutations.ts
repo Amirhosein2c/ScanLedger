@@ -23,9 +23,9 @@ export const CONFIRM_OCR_MUTATION_MOCK_RESPONSE = "CONFIRMATION_RECEIVED";
 
 export const SIGNUP_MUTATION_MOCK_RESPONSE = [
   {
-    User_Email: "mock-signup-user@example.com",
+    User_email: "mock-signup-user@example.com",
     User_ID: "mock-signup-user-id",
-    User_Name: "Mock",
-    User_Surname: "User",
+    User_name: "Mock",
+    User_surname: "User",
   },
 ];

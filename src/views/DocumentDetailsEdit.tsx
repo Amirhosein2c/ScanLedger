@@ -1,6 +1,12 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import {
+  ChangeEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 
@@ -17,245 +23,29 @@ import {
   persistOcrResult,
 } from "./document-scan/storage";
 import { useConfirmOcr } from "./document-scan/hooks/useConfirmOcr";
+import {
+  extractDocumentPayload,
+  type DocumentPayload,
+} from "@/src/utils/documentPayload";
+import { apiGet } from "@/src/utils/api";
 
-type StoredDocumentPayload = {
-  docId: string;
-  documentClass: string;
-  result: Record<string, string>;
+type FieldRow = {
+  label: string;
+  value: string;
 };
 
 type SavedDocumentRecord = {
-  id?: string;
+  document_ID?: string;
   docId?: string;
+  id?: string;
   type?: string;
   amount?: string;
   vendor?: string;
   date?: string;
   image?: string;
   ts?: string;
-  payload?: StoredDocumentPayload;
+  payload?: unknown;
   [key: string]: unknown;
-};
-
-const emptyPayload: StoredDocumentPayload = {
-  docId: "",
-  documentClass: "",
-  result: {},
-};
-
-const readSavedDocuments = (): SavedDocumentRecord[] => {
-  if (typeof window === "undefined") {
-    return [];
-  }
-  try {
-    const raw = window.localStorage.getItem("exportedDocuments");
-    if (!raw) {
-      return [];
-    }
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return (parsed as SavedDocumentRecord[]).map((record, index) => {
-      const normalizedDocId =
-        record.docId || record.id || record.ts || `doc-${index}`;
-      return {
-        ...record,
-        docId: normalizedDocId,
-        id: record.id ?? normalizedDocId,
-      };
-    });
-  } catch (error) {
-    console.warn("Failed to read saved documents", error);
-    return [];
-  }
-};
-
-const findSavedDocument = (
-  documents: SavedDocumentRecord[],
-  identifier: string
-): { record: SavedDocumentRecord; index: number } | null => {
-  const byDocId = documents.findIndex((doc) => doc.docId === identifier);
-  if (byDocId !== -1) {
-    return { record: documents[byDocId], index: byDocId };
-  }
-
-  const byId = documents.findIndex((doc) => doc.id === identifier);
-  if (byId !== -1) {
-    return { record: documents[byId], index: byId };
-  }
-
-  const numeric = Number(identifier);
-  if (!Number.isNaN(numeric) && numeric >= 0 && numeric < documents.length) {
-    return { record: documents[numeric], index: numeric };
-  }
-
-  const byTimestamp = documents.findIndex((doc) => doc.ts === identifier);
-  if (byTimestamp !== -1) {
-    return { record: documents[byTimestamp], index: byTimestamp };
-  }
-
-  return null;
-};
-
-const generateUniqueId = () => {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `doc-${Date.now()}`;
-};
-
-const normalizeRecord = (value: unknown): Record<string, unknown> | null => {
-  if (!value) {
-    return null;
-  }
-  if (Array.isArray(value)) {
-    const candidate = value.find(
-      (item): item is Record<string, unknown> =>
-        !!item && typeof item === "object" && !Array.isArray(item)
-    );
-    return candidate ?? null;
-  }
-  if (typeof value === "object") {
-    return value as Record<string, unknown>;
-  }
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      return normalizeRecord(parsed);
-    } catch {
-      return null;
-    }
-  }
-  return null;
-};
-
-const toRecord = (source: unknown): Record<string, string> => {
-  if (!source) {
-    return {};
-  }
-
-  if (typeof source === "string") {
-    try {
-      const parsed = JSON.parse(source);
-      return toRecord(parsed);
-    } catch {
-      return {};
-    }
-  }
-
-  if (Array.isArray(source)) {
-    return source.reduce<Record<string, string>>((acc, item) => {
-      if (!item || typeof item !== "object") {
-        return acc;
-      }
-      const entry = item as Record<string, unknown>;
-      const labelSource =
-        entry.label ?? entry.name ?? entry.key ?? entry.field ?? null;
-      const label =
-        typeof labelSource === "string"
-          ? labelSource.trim()
-          : labelSource != null
-          ? String(labelSource).trim()
-          : "";
-      if (!label) {
-        return acc;
-      }
-      const valueSource =
-        entry.value ?? entry.text ?? entry.raw ?? entry.content ?? "";
-      acc[label] =
-        typeof valueSource === "string"
-          ? valueSource
-          : valueSource != null
-          ? String(valueSource)
-          : "";
-      return acc;
-    }, {});
-  }
-
-  if (typeof source === "object") {
-    return Object.entries(source as Record<string, unknown>).reduce<
-      Record<string, string>
-    >((acc, [label, value]) => {
-      const normalizedLabel =
-        typeof label === "string" ? label.trim() : String(label).trim();
-      if (!normalizedLabel) {
-        return acc;
-      }
-      acc[normalizedLabel] = value != null ? String(value) : "";
-      return acc;
-    }, {});
-  }
-
-  return {};
-};
-
-const parseStoredPayload = (raw: string | null): StoredDocumentPayload => {
-  if (!raw) {
-    return emptyPayload;
-  }
-
-  try {
-    const record = normalizeRecord(JSON.parse(raw));
-    if (!record) {
-      return emptyPayload;
-    }
-
-    const payloadRecord =
-      record.payload && typeof record.payload === "object"
-        ? normalizeRecord(record.payload)
-        : null;
-
-    const source = payloadRecord ?? record;
-
-    const docIdSource =
-      source.docId ??
-      source.doc_id ??
-      source.documentId ??
-      source.document_id ??
-      "";
-    const docId =
-      typeof docIdSource === "string"
-        ? docIdSource.trim()
-        : docIdSource != null
-        ? String(docIdSource).trim()
-        : "";
-
-    const documentClassSource =
-      source.documentClass ??
-      source.document_class ??
-      source.type ??
-      source.document_type ??
-      "";
-    const documentClass =
-      typeof documentClassSource === "string"
-        ? documentClassSource.trim()
-        : documentClassSource != null
-        ? String(documentClassSource).trim()
-        : "";
-
-    const resultSource =
-      source.result ??
-      source.fields ??
-      source.display_fields ??
-      source.data ??
-      source.raw ??
-      {};
-
-    return {
-      docId: docId || generateUniqueId(),
-      documentClass,
-      result: toRecord(resultSource),
-    };
-  } catch (error) {
-    console.warn("Unable to parse stored OCR payload", error);
-    return emptyPayload;
-  }
-};
-
-type FieldRow = {
-  label: string;
-  value: string;
 };
 
 const toFieldRows = (record: Record<string, string>): FieldRow[] =>
@@ -278,19 +68,103 @@ const findValueByKeywords = (rows: FieldRow[], keywords: string[]): string => {
   return hit?.value?.trim() || "";
 };
 
+const readSavedDocuments = (): SavedDocumentRecord[] => {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  try {
+    const raw = window.localStorage.getItem("exportedDocuments");
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as SavedDocumentRecord[]) : [];
+  } catch (error) {
+    console.warn("Failed to read saved documents", error);
+    return [];
+  }
+};
+
+const getDocumentIdFromRecord = (record: SavedDocumentRecord): string => {
+  const directCandidates = [
+    record.document_ID,
+    record.docId,
+    record.id,
+  ];
+
+  for (const candidate of directCandidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  if (record.payload) {
+    const payload = extractDocumentPayload(record.payload);
+    if (payload?.docId) {
+      return payload.docId;
+    }
+  }
+
+  return "";
+};
+
+const findSavedDocument = (
+  documents: SavedDocumentRecord[],
+  identifier: string
+): { record: SavedDocumentRecord; index: number } | null => {
+  const normalized = identifier?.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const index = documents.findIndex((doc) => {
+    const docId = getDocumentIdFromRecord(doc);
+    return docId === normalized;
+  });
+
+  if (index === -1) {
+    return null;
+  }
+
+  return { record: documents[index], index };
+};
+
+const buildCsvFromFields = (rows: FieldRow[]): string =>
+  generateCsvFromFields(
+    rows.map<OcrField>((field) => ({
+      label: field.label,
+      value: field.value,
+    }))
+  );
+
+const resolveImageSrc = (provided?: string | null): string => {
+  const candidate = (provided ?? "").trim();
+  if (candidate) {
+    return candidate;
+  }
+  const fallback = getPersistedImageDataUrl();
+  return fallback ? fallback : "";
+};
+
 const DocumentDetailsEdit = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   useAuthRedirect({ redirectUnauthenticatedTo: "/login" });
   const { t } = useTranslation();
 
-  const [imageSrc, setImageSrc] = useState<string>("");
+  const savedDocumentId = searchParams.get("id");
+
+  const [docId, setDocId] = useState<string>("");
   const [documentClass, setDocumentClass] = useState<string>("");
   const [fields, setFields] = useState<FieldRow[]>([]);
+  const [imageSrc, setImageSrc] = useState<string>("");
   const [message, setMessage] = useState<string | null>(null);
-  const [docId, setDocId] = useState<string>(() => generateUniqueId());
-  const [isExistingDocument, setIsExistingDocument] = useState<boolean>(false);
+  const [isExistingDocument, setIsExistingDocument] = useState<boolean>(
+    Boolean(savedDocumentId)
+  );
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [hasInitialized, setHasInitialized] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const { saveOcr, discardOcr, isConfirming } = useConfirmOcr({
     t,
@@ -303,8 +177,6 @@ const DocumentDetailsEdit = () => {
     },
   });
 
-  const savedDocumentId = searchParams.get("id");
-
   const navigateBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
@@ -313,64 +185,120 @@ const DocumentDetailsEdit = () => {
     }
   };
 
+  const applyPayload = useCallback(
+    (
+      payload: DocumentPayload,
+      options: {
+        image?: string | null;
+        index?: number | null;
+        existing?: boolean;
+      } = {}
+    ) => {
+      setDocId(payload.docId);
+      setDocumentClass(payload.documentClass || "");
+      setFields(toFieldRows(payload.result));
+      const resolvedImage = resolveImageSrc(
+        typeof options.image === "string" ? options.image : payload.imageUrl
+      );
+      setImageSrc(resolvedImage);
+      setEditingIndex(
+        typeof options.index === "number" ? options.index : null
+      );
+      setIsExistingDocument(options.existing ?? Boolean(savedDocumentId));
+      setMessage(null);
+      setHasInitialized(true);
+    },
+    [savedDocumentId]
+  );
+
   useEffect(() => {
-    if (typeof window === "undefined") {
+    const initialize = async () => {
+      if (savedDocumentId) {
+        setIsLoading(true);
+        try {
+          const response = await apiGet<unknown>(
+            `/multi-agent-ocr/documents/${encodeURIComponent(savedDocumentId)}`
+          );
+          const backendPayload = extractDocumentPayload(response);
+          if (backendPayload) {
+            applyPayload(backendPayload, {
+              image: backendPayload.imageUrl ?? "",
+              existing: true,
+              index: null,
+            });
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.warn("Failed to fetch document details", error);
+        }
+
+        const savedDocuments = readSavedDocuments();
+        const match = findSavedDocument(savedDocuments, savedDocumentId);
+        if (match) {
+          const payload = extractDocumentPayload(
+            match.record.payload ?? match.record
+          );
+          if (payload) {
+            applyPayload(payload, {
+              image: match.record.image ?? payload.imageUrl ?? "",
+              index: match.index,
+              existing: true,
+            });
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        setMessage(t("documentDetails.messages.missingDocument"));
+        setIsExistingDocument(true);
+        setEditingIndex(null);
+        setDocId("");
+        setFields([]);
+        setIsLoading(false);
+        setHasInitialized(true);
+        return;
+      }
+
+      const draftPayload = extractDocumentPayload(getPersistedOcrResult());
+      if (draftPayload) {
+        applyPayload(draftPayload, {
+          image: draftPayload.imageUrl ?? "",
+          existing: false,
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      setMessage(t("documentDetails.messages.noFields"));
+      setIsExistingDocument(false);
+      setEditingIndex(null);
+      setDocId("");
+      setFields([]);
+      setIsLoading(false);
+      setHasInitialized(true);
+    };
+
+    void initialize();
+  }, [applyPayload, savedDocumentId, t]);
+
+  useEffect(() => {
+    if (!hasInitialized) {
+      return;
+    }
+    const trimmedId = docId.trim();
+    if (!trimmedId) {
       return;
     }
 
-    const savedDocuments = readSavedDocuments();
-    if (savedDocumentId) {
-      const match = findSavedDocument(savedDocuments, savedDocumentId);
-      if (match) {
-        const { record, index } = match;
-        const basePayload: StoredDocumentPayload =
-          record.payload ??
-          ({
-            docId: record.docId || "",
-            documentClass: (record.type ?? "").trim(),
-            result: {},
-          } as StoredDocumentPayload);
+    const payload = {
+      docId: trimmedId,
+      documentClass: documentClass.trim(),
+      result: reduceFieldsToRecord(fields),
+    };
 
-        const effectiveDocId =
-          basePayload.docId || record.docId || generateUniqueId();
-        const payloadWithId: StoredDocumentPayload = {
-          ...basePayload,
-          docId: effectiveDocId,
-        };
-
-        setDocId(effectiveDocId);
-        setIsExistingDocument(true);
-        setEditingIndex(index);
-        setDocumentClass(payloadWithId.documentClass);
-        setImageSrc(record.image || "");
-
-        const rows = toFieldRows(payloadWithId.result);
-        setFields(rows.length > 0 ? rows : []);
-
-        persistOcrResult(JSON.stringify(payloadWithId));
-        return;
-      }
-    }
-
-    setIsExistingDocument(false);
-    setEditingIndex(null);
-
-    const storedImage = getPersistedImageDataUrl() || "";
-    setImageSrc(storedImage);
-
-    const payload = parseStoredPayload(getPersistedOcrResult());
-    const normalizedPayload =
-      payload.docId && payload.docId.length > 0
-        ? payload
-        : { ...payload, docId: generateUniqueId() };
-
-    setDocId(normalizedPayload.docId);
-    setDocumentClass(normalizedPayload.documentClass);
-    const rows = toFieldRows(normalizedPayload.result);
-    setFields(rows.length > 0 ? rows : []);
-
-    persistOcrResult(JSON.stringify(normalizedPayload));
-  }, [savedDocumentId]);
+    persistOcrResult(JSON.stringify(payload));
+  }, [docId, documentClass, fields, hasInitialized]);
 
   const summary = useMemo(() => {
     const type = documentClass || t("documents.summary.fallback");
@@ -393,11 +321,20 @@ const DocumentDetailsEdit = () => {
       next[index] = { ...next[index], value };
       return next;
     });
+    setMessage(null);
   };
 
   const handleSave = async () => {
+    setMessage(null);
+
     if (fields.length === 0) {
       setMessage(t("documentDetails.messages.noFields"));
+      return;
+    }
+
+    const trimmedDocId = docId.trim();
+    if (!trimmedDocId) {
+      setMessage(t("documentDetails.messages.missingDocumentId"));
       return;
     }
 
@@ -406,71 +343,17 @@ const DocumentDetailsEdit = () => {
       value: field.value.trim(),
     }));
 
-    const actualDocId = docId || generateUniqueId();
-    const normalizedPayload: StoredDocumentPayload = {
-      docId: actualDocId,
+    const payloadToPersist = {
+      docId: trimmedDocId,
       documentClass: documentClass.trim(),
       result: reduceFieldsToRecord(cleanedFields),
     };
 
-    setDocId(actualDocId);
-    persistOcrResult(JSON.stringify(normalizedPayload));
-
-    const csvContent = generateCsvFromFields(
-      cleanedFields.map<OcrField>((field) => ({
-        label: field.label,
-        value: field.value,
-      }))
-    );
-
-    if (
-      typeof window !== "undefined" &&
-      window.navigator.storage &&
-      window.navigator.storage.estimate
-    ) {
-      try {
-        const { quota, usage } = await window.navigator.storage.estimate();
-        if (quota && usage && usage / quota > 0.9) {
-          setMessage(t("documentDetails.messages.saveFailed"));
-          setTimeout(() => setMessage(null), 3000);
-          return;
-        }
-      } catch (estimateError) {
-        console.warn("Failed to estimate storage availability", estimateError);
-      }
-    }
+    persistOcrResult(JSON.stringify(payloadToPersist));
 
     if (typeof window !== "undefined") {
-      let nextIndex = editingIndex;
-      let updatedRecords = readSavedDocuments();
-      const documentId = normalizedPayload.docId;
-      const timestamp = new Date().toISOString();
+      const csvContent = buildCsvFromFields(cleanedFields);
 
-      const nextRecord: SavedDocumentRecord = {
-        id: documentId,
-        docId: documentId,
-        type: summary.type,
-        amount: summary.amount,
-        vendor: summary.vendor,
-        date: summary.date,
-        image: imageSrc,
-        ts: timestamp,
-        payload: normalizedPayload,
-      };
-
-      if (editingIndex != null && updatedRecords[editingIndex]) {
-        const existing = updatedRecords[editingIndex];
-        updatedRecords[editingIndex] = {
-          ...existing,
-          ...nextRecord,
-          ts: existing.ts ?? timestamp,
-        };
-      } else {
-        updatedRecords.push(nextRecord);
-        nextIndex = updatedRecords.length - 1;
-      }
-
-      let recordsPersisted = false;
       try {
         window.localStorage.setItem("ocrCsvContent", csvContent);
       } catch {
@@ -483,38 +366,46 @@ const DocumentDetailsEdit = () => {
         window.sessionStorage.removeItem("ocrCsvContent");
       }
 
+      const records = readSavedDocuments();
+      const existingIndex =
+        editingIndex != null && editingIndex < records.length
+          ? editingIndex
+          : records.findIndex(
+              (item) => getDocumentIdFromRecord(item) === trimmedDocId
+            );
+
+      const timestamp = new Date().toISOString();
+      const nextRecord: SavedDocumentRecord = {
+        document_ID: trimmedDocId,
+        docId: trimmedDocId,
+        id: trimmedDocId,
+        type: summary.type,
+        amount: summary.amount,
+        vendor: summary.vendor,
+        date: summary.date,
+        image: imageSrc,
+        ts: timestamp,
+        payload: payloadToPersist,
+      };
+
+      const updatedRecords =
+        existingIndex >= 0
+          ? records.map((item, index) =>
+              index === existingIndex ? { ...item, ...nextRecord } : item
+            )
+          : [...records, nextRecord];
+
       try {
         window.localStorage.setItem(
           "exportedDocuments",
           JSON.stringify(updatedRecords)
         );
-        recordsPersisted = true;
-      } catch (firstError) {
-        const isQuotaError =
-          firstError instanceof DOMException &&
-          (firstError.name === "QuotaExceededError" ||
-            firstError.code === 22 ||
-            firstError.code === 1014);
-
-        if (isQuotaError) {
-          try {
-            window.localStorage.removeItem("exportedDocuments");
-            window.localStorage.setItem(
-              "exportedDocuments",
-              JSON.stringify([nextRecord])
-            );
-            updatedRecords = [nextRecord];
-            nextIndex = 0;
-            recordsPersisted = true;
-          } catch {
-            window.localStorage.removeItem("exportedDocuments");
-          }
-        }
-      }
-
-      if (recordsPersisted) {
         setIsExistingDocument(true);
-        setEditingIndex(nextIndex);
+        setEditingIndex(
+          existingIndex >= 0 ? existingIndex : updatedRecords.length - 1
+        );
+      } catch (storageError) {
+        console.warn("Failed to persist exported documents", storageError);
       }
     }
 
@@ -545,9 +436,14 @@ const DocumentDetailsEdit = () => {
     if (typeof window !== "undefined") {
       try {
         window.localStorage.removeItem("ocrCsvContent");
+      } catch (storageError) {
+        console.warn("Failed to clear local CSV cache", storageError);
+      }
+
+      try {
         window.sessionStorage.removeItem("ocrCsvContent");
       } catch (storageError) {
-        console.warn("Failed to clear OCR CSV content", storageError);
+        console.warn("Failed to clear session CSV cache", storageError);
       }
     }
     router.push("/documents/scan");
@@ -568,12 +464,28 @@ const DocumentDetailsEdit = () => {
       >
         <AppIcon name="arrow_back" className="h-7 w-7" />
       </button>
-      <h2 className="text-lg font-bold">{t("documentDetails.header.title")}</h2>
+      <h2 className="text-lg font-bold">
+        {t("documentDetails.header.title")}
+      </h2>
       <div className="flex h-12 w-12 items-center justify-center rounded-full text-[#96c5a9]">
         <AppIcon name="edit" className="h-7 w-7" />
       </div>
     </div>
   );
+
+  if (!hasInitialized || isLoading) {
+    return (
+      <AppLayout
+        header={header}
+        className="bg-[#111827] text-white"
+        contentClassName="flex flex-col gap-6"
+      >
+        <section className="rounded-2xl bg-[#1F2937] p-6 text-center text-sm text-gray-400">
+          {t("documentDetails.messages.loading")}
+        </section>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout
@@ -607,7 +519,10 @@ const DocumentDetailsEdit = () => {
             className="block w-full rounded-xl border-transparent bg-[#1F2937] px-4 py-3 text-base text-white focus:border-[var(--primary-color)] focus:ring focus:ring-[var(--primary-color)] focus:ring-opacity-50"
             value={documentClass}
             placeholder={t("documents.summary.fallback")}
-            onChange={(event) => setDocumentClass(event.target.value)}
+            onChange={(event) => {
+              setDocumentClass(event.target.value);
+              setMessage(null);
+            }}
           />
         </label>
         <div className="grid gap-3 text-sm text-gray-300">

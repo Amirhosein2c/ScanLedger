@@ -76,25 +76,40 @@ export const useConfirmOcr = ({ t, onError }: UseConfirmOcrOptions) => {
           throw new Error("Failed to parse OCR result from storage.");
         }
 
+        const documentId =
+          typeof parsedResult.docId === "string"
+            ? parsedResult.docId.trim()
+            : parsedResult.docId != null
+            ? String(parsedResult.docId).trim()
+            : "";
+
+        if (!documentId) {
+          throw new Error("MISSING_DOCUMENT_ID");
+        }
+
         const editedResult: Record<string, string | null> = {
           ...(parsedResult.result ?? {}),
         };
 
+        const payload: ConfirmOcrPayload = {
+          action,
+          document_ID: documentId,
+        };
+
         if (action === "accept") {
-          return await confirmMutation.mutateAsync({
-            action,
-            document_ID: parsedResult.docId,
-            edited_result: editedResult,
-          });
+          payload.edited_result = editedResult;
         }
 
-        return await confirmMutation.mutateAsync({ action });
+        return await confirmMutation.mutateAsync(payload);
       } catch (error) {
         const normalizedError = normalizeMutationError(error);
         console.error(normalizedError);
-        onError?.(
-          normalizedError.message || t("documentDetails.messages.saveFailed")
-        );
+        const message =
+          normalizedError.message === "MISSING_DOCUMENT_ID"
+            ? t("documentDetails.messages.missingDocumentId")
+            : normalizedError.message ||
+              t("documentDetails.messages.saveFailed");
+        onError?.(message);
         throw normalizedError;
       }
     },

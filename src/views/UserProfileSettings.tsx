@@ -48,12 +48,12 @@ const UserProfileSettings = () => {
       return;
     }
     setProfile({
-      name: stored.User_Name || "",
-      surname: stored.User_Surname || "",
-      email: stored.User_Email || "",
+      name: stored.User_name || "",
+      surname: stored.User_surname || "",
+      email: stored.User_email || "",
     });
     setPicture(
-      stored.User_Picture || `https://www.gravatar.com/avatar/?d=mp&s=128`
+      stored.User_picture || `https://www.gravatar.com/avatar/?d=mp&s=128`
     );
   }, []);
 

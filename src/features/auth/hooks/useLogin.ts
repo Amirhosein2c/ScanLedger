@@ -43,12 +43,12 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
 const fallbackUserData = (email: string): StoredUserData => ({
-  User_Email: email,
+  User_email: email,
   User_ID: "",
-  User_Name: "",
-  User_Surname: "",
-  User_Picture: null,
-  Latest_Documents: null,
+  User_name: "",
+  User_surname: "",
+  User_picture: null,
+  documents: null,
 });
 
 const toStoredUserData = (
@@ -56,20 +56,18 @@ const toStoredUserData = (
   fallbackEmail: string
 ): StoredUserData => {
   const fromRecord = (record: Record<string, unknown>): StoredUserData => ({
-    User_Email:
-      typeof record.User_Email === "string" && record.User_Email
-        ? record.User_Email
+    User_email:
+      typeof record.User_email === "string" && record.User_email
+        ? record.User_email
         : fallbackEmail,
-    User_ID:
-      typeof record.User_ID === "string" ? record.User_ID : "",
-    User_Name:
-      typeof record.User_Name === "string" ? record.User_Name : "",
-    User_Surname:
-      typeof record.User_Surname === "string" ? record.User_Surname : "",
-    User_Picture:
-      typeof record.User_Picture === "string" ? record.User_Picture : null,
-    Latest_Documents: Array.isArray(record.Latest_Documents)
-      ? (record.Latest_Documents as Array<Record<string, string | null>>)
+    User_ID: typeof record.User_ID === "string" ? record.User_ID : "",
+    User_name: typeof record.User_name === "string" ? record.User_name : "",
+    User_surname:
+      typeof record.User_surname === "string" ? record.User_surname : "",
+    User_picture:
+      typeof record.User_picture === "string" ? record.User_picture : null,
+    documents: Array.isArray(record.documents)
+      ? (record.documents as Array<Record<string, string | null>>)
       : null,
   });
 
@@ -77,7 +75,7 @@ const toStoredUserData = (
     for (const item of payload) {
       if (isRecord(item)) {
         const candidate = fromRecord(item);
-        if (candidate.User_Email) {
+        if (candidate.User_email) {
           return candidate;
         }
       }
