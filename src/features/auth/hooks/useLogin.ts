@@ -127,6 +127,7 @@ export const useLogin = <TResponse = unknown>({
 
         const userData = toStoredUserData(response, trimmedEmail);
         setStoredUserData(userData);
+
         const profile = mapUserToProfile(userData);
 
         onSuccess?.({

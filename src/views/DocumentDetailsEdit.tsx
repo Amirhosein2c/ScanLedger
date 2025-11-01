@@ -34,20 +34,6 @@ type FieldRow = {
   value: string;
 };
 
-type SavedDocumentRecord = {
-  document_ID?: string;
-  docId?: string;
-  id?: string;
-  type?: string;
-  amount?: string;
-  vendor?: string;
-  date?: string;
-  image?: string;
-  ts?: string;
-  payload?: unknown;
-  [key: string]: unknown;
-};
-
 const toFieldRows = (record: Record<string, string>): FieldRow[] =>
   Object.entries(record).map(([label, value]) => ({
     label,
@@ -66,67 +52,6 @@ const findValueByKeywords = (rows: FieldRow[], keywords: string[]): string => {
     lowered.some((keyword) => row.label.toLowerCase().includes(keyword))
   );
   return hit?.value?.trim() || "";
-};
-
-const readSavedDocuments = (): SavedDocumentRecord[] => {
-  if (typeof window === "undefined") {
-    return [];
-  }
-  try {
-    const raw = window.localStorage.getItem("exportedDocuments");
-    if (!raw) {
-      return [];
-    }
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as SavedDocumentRecord[]) : [];
-  } catch (error) {
-    console.warn("Failed to read saved documents", error);
-    return [];
-  }
-};
-
-const getDocumentIdFromRecord = (record: SavedDocumentRecord): string => {
-  const directCandidates = [
-    record.document_ID,
-    record.docId,
-    record.id,
-  ];
-
-  for (const candidate of directCandidates) {
-    if (typeof candidate === "string" && candidate.trim()) {
-      return candidate.trim();
-    }
-  }
-
-  if (record.payload) {
-    const payload = extractDocumentPayload(record.payload);
-    if (payload?.docId) {
-      return payload.docId;
-    }
-  }
-
-  return "";
-};
-
-const findSavedDocument = (
-  documents: SavedDocumentRecord[],
-  identifier: string
-): { record: SavedDocumentRecord; index: number } | null => {
-  const normalized = identifier?.trim();
-  if (!normalized) {
-    return null;
-  }
-
-  const index = documents.findIndex((doc) => {
-    const docId = getDocumentIdFromRecord(doc);
-    return docId === normalized;
-  });
-
-  if (index === -1) {
-    return null;
-  }
-
-  return { record: documents[index], index };
 };
 
 const buildCsvFromFields = (rows: FieldRow[]): string =>
@@ -162,7 +87,6 @@ const DocumentDetailsEdit = () => {
   const [isExistingDocument, setIsExistingDocument] = useState<boolean>(
     Boolean(savedDocumentId)
   );
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [hasInitialized, setHasInitialized] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -190,7 +114,6 @@ const DocumentDetailsEdit = () => {
       payload: DocumentPayload,
       options: {
         image?: string | null;
-        index?: number | null;
         existing?: boolean;
       } = {}
     ) => {
@@ -201,9 +124,6 @@ const DocumentDetailsEdit = () => {
         typeof options.image === "string" ? options.image : payload.imageUrl
       );
       setImageSrc(resolvedImage);
-      setEditingIndex(
-        typeof options.index === "number" ? options.index : null
-      );
       setIsExistingDocument(options.existing ?? Boolean(savedDocumentId));
       setMessage(null);
       setHasInitialized(true);
@@ -224,7 +144,6 @@ const DocumentDetailsEdit = () => {
             applyPayload(backendPayload, {
               image: backendPayload.imageUrl ?? "",
               existing: true,
-              index: null,
             });
             setIsLoading(false);
             return;
@@ -233,26 +152,8 @@ const DocumentDetailsEdit = () => {
           console.warn("Failed to fetch document details", error);
         }
 
-        const savedDocuments = readSavedDocuments();
-        const match = findSavedDocument(savedDocuments, savedDocumentId);
-        if (match) {
-          const payload = extractDocumentPayload(
-            match.record.payload ?? match.record
-          );
-          if (payload) {
-            applyPayload(payload, {
-              image: match.record.image ?? payload.imageUrl ?? "",
-              index: match.index,
-              existing: true,
-            });
-            setIsLoading(false);
-            return;
-          }
-        }
-
         setMessage(t("documentDetails.messages.missingDocument"));
         setIsExistingDocument(true);
-        setEditingIndex(null);
         setDocId("");
         setFields([]);
         setIsLoading(false);
@@ -272,7 +173,6 @@ const DocumentDetailsEdit = () => {
 
       setMessage(t("documentDetails.messages.noFields"));
       setIsExistingDocument(false);
-      setEditingIndex(null);
       setDocId("");
       setFields([]);
       setIsLoading(false);
@@ -365,49 +265,9 @@ const DocumentDetailsEdit = () => {
       } catch {
         window.sessionStorage.removeItem("ocrCsvContent");
       }
-
-      const records = readSavedDocuments();
-      const existingIndex =
-        editingIndex != null && editingIndex < records.length
-          ? editingIndex
-          : records.findIndex(
-              (item) => getDocumentIdFromRecord(item) === trimmedDocId
-            );
-
-      const timestamp = new Date().toISOString();
-      const nextRecord: SavedDocumentRecord = {
-        document_ID: trimmedDocId,
-        docId: trimmedDocId,
-        id: trimmedDocId,
-        type: summary.type,
-        amount: summary.amount,
-        vendor: summary.vendor,
-        date: summary.date,
-        image: imageSrc,
-        ts: timestamp,
-        payload: payloadToPersist,
-      };
-
-      const updatedRecords =
-        existingIndex >= 0
-          ? records.map((item, index) =>
-              index === existingIndex ? { ...item, ...nextRecord } : item
-            )
-          : [...records, nextRecord];
-
-      try {
-        window.localStorage.setItem(
-          "exportedDocuments",
-          JSON.stringify(updatedRecords)
-        );
-        setIsExistingDocument(true);
-        setEditingIndex(
-          existingIndex >= 0 ? existingIndex : updatedRecords.length - 1
-        );
-      } catch (storageError) {
-        console.warn("Failed to persist exported documents", storageError);
-      }
     }
+
+    setIsExistingDocument(true);
 
     try {
       await saveOcr();

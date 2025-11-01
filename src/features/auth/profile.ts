@@ -1,4 +1,4 @@
-type LatestDocuments = Array<Record<string, string | null>> | null;
+type LatestDocuments = Array<Record<string, unknown>> | null;
 
 export interface StoredUserData {
   User_email: string;
