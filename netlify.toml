@@ -7,9 +7,3 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-
-[[redirects]]
-  from = "/webhook/*"
-  to = "https://api.perceptionist.top/webhook/:splat"
-  status = 200
-  force = true
