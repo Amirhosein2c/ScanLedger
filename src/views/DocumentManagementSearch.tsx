@@ -1,8 +1,8 @@
 "use client";
 
 import type { ChangeEvent, CSSProperties, FC, KeyboardEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AppLayout from "../components/layout/AppLayout";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
@@ -10,20 +10,32 @@ import { Card, CardContent } from "../components/ui/card";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
 import { AppIcon } from "@/src/components/AppIcon";
-import { getStoredUserData } from "../features/auth/profile";
+import {
+  type DocumentSummary,
+  usePaginatedDocuments,
+} from "../features/documents/hooks/usePaginatedDocuments";
 
-interface BackendDocument {
-  Document_id: string;
-  OCR_DateTime?: string | null;
-  Status?: string | null;
-  scan_thumbnail?: string | null;
-  [key: string]: unknown;
-}
+// const documentsMode =
+//   process.env.NEXT_PUBLIC_DOCUMENTS_MODE === "server" ? "server" : "mock";
 
+const documentsMode = "mock";
 interface DocumentRowProps {
-  document: BackendDocument;
+  document: DocumentSummary;
   onSelect: () => void;
 }
+
+const DocumentSkeleton: FC = () => (
+  <Card className="bg-[#1F2937]">
+    <CardContent className="flex items-center gap-4 p-3">
+      <div className="size-14 rounded-lg bg-[#273248] animate-pulse" />
+      <div className="flex-1 space-y-2">
+        <div className="h-4 w-4/5 rounded bg-white/20 animate-pulse" />
+        <div className="h-3 w-3/5 rounded bg-white/10 animate-pulse" />
+      </div>
+      {/* <div className="h-3 w-14 rounded bg-white/10 animate-pulse" /> */}
+    </CardContent>
+  </Card>
+);
 
 const DocumentRow: FC<DocumentRowProps> = ({ document, onSelect }) => {
   const { t } = useTranslation();
@@ -80,40 +92,65 @@ const DocumentManagementSearch = () => {
   useAuthRedirect({ redirectUnauthenticatedTo: "/login" });
   const { t } = useTranslation();
   const router = useRouter();
-  const [query, setQuery] = useState<string>("");
-  const [documents, setDocuments] = useState<BackendDocument[]>([]);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState<string>(
+    () => searchParams?.get("documents") ?? ""
+  );
+  const { documents, loadMore, isLoading, hasMore, error } =
+    usePaginatedDocuments({ pageSize: 5, mode: documentsMode });
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const profile = getStoredUserData();
-    const storedDocs = Array.isArray(profile?.documents)
-      ? (profile?.documents as BackendDocument[])
-      : [];
-    const normalized = storedDocs.filter((doc) =>
-      typeof doc.Document_id === "string"
-    );
-    setDocuments(normalized);
-  }, []);
+    const nextQuery = searchParams?.get("documents") ?? "";
+    setQuery((current) => (current === nextQuery ? current : nextQuery));
+  }, [searchParams]);
 
-  const filteredDocuments = useMemo(() => {
-    if (!query.trim()) {
-      return documents;
+  useEffect(() => {
+    if (documents.length === 0 && hasMore && !isLoading) {
+      void loadMore();
     }
-    const normalized = query.trim().toLowerCase();
-    return documents.filter((doc) => {
-      const haystack = [
-        doc.Document_id,
-        doc.OCR_DateTime,
-        typeof doc.Status === "string" ? doc.Status : "",
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(normalized);
-    });
-  }, [documents, query]);
+  }, [documents.length, hasMore, isLoading, loadMore]);
+
+  useEffect(() => {
+    if (!hasMore) {
+      return;
+    }
+
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting) {
+          void loadMore();
+        }
+      },
+      { root: null, rootMargin: "200px 0px", threshold: 0 }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore, documents.length]);
 
   const handleQueryChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setQuery(event.target.value);
+    const nextQuery = event.target.value;
+    setQuery(nextQuery);
+
+    const params = new URLSearchParams(
+      searchParams ? searchParams.toString() : ""
+    );
+    if (nextQuery) {
+      params.set("documents", nextQuery);
+    } else {
+      params.delete("documents");
+    }
+
+    const queryString = params.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname);
   };
 
   const header = (
@@ -182,20 +219,39 @@ const DocumentManagementSearch = () => {
         </Button>
       </div>
       <div className="space-y-2 pb-6">
-        {filteredDocuments.length === 0 && (
+        {!hasMore && !isLoading && documents.length === 0 && (
           <p className="text-sm text-gray-400">{t("documents.search.empty")}</p>
         )}
-        {filteredDocuments.map((document) => (
-          <DocumentRow
-            key={document.Document_id}
-            document={document}
-            onSelect={() => {
-              router.push(
-                `/documents/details?id=${encodeURIComponent(document.Document_id)}`
-              );
-            }}
-          />
-        ))}
+        {documents.map((document, index) => {
+          const sequence =
+            typeof document.__mockSequence === "string"
+              ? document.__mockSequence
+              : index;
+          const key = `${document.Document_id}-${sequence}`;
+          return (
+            <DocumentRow
+              key={key}
+              document={document}
+              onSelect={() => {
+                router.push(
+                  `/documents/details?id=${encodeURIComponent(
+                    document.Document_id
+                  )}`
+                );
+              }}
+            />
+          );
+        })}
+        {error && (
+          <p role="alert" className="text-sm text-red-400">
+            {error.message}
+          </p>
+        )}
+        {isLoading &&
+          Array.from({ length: documents.length === 0 ? 3 : 1 }).map(
+            (_, index) => <DocumentSkeleton key={`skeleton-${index}`} />
+          )}
+        <div ref={loadMoreRef} className="h-1 w-full" aria-hidden="true" />
       </div>
     </AppLayout>
   );

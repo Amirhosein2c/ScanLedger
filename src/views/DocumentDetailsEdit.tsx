@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  ChangeEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 
@@ -324,9 +318,7 @@ const DocumentDetailsEdit = () => {
       >
         <AppIcon name="arrow_back" className="h-7 w-7" />
       </button>
-      <h2 className="text-lg font-bold">
-        {t("documentDetails.header.title")}
-      </h2>
+      <h2 className="text-lg font-bold">{t("documentDetails.header.title")}</h2>
       <div className="flex h-12 w-12 items-center justify-center rounded-full text-[#96c5a9]">
         <AppIcon name="edit" className="h-7 w-7" />
       </div>
