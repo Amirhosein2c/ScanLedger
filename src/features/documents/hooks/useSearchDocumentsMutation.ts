@@ -5,9 +5,11 @@ import { useApiMutation } from "@/src/hooks/useApiMutation";
 import type { DocumentSummary } from "./usePaginatedDocuments";
 
 interface SearchDocumentsPayload {
-  documents?: string;
+  user_id?: string | null;
+  page?: number;
   limit?: number;
-  offset?: number;
+  category?: string | null;
+  date?: string | null;
 }
 
 interface UseSearchDocumentsMutationOptions {
@@ -24,9 +26,9 @@ export const useSearchDocumentsMutation = (
     return options.mockResponse;
   }, [options.mockResponse]);
 
-  return useApiMutation<DocumentSummary[], SearchDocumentsPayload>({
-    path: "/documents",
-    method: "GET",
+  return useApiMutation<DocumentSummary, SearchDocumentsPayload>({
+    path: "/documents-retrieval",
+    method: "POST",
     mockResponse,
   });
 };

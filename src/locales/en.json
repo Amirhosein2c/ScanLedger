@@ -172,13 +172,18 @@
     "filters": {
       "date": "Date",
       "category": "Category",
-      "vendor": "Vendor"
+      "vendor": "Vendor",
+      "clear": "Clear"
     },
     "categories": {
       "groceries": "Groceries",
       "transport": "Transport",
       "entertainment": "Entertainment",
       "foodDrink": "Food & Drink"
+    },
+    "sort": {
+      "newest": "Newest first",
+      "oldest": "Oldest first"
     },
     "summary": {
       "fallback": "Document",
