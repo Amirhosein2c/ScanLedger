@@ -20,6 +20,7 @@ import {
   getStoredUserData,
 } from "../features/auth/profile";
 import { AppIcon } from "@/src/components/AppIcon";
+import { toast } from "sonner";
 
 interface ProfileState {
   name: string;
@@ -36,7 +37,7 @@ const UserProfileSettings = () => {
     surname: "",
     email: "",
   });
-  const [message, setMessage] = useState<string | null>(null);
+  // const [message, setMessage] = useState<string | null>(null);
   const [picture, setPicture] = useState<string>(
     `https://www.gravatar.com/avatar/?d=mp&s=128`
   );
@@ -74,11 +75,21 @@ const UserProfileSettings = () => {
     router.push("/login");
   };
 
+  const handleTempAction = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+
+      toast.info(t("profile.messages.comingSoon"));
+      // setMessage(t("profile.messages.comingSoon"));
+      // setTimeout(() => setMessage(null), 2000);
+    },
+    [t]
+  );
+
   const handleTemplateAction = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
-      setMessage(t("profile.messages.comingSoon"));
-      setTimeout(() => setMessage(null), 2000);
+      router.push("/templates");
     },
     [t]
   );
@@ -95,7 +106,7 @@ const UserProfileSettings = () => {
             },
             {
               label: t("profile.sections.templates.items.add"),
-              action: handleTemplateAction,
+              action: handleTempAction,
             },
           ],
         },
@@ -104,11 +115,11 @@ const UserProfileSettings = () => {
           items: [
             {
               label: t("profile.sections.export.items.destination"),
-              action: handleTemplateAction,
+              action: handleTempAction,
             },
             {
               label: t("profile.sections.export.items.format"),
-              action: handleTemplateAction,
+              action: handleTempAction,
             },
           ],
         },
@@ -117,16 +128,16 @@ const UserProfileSettings = () => {
           items: [
             {
               label: t("profile.sections.support.items.help"),
-              action: handleTemplateAction,
+              action: handleTempAction,
             },
             {
               label: t("profile.sections.support.items.contact"),
-              action: handleTemplateAction,
+              action: handleTempAction,
             },
           ],
         },
       ] as const,
-    [handleTemplateAction, t]
+    [handleTempAction, handleTemplateAction, t]
   );
 
   const header = (
@@ -228,13 +239,13 @@ const UserProfileSettings = () => {
         </CardContent>
       </Card>
 
-      {message && (
+      {/* {message && (
         <Card className="border-emerald-400/40 bg-emerald-500/10">
           <CardContent className="px-4 py-3 text-center text-sm text-emerald-200">
             {message}
           </CardContent>
         </Card>
-      )}
+      )} */}
     </AppLayout>
   );
 };

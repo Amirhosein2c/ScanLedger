@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, FC, KeyboardEvent, MouseEvent } from "react";
+import type { FC, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -10,18 +10,12 @@ import { Card, CardContent } from "../components/ui/card";
 import { useAuthRedirect } from "../features/auth/hooks/useAuthRedirect";
 import { useTranslation } from "@/src/lib/i18n";
 import { AppIcon } from "@/src/components/AppIcon";
+import DocumentRow from "@/src/components/documents/DocumentRow";
 import { getStoredUserId } from "../features/auth/profile";
-import {
-  type DocumentSummary,
-  usePaginatedDocuments,
-} from "../features/documents/hooks/usePaginatedDocuments";
+import { usePaginatedDocuments } from "../features/documents/hooks/usePaginatedDocuments";
 
 const documentsMode =
   process.env.NEXT_PUBLIC_DOCUMENTS_MODE === "mock" ? "mock" : "server";
-interface DocumentRowProps {
-  document: DocumentSummary;
-  onSelect: () => void;
-}
 
 const DocumentSkeleton: FC = () => (
   <Card className="bg-[#1F2937]">
@@ -35,57 +29,6 @@ const DocumentSkeleton: FC = () => (
     </CardContent>
   </Card>
 );
-
-const DocumentRow: FC<DocumentRowProps> = ({ document, onSelect }) => {
-  const { t } = useTranslation();
-  const thumbnailStyle: CSSProperties = useMemo(() => {
-    const thumbnail = document.scan_thumbnail;
-    if (typeof thumbnail !== "string" || !thumbnail.trim()) {
-      return { backgroundColor: "#1F2937" };
-    }
-    const dataUri = thumbnail.startsWith("data:")
-      ? thumbnail
-      : `data:image/png;base64,${thumbnail}`;
-    return { backgroundImage: `url('${dataUri}')` };
-  }, [document.scan_thumbnail]);
-
-  return (
-    <Card
-      role="button"
-      tabIndex={0}
-      onClick={onSelect}
-      onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onSelect();
-        }
-      }}
-      className="bg-[#1F2937] cursor-pointer transition hover:bg-[#273248] focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
-    >
-      <CardContent className="flex items-center gap-4 p-3">
-        <div
-          className="size-14 rounded-lg bg-cover bg-center bg-no-repeat"
-          style={thumbnailStyle}
-        />
-        <div className="flex-1">
-          <p className="line-clamp-1 text-base font-medium text-white">
-            {document.Document_id || t("documents.common.document")}
-          </p>
-          <p className="line-clamp-2 text-sm text-[#D1D5DB]">
-            {document.OCR_DateTime
-              ? new Date(document.OCR_DateTime).toLocaleString()
-              : ""}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm text-[#D1D5DB]">
-            {typeof document.Status === "string" ? document.Status : ""}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
 
 const DocumentManagementSearch = () => {
   useAuthRedirect({ redirectUnauthenticatedTo: "/login" });
@@ -369,7 +312,7 @@ const DocumentManagementSearch = () => {
               setSelectedDate(value);
               setOpenFilter(null);
             }}
-            className="w-full rounded-lg bg-[#111827] p-2 text-sm text-white outline-none"
+            className="w-full rounded-lg bg-[#111827] p-2 text-sm text-white outline-none [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-80"
           />
           {selectedDate && (
             <button
